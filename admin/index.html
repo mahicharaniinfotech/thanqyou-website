@@ -305,9 +305,33 @@
           <p id="admin-email-disp">Admin</p>
           <span>Super Admin</span>
         </div>
+        <button class="logout-btn" onclick="openChangePassword()" title="Change Password">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </button>
         <button class="logout-btn" onclick="doLogout()" title="Logout">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+  <div id="cp-overlay" style="display:none;position:fixed;inset:0;background:rgba(42,36,34,0.45);z-index:500;align-items:center;justify-content:center;">
+    <div style="background:var(--dark2);border-radius:16px;padding:28px;width:380px;">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">Change Password</h3>
+      <p style="font-size:12px;color:var(--grey);margin-bottom:18px">You'll need the current 6-digit code from your email to confirm this change.</p>
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">New Password</label>
+      <input type="password" id="cp-new" placeholder="At least 8 characters" style="width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:12px;box-sizing:border-box">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Confirm Password</label>
+      <input type="password" id="cp-confirm" placeholder="Repeat password" style="width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:16px;box-sizing:border-box">
+      <div id="cp-otp-row" style="display:none">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Verification Code</label>
+        <input type="text" id="cp-otp" maxlength="6" placeholder="000000" style="width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;letter-spacing:6px;text-align:center;margin-bottom:16px;box-sizing:border-box">
+      </div>
+      <div id="cp-msg" style="font-size:12px;margin-bottom:12px;display:none"></div>
+      <div style="display:flex;gap:10px">
+        <button onclick="closeChangePassword()" style="flex:1;background:var(--dark3);color:var(--grey);border:1px solid var(--dark4);border-radius:8px;padding:11px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button id="cp-submit-btn" onclick="submitChangePassword()" style="flex:1;background:var(--red);color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">Send Code</button>
       </div>
     </div>
   </div>
@@ -702,6 +726,50 @@ async function doLogout() {
   document.getElementById('login-step-password').style.display='block';
 }
 restoreSession();
+
+// ── CHANGE PASSWORD ──────────────────────────────────────
+let cpStage = 'init';
+function openChangePassword(){
+  document.getElementById('cp-overlay').style.display='flex';
+  document.getElementById('cp-new').value='';
+  document.getElementById('cp-confirm').value='';
+  document.getElementById('cp-otp').value='';
+  document.getElementById('cp-otp-row').style.display='none';
+  document.getElementById('cp-msg').style.display='none';
+  document.getElementById('cp-submit-btn').textContent='Send Code';
+  cpStage='init';
+}
+function closeChangePassword(){ document.getElementById('cp-overlay').style.display='none'; }
+function cpMsg(text, isError){
+  var m=document.getElementById('cp-msg');
+  m.style.display='block'; m.style.color=isError?'#E74C3C':'#27AE60'; m.textContent=text;
+}
+async function submitChangePassword(){
+  var np=document.getElementById('cp-new').value;
+  var cf=document.getElementById('cp-confirm').value;
+  var btn=document.getElementById('cp-submit-btn');
+  if(cpStage==='init'){
+    if(np.length<8){ cpMsg('Password must be at least 8 characters.', true); return; }
+    if(np!==cf){ cpMsg('Passwords do not match.', true); return; }
+    btn.disabled=true; btn.textContent='Sending\u2026';
+    var r=await adminAuth('change-password-init',{token:sessionToken,newPassword:np});
+    btn.disabled=false;
+    if(!r.ok){ cpMsg(r.data.error||'Could not send code.', true); btn.textContent='Send Code'; return; }
+    document.getElementById('cp-otp-row').style.display='block';
+    btn.textContent='Confirm';
+    cpMsg('Code sent to your email.', false);
+    cpStage='confirm';
+  } else {
+    var code=document.getElementById('cp-otp').value.trim();
+    if(!code){ cpMsg('Enter the code sent to your email.', true); return; }
+    btn.disabled=true; btn.textContent='Confirming\u2026';
+    var r=await adminAuth('change-password-confirm',{token:sessionToken,code:code,newPassword:np});
+    btn.disabled=false; btn.textContent='Confirm';
+    if(!r.ok){ cpMsg(r.data.error||'Invalid or expired code.', true); return; }
+    cpMsg('Password updated.', false);
+    setTimeout(closeChangePassword, 1200);
+  }
+}
 // ── SUPABASE QUERY ────────────────────────────────────
 async function query(table, params) {
   params = params || '';
