@@ -1456,8 +1456,8 @@ async function loadPayouts(){
   document.getElementById('py-table-title').textContent=isPending?'Pending Payouts':'All Payouts (History)';
   var res=await Promise.all([
     query('wallets','select=firebase_uid,pending_payout_rupees'),
-    query('user_kyc','select=firebase_uid,status,bank_verified'),
-    query('users','select=firebase_uid,display_name,bank_account,bank_ifsc'),
+    query('user_kyc','select=firebase_uid,status,bank_verified,bank_account_plain,bank_ifsc_plain,bank_holder_name_plain'),
+    query('users','select=firebase_uid,display_name'),
     query('social_accounts','select=firebase_uid,username_handle,username'),
     query('wallet_transactions','select=firebase_uid,rupees&type=eq.payout&order=created_at.desc')
   ]);
@@ -1475,7 +1475,7 @@ async function loadPayouts(){
       paid:paidByUid[uid]||0,
       verified:kyc.status==='verified',
       bankVerified:!!kyc.bank_verified,
-      bankInfo:user.bank_account?(user.bank_account+' '+(user.bank_ifsc||'')):'No bank details',
+      bankInfo:kyc.bank_account_plain?(kyc.bank_account_plain+' '+(kyc.bank_ifsc_plain||'')):'No bank details',
       eligible:kyc.status==='verified'&&kyc.bank_verified&&parseFloat(w.pending_payout_rupees||0)>=500
     };
   });
