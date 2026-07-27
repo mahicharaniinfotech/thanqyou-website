@@ -1475,6 +1475,7 @@ async function loadPayouts(){
       paid:paidByUid[uid]||0,
       verified:kyc.status==='verified',
       bankVerified:!!kyc.bank_verified,
+      hasBankDetails:!!kyc.bank_account_plain,
       bankInfo:kyc.bank_account_plain?(kyc.bank_account_plain+' '+(kyc.bank_ifsc_plain||'')):'No bank details',
       eligible:kyc.status==='verified'&&kyc.bank_verified&&parseFloat(w.pending_payout_rupees||0)>=500
     };
@@ -1508,7 +1509,8 @@ function renderPayoutRows(list){
     } else {
       btn='<span style="color:var(--green)">\u2713 No pending balance</span>';
     }
-    return'<tr><td><div class="avatar-cell"><div class="av" style="background:'+colorFor(r.uid)+'">'+initials(r.handle)+'</div>@'+r.handle+'</div></td><td style="font-weight:700;color:var(--green);font-size:15px">\u20b9'+amt+(r.paid>0?'<br><span style="color:#444;font-size:10px">Paid so far: \u20b9'+r.paid.toFixed(2)+'</span>':'')+'</td><td style="font-size:12px">'+r.bankInfo+'<br>'+bv+kv+'</td><td>'+btn+'</td></tr>';
+    var verifyBtn=(r.hasBankDetails&&!r.bankVerified)?' <button class="btn btn-red" style="padding:2px 8px;font-size:10px;margin-left:6px" onclick="verifyBankAccount(\''+uid+'\',\''+handle+'\')">Verify Bank</button>':'';
+    return'<tr><td><div class="avatar-cell"><div class="av" style="background:'+colorFor(r.uid)+'">'+initials(r.handle)+'</div>@'+r.handle+'</div></td><td style="font-weight:700;color:var(--green);font-size:15px">\u20b9'+amt+(r.paid>0?'<br><span style="color:#444;font-size:10px">Paid so far: \u20b9'+r.paid.toFixed(2)+'</span>':'')+'</td><td style="font-size:12px">'+r.bankInfo+'<br>'+bv+kv+verifyBtn+'</td><td>'+btn+'</td></tr>';
   }).join('');
 }
 function renderPayoutSummary(all){
@@ -1521,6 +1523,13 @@ async function markCreatorPaid(firebaseUid,handle,amount){
     if(!rpcRes.ok){alert('Error decrementing balance. Try again.');return;}
     var logRes=await fetch(SUPABASE_URL+'/functions/v1/admin-proxy/rest/wallet_transactions',{method:'POST',headers:{'x-admin-session': sessionToken,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({firebase_uid:firebaseUid,type:'payout',rupees:parseFloat(amount.replace('\u20b9','')),description:'Manual admin payout',status:'completed',source:'manual_admin',created_at:new Date().toISOString()})});
     if(logRes.ok){alert('Marked as paid for @'+handle);loadPayouts();}else alert('Balance decremented but logging failed - check wallet_transactions manually.');
+  }catch(e){alert('Network error: '+e.message);}
+}
+async function verifyBankAccount(firebaseUid,handle){
+  if(!confirm('Confirm you have manually checked and verified the bank account details for @'+handle+' are correct? This marks the account eligible for payout.'))return;
+  try{
+    var res=await fetch(SUPABASE_URL+'/functions/v1/admin-proxy/rest/user_kyc?firebase_uid=eq.'+firebaseUid,{method:'PATCH',headers:{'x-admin-session': sessionToken,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({bank_verified:true,bank_verified_at:new Date().toISOString()})});
+    if(res.ok){alert('Bank account verified for @'+handle);loadPayouts();}else alert('Error verifying bank account. Try again.');
   }catch(e){alert('Network error: '+e.message);}
 }
 
