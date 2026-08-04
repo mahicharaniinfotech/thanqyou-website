@@ -35,6 +35,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .brand-name{font-family:'Sora',sans-serif;font-weight:800;font-size:19px;color:var(--wine);letter-spacing:-0.01em;}
 .admin-link{font-size:13px;font-weight:600;color:var(--ink2);text-decoration:none;padding:9px 20px;border-radius:100px;border:1px solid rgba(114,47,55,0.18);transition:all .2s;}
 .admin-link:hover{background:var(--wine);color:#fff;border-color:var(--wine);}
+.nav-links{display:flex;align-items:center;gap:10px;}
+.link-device-link{font-size:13px;font-weight:600;color:#fff;text-decoration:none;padding:9px 20px;border-radius:100px;background:var(--wine);border:1px solid var(--wine);transition:all .2s;}
+.link-device-link:hover{opacity:.88;}
+@media(max-width:520px){.nav-links{gap:6px;}.admin-link,.link-device-link{padding:8px 14px;font-size:12px;}}
 
 /* HERO */
 .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:150px 6% 90px;text-align:center;position:relative;overflow:hidden;}
@@ -134,7 +138,10 @@ footer a:hover{color:var(--wine);}
     <img src="images/app_icon.png" alt="ThanQYou">
     <span class="brand-name">ThanQYou</span>
   </a>
-  <a href="/admin/" class="admin-link">Admin Login</a>
+  <div class="nav-links">
+    <a href="https://app.thanqyou.com/#/link-device" class="link-device-link">Link Device</a>
+    <a href="/admin/" class="admin-link">Admin Login</a>
+  </div>
 </nav>
 
 <!-- HERO -->
