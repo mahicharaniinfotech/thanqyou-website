@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/app/">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="ThanqYou">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="ThanqYou">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>ThanqYou</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    ::-webkit-scrollbar { display: none; } * { scrollbar-width: none; }
+    ::-webkit-scrollbar { width: 0; height: 0; } * { scrollbar-width: none; ms-overflow-style: none; }
+    .grecaptcha-badge { visibility: hidden !important; }
+    html, body { overflow: hidden !important; height: 100%; }
+  ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+  * { -ms-overflow-style: none !important; scrollbar-width: none !important; }</style>
+
+  <script>
+    // Stop any leftover Agora audio on page load
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        try {
+          Object.keys(window).filter(function(k){ return k.startsWith('agoraClient_'); }).forEach(function(k){
+            try {
+              var c = window[k];
+              if (c && c.localTracks) c.localTracks.forEach(function(t){ try { t.stop(); t.close(); } catch(e){} });
+              if (c && c.client) c.client.leave().catch(function(){});
+              delete window[k];
+            } catch(e){}
+          });
+        } catch(e){}
+      }, 500);
+    });
+  </script>
+</head>
+<body>
+  <div id="recaptcha-container" style="position:fixed;bottom:0;left:0;width:0;height:0;overflow:hidden;visibility:hidden;"></div>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyB2ztnjmB8KGzcgicaSSt8_ovxLAbMcf1g",
+      authDomain: "thanqyou-0303m.firebaseapp.com",
+      projectId: "thanqyou-0303m",
+      storageBucket: "thanqyou-0303m.appspot.com",
+      messagingSenderId: "929066663904",
+      appId: "1:929066663904:web:0816a70228795979e53585"
+    };
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    // Create fresh verifier - called by Flutter before each OTP send
+    window.createRecaptchaVerifier = function() {
+      if (window.recaptchaVerifier) {
+        try { window.recaptchaVerifier.clear(); } catch(e) {}
+      }
+      window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+        'recaptcha-container', {
+          size: 'invisible',
+          callback: function(response) {
+            console.log('reCAPTCHA solved');
+          },
+          'expired-callback': function() {
+            console.log('reCAPTCHA expired - will recreate');
+          }
+        }
+      );
+      return window.recaptchaVerifier.render();
+    };
+    // Initial render
+    window.createRecaptchaVerifier();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
+
+
+
+
