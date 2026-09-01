@@ -267,6 +267,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
       Content
     </div>
+    <div class="nav-item" onclick="showPage('reports',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      Reports
+    </div>
     <div class="nav-item" onclick="showPage('kyc',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
       KYC
@@ -400,7 +404,29 @@
       </div>
 
       <!-- CONTENT -->
-      <div class="page" id="page-content">
+      <!-- REPORTS -->
+    <div class="page" id="page-reports">
+      <div class="stats-row">
+        <div class="mini-stat"><div class="ms-val" id="rp-pending-posts">—</div><div class="ms-label">Pending Post Reports</div></div>
+        <div class="mini-stat"><div class="ms-val" id="rp-pending-users">—</div><div class="ms-label">Pending User Reports</div></div>
+      </div>
+      <div class="panel">
+        <h3>Reported Posts</h3>
+        <table>
+          <thead><tr><th>Post</th><th>Post Author</th><th>Reported By</th><th>Reason</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="reports-post-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="panel" style="margin-top:20px">
+        <h3>Reported Users</h3>
+        <table>
+          <thead><tr><th>Reported Account</th><th>Reported By</th><th>Reason</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="reports-user-body"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page" id="page-content">
         <div class="mini-stats">
           <div class="mini-stat"><div class="ms-val" id="c-total">—</div><div class="ms-label">Total Posts</div></div>
           <div class="mini-stat"><div class="ms-val" id="c-reels">—</div><div class="ms-label">Reels</div></div>
@@ -849,7 +875,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
-  dashboard:'Dashboard', users:'Users', content:'Content', kyc:'KYC Verification',
+  dashboard:'Dashboard', users:'Users', content:'Content', reports:'Reports', kyc:'KYC Verification',
   wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
@@ -860,7 +886,7 @@ function showPage(name, el) {
   el.classList.add('active');
   document.getElementById('page-title').textContent = pageTitles[name];
   const loaders = {
-    dashboard: loadDashboard, users: loadUsers, content: loadContent,
+    dashboard: loadDashboard, users: loadUsers, content: loadContent, reports: loadReports,
     kyc: loadKYC, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts,
     analytics: loadAnalytics, settings: loadSettings
   };
@@ -871,7 +897,7 @@ function refreshCurrentPage() {
   const active = document.querySelector('.nav-item.active');
   const page = active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (page) {
-    const loaders = {dashboard:loadDashboard,users:loadUsers,content:loadContent,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,settings:loadSettings};
+    const loaders = {dashboard:loadDashboard,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,settings:loadSettings};
     if (loaders[page]) loaders[page]();
   }
 }
@@ -1441,6 +1467,92 @@ function filterContent(){
       +'<td style="font-size:12px">'+formatDate(p.created_at)+'</td>'
       +'<td><button class="action-btn danger" onclick="deletePost(\''+p.id+'\')">Delete</button></td></tr>';
   }).join('');
+}
+async function loadReports(){
+  document.getElementById('reports-post-body').innerHTML='<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('reports-user-body').innerHTML='<tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  var res=await Promise.all([
+    query('post_reports','select=*&status=eq.pending&order=created_at.desc'),
+    query('user_reports','select=*&status=eq.pending&order=created_at.desc'),
+    query('social_accounts','select=id,social_uid,username_handle,username,social_avatar_url')
+  ]);
+  var postReports=res[0]||[],userReports=res[1]||[];
+  var accts={};(res[2]||[]).forEach(function(a){accts[a.social_uid]=a;});
+  window._accts=accts;
+  document.getElementById('rp-pending-posts').textContent=postReports.length;
+  document.getElementById('rp-pending-users').textContent=userReports.length;
+
+  var postIds=Array.from(new Set(postReports.map(function(r){return r.post_id;}).filter(Boolean)));
+  var posts={};
+  if(postIds.length){
+    var fetched=await query('posts','select=id,caption,social_uid&id=in.('+postIds.join(',')+')');
+    (fetched||[]).forEach(function(p){posts[p.id]=p;});
+  }
+
+  renderPostReports(postReports,posts);
+  renderUserReports(userReports);
+}
+function nameFor(uid){
+  var a=window._accts&&window._accts[uid];
+  return a?('@'+(a.username_handle||a.username||uid.substring(0,8))):(uid?uid.substring(0,8):'—');
+}
+function renderPostReports(reports,posts){
+  var body=document.getElementById('reports-post-body');
+  if(!reports.length){body.innerHTML='<tr><td colspan="6"><div class="empty-state"><p>No pending post reports</p></div></td></tr>';return;}
+  body.innerHTML=reports.map(function(r){
+    var p=posts[r.post_id];
+    var caption=p?(p.caption||'(no caption)'):'(post already removed)';
+    return '<tr>'
+      +'<td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+caption+'</td>'
+      +'<td>'+(p?nameFor(p.social_uid):'—')+'</td>'
+      +'<td>'+nameFor(r.social_uid)+'</td>'
+      +'<td><span class="badge badge-red">'+r.reason+'</span></td>'
+      +'<td style="font-size:12px">'+formatDate(r.created_at)+'</td>'
+      +'<td>'
+        +'<button class="action-btn" onclick="resolveReport(\'post_reports\',\''+r.id+'\')">Approve (clean)</button> '
+        +(p?'<button class="action-btn danger" onclick="removeReportedPost(\''+r.id+'\',\''+r.post_id+'\')">Remove post</button>':'')
+      +'</td></tr>';
+  }).join('');
+}
+function renderUserReports(reports){
+  var body=document.getElementById('reports-user-body');
+  if(!reports.length){body.innerHTML='<tr><td colspan="5"><div class="empty-state"><p>No pending user reports</p></div></td></tr>';return;}
+  body.innerHTML=reports.map(function(r){
+    return '<tr>'
+      +'<td>'+nameFor(r.reported_social_uid)+'</td>'
+      +'<td>'+nameFor(r.reporter_social_uid)+'</td>'
+      +'<td><span class="badge badge-red">'+r.reason+'</span></td>'
+      +'<td style="font-size:12px">'+formatDate(r.created_at)+'</td>'
+      +'<td>'
+        +'<button class="action-btn" onclick="resolveReport(\'user_reports\',\''+r.id+'\')">Approve (clean)</button> '
+        +'<button class="action-btn danger" onclick="blockReportedUser(\''+r.id+'\',\''+r.reported_social_uid+'\')">Block user</button>'
+      +'</td></tr>';
+  }).join('');
+}
+async function resolveReport(table,id){
+  var ok=await update(table,id,{status:'resolved'});
+  if(ok){showToast('Marked as reviewed - clean');loadReports();}
+  else showToast('Failed to update report','error');
+}
+async function removeReportedPost(reportId,postId){
+  if(!confirm('Remove this post? This cannot be undone.'))return;
+  var ok=await deleteRow('posts','id',postId);
+  if(ok){
+    await update('post_reports',reportId,{status:'resolved'});
+    showToast('Post removed');
+    loadReports();
+  } else showToast('Failed to remove post','error');
+}
+async function blockReportedUser(reportId,socialUid){
+  if(!confirm('Block this account? They will be removed from Social and unable to sign back in there.'))return;
+  var acct=window._accts&&window._accts[socialUid];
+  if(!acct||!acct.id){showToast('Account not found','error');return;}
+  var ok=await update('social_accounts',acct.id,{is_blocked:true,social_blocked:true,block_reason:'Reported and reviewed by admin'});
+  if(ok){
+    await update('user_reports',reportId,{status:'resolved'});
+    showToast('User blocked');
+    loadReports();
+  } else showToast('Failed to block user','error');
 }
 async function deletePost(id){
   if(!confirm('Delete this post?'))return;
