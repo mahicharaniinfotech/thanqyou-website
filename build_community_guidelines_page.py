@@ -1,0 +1,139 @@
+r"""
+Creates a standalone Community Guidelines page on the website,
+matching the homepage's actual palette/fonts, and links it from the
+homepage footer.
+
+Usage:
+    python build_community_guidelines_page.py <path-to-website-repo-root>
+
+Example:
+    python build_community_guidelines_page.py "C:\Users\workw\Desktop\ThanQYou"
+"""
+
+import sys
+from pathlib import Path
+
+
+def fail(msg):
+    print(f"FAILED: {msg}")
+    sys.exit(1)
+
+
+PAGE_HTML = r'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Community Guidelines - ThanQYou</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wine:#722F37; --wine-deep:#4A1E23; --wine-soft:rgba(114,47,55,0.07); --wine-soft2:rgba(114,47,55,0.13);
+  --paper:#FBF3EC; --paper2:#F5E9DE; --ink:#241A1C; --ink2:#5C4E4A; --ink3:#8C7D78;
+  --gold:#C9963E; --gold-soft:rgba(201,150,62,0.14);
+  --white:#FFFFFF;
+  --radius:20px;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);line-height:1.7;margin:0;}
+.script{font-family:'Pacifico',cursive;}
+.head{font-family:'Sora',sans-serif;}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 6%;height:76px;background:rgba(251,243,236,0.86);backdrop-filter:blur(18px);border-bottom:1px solid rgba(114,47,55,0.09);}
+.brand-name{font-family:'Sora',sans-serif;font-weight:800;font-size:19px;color:var(--wine);letter-spacing:-0.01em;text-decoration:none;}
+.back-link{font-size:13px;font-weight:600;color:var(--ink2);text-decoration:none;padding:9px 20px;border-radius:100px;border:1px solid rgba(114,47,55,0.18);transition:all .2s;}
+.back-link:hover{background:var(--wine);color:#fff;border-color:var(--wine);}
+main{max-width:780px;margin:0 auto;padding:150px 6% 100px;}
+h1{font-family:'Sora',sans-serif;font-weight:800;font-size:clamp(2.2rem,5vw,3rem);color:var(--wine);margin:0 0 8px;}
+.updated{color:var(--ink3);font-size:14px;margin-bottom:48px;}
+.intro{font-size:16px;color:var(--ink2);margin-bottom:40px;}
+.rule{background:var(--white);border:1px solid rgba(114,47,55,0.09);border-radius:var(--radius);padding:26px 28px;margin-bottom:16px;}
+.rule h3{font-family:'Sora',sans-serif;color:var(--wine);font-size:17px;margin:0 0 8px;display:flex;align-items:center;gap:10px;}
+.rule h3 .num{width:28px;height:28px;border-radius:50%;background:var(--wine-soft);color:var(--wine);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;}
+.rule p{margin:0;color:var(--ink2);font-size:14.5px;}
+.enforce{background:var(--gold-soft);border-radius:var(--radius);padding:28px;margin-top:36px;}
+.enforce h2{font-family:'Sora',sans-serif;color:var(--wine-deep);font-size:19px;margin:0 0 12px;}
+.enforce p{color:var(--ink2);font-size:14.5px;margin:0 0 10px;}
+.enforce ul{margin:0;padding-left:20px;color:var(--ink2);font-size:14.5px;}
+.enforce li{margin-bottom:6px;}
+footer{padding:40px 6%;text-align:center;color:var(--ink3);font-size:13px;border-top:1px solid rgba(114,47,55,0.09);}
+footer a{color:var(--wine);text-decoration:none;font-weight:600;}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="brand-name">ThanQYou</a>
+  <a href="/" class="back-link">&larr; Back to home</a>
+</nav>
+<main>
+  <h1>Community Guidelines</h1>
+  <p class="updated">Last updated: September 2026</p>
+  <p class="intro">ThanQYou is a space to connect, share, and earn together. These guidelines exist to keep it safe and respectful for everyone. By using ThanQYou, you agree to follow them &mdash; on every post, reel, chat, and profile.</p>
+
+  <div class="rule"><h3><span class="num">1</span>No nudity or sexual content</h3><p>Do not post, share, or send sexually explicit content, nudity, or content sexualizing minors. This applies to posts, reels, stories, profile photos, and direct messages.</p></div>
+  <div class="rule"><h3><span class="num">2</span>No hate speech</h3><p>Content that attacks or demeans people based on race, ethnicity, religion, caste, gender, sexual orientation, disability, or nationality is not allowed.</p></div>
+  <div class="rule"><h3><span class="num">3</span>No violence or graphic content</h3><p>Do not post content that depicts, glorifies, or threatens violence, self-harm, or graphic injury.</p></div>
+  <div class="rule"><h3><span class="num">4</span>No spam or fake engagement</h3><p>Do not use bots, fake accounts, or coordinated activity to inflate likes, views, follows, or earnings. Do not repeatedly post irrelevant or repetitive content.</p></div>
+  <div class="rule"><h3><span class="num">5</span>No copyright or IP infringement</h3><p>Only post content you own or have the right to share. Do not upload copyrighted music, videos, or images without permission.</p></div>
+  <div class="rule"><h3><span class="num">6</span>No illegal content or activity</h3><p>Do not use ThanQYou to promote, sell, or coordinate anything illegal, including drugs, weapons, or fraud.</p></div>
+  <div class="rule"><h3><span class="num">7</span>No impersonation</h3><p>Do not create accounts pretending to be another real person, business, or organization you're not authorized to represent.</p></div>
+
+  <div class="enforce">
+    <h2>How we enforce this</h2>
+    <p>Every user can report a post or a profile directly in the app, and block anyone they don't want to interact with. Reports are reviewed by our team, and confirmed violations can result in:</p>
+    <ul>
+      <li>Removal of the specific content</li>
+      <li>A warning to the account</li>
+      <li>Temporary or permanent suspension of the account</li>
+      <li>Forfeiture of pending earnings tied to the violation</li>
+    </ul>
+    <p style="margin-top:14px">Questions or appeals: <a href="mailto:support@thanqyou.com" style="color:var(--wine);font-weight:600">support@thanqyou.com</a></p>
+  </div>
+</main>
+<footer>
+  &copy; 2026 ThanQYou. All rights reserved. &nbsp;|&nbsp; <a href="/">Home</a>
+</footer>
+</body>
+</html>
+'''
+
+
+def main():
+    if len(sys.argv) < 2:
+        fail("Usage: python build_community_guidelines_page.py <path-to-website-repo-root>")
+    root = Path(sys.argv[1])
+    if not root.exists():
+        fail(f"{root} not found.")
+
+    page_path = root / "community-guidelines.html"
+    page_path.write_text(PAGE_HTML, encoding="utf-8", newline="\r\n")
+    print(f"Created: {page_path}")
+
+    index_path = root / "index.html"
+    if not index_path.exists():
+        fail(f"{index_path} not found -- footer link not added.")
+    text = index_path.read_text(encoding="utf-8")
+
+    if "community-guidelines.html" in text:
+        print("SKIP: footer link already present.")
+        return
+
+    old_footer = (
+        '    <p class="fcopy">\u00a9 2026 ThanQYou. All rights reserved.</p>\n'
+        '    <a href="/admin/">Admin</a>'
+    )
+    if old_footer not in text:
+        fail("Could not find the footer anchor to add the link -- add manually: "
+             '<a href="/community-guidelines.html">Community Guidelines</a>')
+    new_footer = (
+        '    <p class="fcopy">\u00a9 2026 ThanQYou. All rights reserved.</p>\n'
+        '    <a href="/community-guidelines.html">Community Guidelines</a>\n'
+        '    <a href="/admin/">Admin</a>'
+    )
+    text = text.replace(old_footer, new_footer, 1)
+    index_path.write_text(text, encoding="utf-8", newline="\r\n")
+    print(f"Patched: {index_path} (footer link added)")
+
+
+if __name__ == "__main__":
+    main()
