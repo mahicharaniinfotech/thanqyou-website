@@ -80,6 +80,11 @@
   .stat-card .stat-change { font-size:12px; color:var(--grey); }
   .stat-card .stat-change.up { color:var(--green); }
   .stat-card .stat-change.down { color:var(--red); }
+  .dash-filter { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:16px; }
+  .dash-filter-label { font-size:11px; font-weight:600; color:var(--grey); text-transform:uppercase; letter-spacing:1px; margin-right:4px; }
+  .dash-filter label { font-size:12px; color:var(--grey); display:flex; align-items:center; gap:6px; }
+  .dash-filter input[type=date] { background:var(--dark3); border:1px solid var(--dark4); border-radius:8px; padding:6px 8px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
+  .dash-filter .action-btn.active { border-color:var(--red); color:var(--red); }
 
   /* CHARTS */
   .charts-grid { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:24px; }
@@ -354,6 +359,16 @@
 
       <!-- DASHBOARD -->
       <div class="page active" id="page-dashboard">
+        <div class="dash-filter">
+          <span class="dash-filter-label">Filter by date</span>
+          <label>From <input type="date" id="dash-from" onchange="setDashRange()"></label>
+          <label>To <input type="date" id="dash-to" onchange="setDashRange()"></label>
+          <button class="action-btn" data-preset="today" onclick="setDashPreset('today')">Today</button>
+          <button class="action-btn" data-preset="yesterday" onclick="setDashPreset('yesterday')">Yesterday</button>
+          <button class="action-btn" data-preset="7d" onclick="setDashPreset('7d')">Last 7 days</button>
+          <button class="action-btn" data-preset="month" onclick="setDashPreset('month')">This month</button>
+          <button class="action-btn active" data-preset="all" onclick="setDashPreset('all')">All time</button>
+        </div>
         <div class="stats-grid" id="dash-stats">
           <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value" id="s-users">—</div><div class="stat-change" id="s-users-c">Loading...</div></div>
           <div class="stat-card"><div class="stat-label">Total Posts</div><div class="stat-value" id="s-posts">—</div><div class="stat-change" id="s-posts-c">Loading...</div></div>
@@ -911,28 +926,13 @@ function refreshCurrentPage() {
 async function loadDashboard() {
   const [users, posts, txns, kyc] = await Promise.all([
     query('users', 'select=firebase_uid,display_name,email,referred_by,created_at&order=created_at.desc'),
-    query('posts', 'select=id,media_types&is_deleted=eq.false'),
-    query('wallet_transactions', 'select=rupees,type'),
-    query('user_kyc', 'select=id,status')
+    query('posts', 'select=id,media_types,created_at&is_deleted=eq.false'),
+    query('wallet_transactions', 'select=rupees,type,created_at'),
+    query('user_kyc', 'select=id,status,submitted_at')
   ]);
 
-  document.getElementById('s-users').textContent = users.length || 0;
-  const today = new Date().toISOString().substring(0,10);
-  const newToday = (users||[]).filter(u => u.created_at?.startsWith(today)).length;
-  document.getElementById('s-users-c').textContent = `+${newToday} today`;
-
-  document.getElementById('s-posts').textContent = posts.length || 0;
-  const reels = (posts||[]).filter(p => (p.media_types||[]).includes('video')).length;
-  document.getElementById('s-posts-c').textContent = `${reels} reels`;
-
-  const totalEarn = (txns || []).reduce((s,t) => s + parseFloat(t.rupees||0), 0);
-  document.getElementById('s-earn').textContent = `₹${totalEarn.toFixed(2)}`;
-  const todayEarn = (txns||[]).filter(t=>t.created_at?.startsWith(today)).reduce((s,t)=>s+parseFloat(t.rupees||0),0);
-  document.getElementById('s-earn-c').textContent = `₹${todayEarn.toFixed(2)} today`;
-
-  const pendingKYC = (kyc || []).filter(k => k.status === 'pending').length;
-  document.getElementById('s-kyc').textContent = pendingKYC;
-  document.getElementById('s-kyc-c').textContent = pendingKYC > 0 ? '⚠️ Needs review' : '✓ All reviewed';
+  window._dashStats = { users: users||[], posts: posts||[], txns: txns||[], kyc: kyc||[] };
+  renderDashStats();
 
   // Recent users
   const recentBody = document.getElementById('recent-users-body');
@@ -943,6 +943,68 @@ async function loadDashboard() {
   }
   window._dashUsers = users || [];
   renderDashUsers();
+}
+
+// Local-time YYYY-MM-DD, so "today" matches the admin's calendar, not UTC
+function localDay(d) {
+  if (!d) return '';
+  const x = new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+}
+
+function setDashPreset(preset) {
+  const now = new Date();
+  let from = '', to = '';
+  if (preset === 'today') { from = to = localDay(now); }
+  else if (preset === 'yesterday') { const y = new Date(now); y.setDate(y.getDate()-1); from = to = localDay(y); }
+  else if (preset === '7d') { const s = new Date(now); s.setDate(s.getDate()-6); from = localDay(s); to = localDay(now); }
+  else if (preset === 'month') { from = localDay(new Date(now.getFullYear(), now.getMonth(), 1)); to = localDay(now); }
+  document.getElementById('dash-from').value = from;
+  document.getElementById('dash-to').value = to;
+  document.querySelectorAll('.dash-filter .action-btn').forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
+  renderDashStats();
+}
+
+function setDashRange() {
+  document.querySelectorAll('.dash-filter .action-btn').forEach(b => b.classList.remove('active'));
+  renderDashStats();
+}
+
+function renderDashStats() {
+  const d = window._dashStats;
+  if (!d) return;
+  const from = document.getElementById('dash-from').value;
+  const to = document.getElementById('dash-to').value;
+  const filtered = from || to;
+  const inRange = ts => { const day = localDay(ts); return !!day && (!from || day >= from) && (!to || day <= to); };
+  const sumRupees = list => list.reduce((s,t) => s + parseFloat(t.rupees||0), 0);
+  const isPendingKYC = k => k.status === 'pending' || k.status === 'pending_admin_review';
+
+  const users = filtered ? d.users.filter(u => inRange(u.created_at)) : d.users;
+  const posts = filtered ? d.posts.filter(p => inRange(p.created_at)) : d.posts;
+  const txns = filtered ? d.txns.filter(t => inRange(t.created_at)) : d.txns;
+  const pendingKYC = d.kyc.filter(k => isPendingKYC(k) && (!filtered || inRange(k.submitted_at))).length;
+  const reels = posts.filter(p => (p.media_types||[]).includes('video')).length;
+
+  document.getElementById('s-users').textContent = users.length;
+  document.getElementById('s-posts').textContent = posts.length;
+  document.getElementById('s-posts-c').textContent = `${reels} reels`;
+  document.getElementById('s-earn').textContent = `₹${sumRupees(txns).toFixed(2)}`;
+  document.getElementById('s-kyc').textContent = pendingKYC;
+
+  if (filtered) {
+    const fmt = s => s ? formatDate(s + 'T00:00:00') : '…';
+    const label = from === to ? `on ${fmt(from)}` : `${fmt(from)} – ${fmt(to)}`;
+    document.getElementById('s-users-c').textContent = `registered ${label}`;
+    document.getElementById('s-posts-c').textContent = `${reels} reels · ${label}`;
+    document.getElementById('s-earn-c').textContent = label;
+    document.getElementById('s-kyc-c').textContent = `submitted ${label}`;
+  } else {
+    const today = localDay(new Date());
+    document.getElementById('s-users-c').textContent = `+${d.users.filter(u => localDay(u.created_at) === today).length} today`;
+    document.getElementById('s-earn-c').textContent = `₹${sumRupees(d.txns.filter(t => localDay(t.created_at) === today)).toFixed(2)} today`;
+    document.getElementById('s-kyc-c').textContent = pendingKYC > 0 ? '⚠️ Needs review' : '✓ All reviewed';
+  }
 }
 
 function filterDashUsers() {
@@ -1211,7 +1273,7 @@ function renderKYC() {
       <td style="font-size:12px;font-family:'DM Mono',monospace">${k.firebase_uid?.substring(0,16)||'—'}...</td>
       <td>${k.id_type||'—'}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${k.id_number||'—'}</td>
-      <td style="font-size:12px">${formatDate(k.submitted_at)}</td>
+      <td style="font-size:12px">${formatDateTime(k.submitted_at)}</td>
       <td>
         <span class="badge ${k.status==='verified'?'badge-green':k.status==='rejected'?'badge-red':k.status==='pending_admin_review'?'badge-orange':'badge-grey'}">${k.status||'pending'}</span>
         ${k.status==='pending_admin_review'&&k.rejection_reason?`<div style="font-size:11px;color:var(--grey);margin-top:4px;max-width:220px">${k.rejection_reason}</div>`:''}
@@ -1220,7 +1282,7 @@ function renderKYC() {
         ${(k.status==='pending'||k.status==='pending_admin_review')?`
           <button class="action-btn success" onclick="approveKYC('${k.id}','${k.firebase_uid}')">Approve</button>
           <button class="action-btn danger" onclick="rejectKYC('${k.id}','${k.firebase_uid}')">Reject</button>
-        `:`<span style="font-size:12px;color:var(--grey)">${k.reviewed_at?formatDate(k.reviewed_at):'—'}</span>`}
+        `:`<span style="font-size:12px;color:var(--grey)">${k.reviewed_at?formatDateTime(k.reviewed_at):'—'}</span>`}
       </div></td>
     </tr>
   `).join('');
