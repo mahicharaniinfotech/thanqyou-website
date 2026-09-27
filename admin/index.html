@@ -870,9 +870,9 @@
             <div class="form-group">
               <label>Target</label>
               <select id="notif-target">
-                <option value="all">All Users</option>
+                <option value="all">All users</option>
                 <option value="active">Active Users (last 7 days)</option>
-                <option value="no_kyc">No KYC Users</option>
+                <option value="no_kyc">Users without verified KYC</option>
               </select>
             </div>
           </div>
@@ -880,12 +880,12 @@
             <label>Message</label>
             <textarea id="notif-body" placeholder="Write your notification message..."></textarea>
           </div>
-          <button class="btn btn-red" onclick="sendNotification()">Send Notification</button>
+          <button class="btn btn-red" id="notif-send-btn" onclick="sendNotification()">Send Notification</button>
         </div>
         <div class="table-card">
           <div class="table-header"><h3>Notification History</h3></div>
-          <table><thead><tr><th>Title</th><th>Message</th><th>Target</th><th>Sent At</th></tr></thead>
-          <tbody id="notif-body-table"><tr><td colspan="4"><div class="empty-state"><p>No notifications sent yet</p></div></td></tr></tbody></table>
+          <table><thead><tr><th>Title</th><th>Message</th><th>Target</th><th>Delivered</th><th>Sent At</th></tr></thead>
+          <tbody id="notif-body-table"><tr><td colspan="5"><div class="empty-state"><p>No notifications sent yet</p></div></td></tr></tbody></table>
         </div>
       </div>
 
@@ -1192,7 +1192,7 @@ function showPage(name, el) {
   const loaders = {
     dashboard: loadDashboard, users: loadUsers, content: loadContent, reports: loadReports,
     kyc: loadKYC, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts,
-    analytics: loadAnalytics, settings: loadSettings
+    analytics: loadAnalytics, notifications: loadNotifications, settings: loadSettings
   };
   if (loaders[name]) loaders[name]();
 }
@@ -1225,7 +1225,7 @@ function refreshCurrentPage() {
   const active = document.querySelector('.nav-item.active');
   const page = active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (page) {
-    const loaders = {dashboard:loadDashboard,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,settings:loadSettings};
+    const loaders = {dashboard:loadDashboard,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
     if (loaders[page]) loaders[page]();
   }
 }
@@ -1975,18 +1975,51 @@ async function loadReferrals() {
 }
 
 // ── NOTIFICATIONS ─────────────────────────────────────
+const NOTIF_TARGETS = { all:'All users', active:'Active (last 7 days)', no_kyc:'No KYC' };
+
 async function sendNotification() {
   const title = document.getElementById('notif-title').value.trim();
   const body = document.getElementById('notif-body').value.trim();
   const target = document.getElementById('notif-target').value;
   if (!title || !body) { showToast('Please fill title and message', 'error'); return; }
-  showToast(`Notification sent to ${target} users ✓`, 'success');
-  document.getElementById('notif-title').value = '';
-  document.getElementById('notif-body').value = '';
+  if (!confirm(`Send "${title}" to ${NOTIF_TARGETS[target]}?\n\nThis pushes to users' phones immediately and cannot be undone.`)) return;
+  const btn = document.getElementById('notif-send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/admin-broadcast-notification`, {
+      method: 'POST',
+      headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body, target })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
+    if (!d.recipients) showToast('No users with the app installed match this target', 'error');
+    else showToast(`Delivered to ${d.delivered} of ${d.recipients} users${d.failed ? ` (${d.failed} failed)` : ''}`, d.failed ? 'error' : 'success');
+    document.getElementById('notif-title').value = '';
+    document.getElementById('notif-body').value = '';
+    loadNotifications();
+  } catch (e) {
+    showToast('Sending failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send Notification';
+  }
+}
+
+async function loadNotifications() {
   const tbody = document.getElementById('notif-body-table');
-  const row = document.createElement('tr');
-  row.innerHTML = `<td style="font-weight:600">${title}</td><td style="font-size:12px">${body}</td><td><span class="badge badge-blue">${target}</span></td><td style="font-size:12px">${new Date().toLocaleString('en-IN')}</td>`;
-  tbody.prepend(row);
+  const rows = await query('admin_notifications', 'select=*&order=created_at.desc&limit=50');
+  if (!rows || !rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>No notifications sent yet</p></div></td></tr>';
+    return;
+  }
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  tbody.innerHTML = rows.map(n => `<tr>
+    <td style="font-weight:600">${esc(n.title)}</td>
+    <td style="font-size:12px;max-width:320px">${esc(n.body)}</td>
+    <td><span class="badge badge-blue">${NOTIF_TARGETS[n.target] || esc(n.target)}</span></td>
+    <td><span class="badge ${n.failed ? 'badge-orange' : 'badge-green'}">${n.delivered} / ${n.recipients}</span></td>
+    <td style="font-size:12px;white-space:nowrap">${formatDateTime(n.created_at)}</td>
+  </tr>`).join('');
 }
 
 // ── SETTINGS ─────────────────────────────────────────
