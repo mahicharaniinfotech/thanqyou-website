@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#221619">
+<meta name="theme-color" content="#075E54">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,7 +21,7 @@
     --line: #ECE8E5;
     --green: #1E8E4E; --orange: #C77712; --blue: #2468B0; --purple: #6E3FA3;
     --sidebar-w: 240px;
-    --sb-bg: #221619; --sb-bg2: #2D1D21; --sb-ink: #EDE3E4; --sb-muted: #A08F92; --sb-accent: #E08A96;
+    --sb-bg: #054D44; --sb-bg2: #075E54; --sb-ink: #E9F7F3; --sb-muted: #A9D3CB; --sb-accent: #25D366;
     --on-accent: #FFFFFF; /* text on --red/colored backgrounds - always white */
     --radius: 14px;
     --shadow-sm: 0 1px 2px rgba(31,26,25,0.04), 0 1px 3px rgba(31,26,25,0.05);
@@ -49,7 +49,7 @@
   #app { display:none; }
   .sidebar { position:fixed; left:0; top:0; width:var(--sidebar-w); height:100vh; background:linear-gradient(180deg, var(--sb-bg2), var(--sb-bg)); padding:20px 12px; z-index:100; display:flex; flex-direction:column; overflow-y:auto; }
   .sidebar-logo { padding:4px 10px 22px; display:flex; align-items:center; gap:12px; }
-  .sidebar-logo .logo-mark { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #9B4450, var(--red)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; box-shadow:0 4px 12px rgba(0,0,0,0.25); flex-shrink:0; }
+  .sidebar-logo .logo-mark { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #25D366, #128C7E); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; box-shadow:0 4px 12px rgba(0,0,0,0.25); flex-shrink:0; }
   .sidebar-logo h2 { font-size:18px; font-weight:800; color:#fff; letter-spacing:-0.3px; line-height:1.1; }
   .sidebar-logo span { font-size:11px; color:var(--sb-muted); }
   .nav-item { display:flex; align-items:center; gap:12px; padding:9px 12px; cursor:pointer; border-radius:9px; transition:background 0.15s, color 0.15s; font-size:14px; font-weight:500; color:var(--sb-muted); margin:2px 0; position:relative; }
@@ -58,10 +58,10 @@
   .nav-item.active::before { content:''; position:absolute; left:-12px; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--sb-accent); }
   .nav-item.active svg { color:var(--sb-accent); }
   .nav-item svg { width:17px; height:17px; flex-shrink:0; }
-  .nav-section { padding:16px 12px 6px; font-size:10px; font-weight:700; color:#7C6A6E; text-transform:uppercase; letter-spacing:1.4px; }
+  .nav-section { padding:16px 12px 6px; font-size:10px; font-weight:700; color:#7FBFB3; text-transform:uppercase; letter-spacing:1.4px; }
   .sidebar-bottom { margin-top:auto; padding:14px 10px 4px; border-top:1px solid rgba(255,255,255,0.08); }
   .admin-badge { display:flex; align-items:center; gap:10px; }
-  .admin-avatar { width:34px; height:34px; background:linear-gradient(135deg, #9B4450, var(--red)); color:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+  .admin-avatar { width:34px; height:34px; background:linear-gradient(135deg, #25D366, #128C7E); color:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
   .admin-info { flex:1; min-width:0; }
   .admin-info p { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--sb-ink); }
   .admin-info span { font-size:10px; color:var(--sb-muted); }
@@ -613,7 +613,7 @@
           </div>
           <div class="stat-card">
             <div class="kpi-top">
-              <div><div class="stat-label">Pending KYC</div><div class="stat-value" id="s-kyc">—</div></div>
+              <div><div class="stat-label">KYC completed</div><div class="stat-value" id="s-kyc">—</div></div>
               <div class="kpi-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
             </div>
             <div class="kpi-foot"><span id="s-kyc-d"></span><span class="stat-change" id="s-kyc-c">Loading...</span></div>
@@ -1234,7 +1234,7 @@ function refreshCurrentPage() {
 // Categorical order validated for colour-blind separation; slot 1 is the brand-adjacent rose
 const DASH_SERIES = ['#b8475a','#2a78d6','#eda100','#1baf7a','#4a3aa7','#e87ba4'];
 const DASH_OTHER = '#b9b2ad';
-const DASH_STATUS = { pending:'#fab219', verified:'#0ca30c', rejected:'#d03b3b' };
+const DASH_STATUS = { verified:'#0ca30c', pending:'#fab219', rejected:'#d03b3b', notStarted:'#d8d2cf' };
 
 async function loadDashboard() {
   document.getElementById('topbar-date').textContent =
@@ -1243,7 +1243,7 @@ async function loadDashboard() {
     query('users', 'select=firebase_uid,display_name,email,gender,referred_by,created_at&order=created_at.desc'),
     query('posts', 'select=id,media_types,created_at&is_deleted=eq.false'),
     query('wallet_transactions', 'select=rupees,type,created_at'),
-    query('user_kyc', 'select=id,status,submitted_at')
+    query('user_kyc', 'select=id,firebase_uid,status,submitted_at')
   ]);
 
   window._dashStats = { users: users||[], posts: posts||[], txns: txns||[], kyc: kyc||[] };
@@ -1263,6 +1263,7 @@ function dayList(from, to) { const out = []; for (let d = from; d <= to && out.l
 function fmtDay(day) { return formatDate(day + 'T00:00:00'); }
 function fmtINR(n) { return '₹' + n.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function prettyType(t) { const s = String(t || 'other').replace(/_/g, ' '); return s.charAt(0).toUpperCase() + s.slice(1); }
+const KYC_LABELS = { verified:'Verified', pending:'Pending review', rejected:'Rejected', notStarted:'Not started' };
 function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pending_admin_review'; }
 
 // ── DATE RANGE FILTER (shared by Dashboard, Users, Content) ──
@@ -1352,8 +1353,17 @@ function renderDashStats() {
   const users = d.users.filter(u => inRange(u.created_at, from, to));
   const posts = d.posts.filter(p => inRange(p.created_at, from, to));
   const txns = d.txns.filter(t => inRange(t.created_at, from, to));
-  const kyc = filtered ? d.kyc.filter(k => inRange(k.submitted_at, from, to)) : d.kyc;
-  const pendingKYC = kyc.filter(isPendingKYC).length;
+  // KYC is measured against users registered in the range, so people who never started count too
+  const kycByUid = {};
+  d.kyc.forEach(k => { kycByUid[k.firebase_uid] = k; });
+  const kycCounts = { verified:0, pending:0, rejected:0, notStarted:0 };
+  users.forEach(u => {
+    const k = kycByUid[u.firebase_uid];
+    if (!k) kycCounts.notStarted++;
+    else if (k.status === 'verified') kycCounts.verified++;
+    else if (k.status === 'rejected') kycCounts.rejected++;
+    else kycCounts.pending++;
+  });
   const reels = posts.filter(p => (p.media_types||[]).includes('video')).length;
   const earn = sumRupees(txns);
 
@@ -1363,7 +1373,7 @@ function renderDashStats() {
   $('s-users').textContent = users.length.toLocaleString('en-IN');
   $('s-posts').textContent = posts.length.toLocaleString('en-IN');
   $('s-earn').textContent = fmtINR(earn);
-  $('s-kyc').textContent = pendingKYC;
+  $('s-kyc').textContent = `${kycCounts.verified} / ${users.length}`;
 
   if (from && to) {
     // Compare with the same number of days immediately before the range
@@ -1391,8 +1401,10 @@ function renderDashStats() {
     $('s-posts-c').textContent = `${reels} reels`;
     $('s-earn-c').textContent = '';
   }
-  $('s-kyc-d').innerHTML = pendingKYC > 0 ? '<span class="chip warn">⚠ Needs review</span>' : '<span class="chip up">✓ All clear</span>';
-  $('s-kyc-c').textContent = filtered ? `submitted ${label}` : '';
+  $('s-kyc-d').innerHTML = kycCounts.pending ? `<span class="chip warn">⚠ ${kycCounts.pending} awaiting review</span>`
+    : kycCounts.verified === users.length && users.length ? '<span class="chip up">✓ All verified</span>'
+    : `<span class="chip flat">${users.length - kycCounts.verified} not completed</span>`;
+  $('s-kyc-c').textContent = kycCounts.pending ? `${kycCounts.notStarted} not started` : '';
 
   // Trend window: the selected range, or the 14 days ending at the selected/today date
   let days;
@@ -1411,14 +1423,8 @@ function renderDashStats() {
   drawSpark('spark-posts', poSeries, DASH_SERIES[1]);
   drawSpark('spark-earn', erSeries, DASH_SERIES[3]);
 
-  const kycCounts = {
-    pending: kyc.filter(isPendingKYC).length,
-    verified: kyc.filter(k => k.status === 'verified').length,
-    rejected: kyc.filter(k => k.status === 'rejected').length
-  };
-  const kycTotal = kycCounts.pending + kycCounts.verified + kycCounts.rejected;
-  $('kyc-mini').innerHTML = kycTotal ? Object.keys(kycCounts).filter(k => kycCounts[k])
-    .map(k => `<span style="flex:${kycCounts[k]};background:${DASH_STATUS[k]}" title="${prettyType(k)}: ${kycCounts[k]}"></span>`).join('') : '';
+  $('kyc-mini').innerHTML = users.length ? Object.keys(kycCounts).filter(k => kycCounts[k])
+    .map(k => `<span style="flex:${kycCounts[k]};background:${DASH_STATUS[k]}" title="${KYC_LABELS[k]}: ${kycCounts[k]}"></span>`).join('') : '';
 
   $('trend-sub').textContent = `Daily · ${fmtDay(days[0])} – ${fmtDay(days[days.length-1])}`;
   $('earn-sub').textContent = label;
@@ -1519,11 +1525,9 @@ function breakdownRow(name, count, total, color) {
 
 function renderBreakdowns(kycCounts, reels, totalPosts) {
   const row = breakdownRow;
-  const kycTotal = kycCounts.pending + kycCounts.verified + kycCounts.rejected;
+  const kycTotal = kycCounts.verified + kycCounts.pending + kycCounts.rejected + kycCounts.notStarted;
   document.getElementById('kyc-breakdown').innerHTML =
-    row('Pending review', kycCounts.pending, kycTotal, DASH_STATUS.pending) +
-    row('Verified', kycCounts.verified, kycTotal, DASH_STATUS.verified) +
-    row('Rejected', kycCounts.rejected, kycTotal, DASH_STATUS.rejected);
+    Object.keys(KYC_LABELS).map(k => row(KYC_LABELS[k], kycCounts[k], kycTotal, DASH_STATUS[k])).join('');
   document.getElementById('content-breakdown').innerHTML =
     row('Reels / videos', reels, totalPosts, DASH_SERIES[1]) +
     row('Photos & text', totalPosts - reels, totalPosts, DASH_SERIES[0]);
