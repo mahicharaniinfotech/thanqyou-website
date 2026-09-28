@@ -302,6 +302,9 @@
   #cp-overlay > div { max-width:calc(100vw - 32px); box-shadow:0 20px 50px rgba(31,26,25,0.2); }
 
   /* RESPONSIVE */
+  /* Wide tables scroll inside their card instead of clipping the last columns */
+  .table-card { overflow-x:auto; }
+  @media (max-width:1440px) { thead th, td { padding-left:14px; padding-right:14px; } }
   @media (max-width:1280px) { .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width:1100px) { .charts-grid, .dash-bottom { grid-template-columns:minmax(0,1fr); } }
 
@@ -645,7 +648,7 @@
               <h3>Recent signups</h3>
               <div class="search-box">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input id="dash-search" placeholder="Search name or email..." oninput="filterDashUsers()">
+                <input id="dash-search" placeholder="Search name, @username, email..." oninput="filterDashUsers()">
               </div>
             </div>
             <table><thead><tr><th>User</th><th>Email</th><th>Joined</th><th>Referral</th></tr></thead>
@@ -679,7 +682,7 @@
             <h3>Users</h3>
             <div class="search-box">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input id="user-search" placeholder="Search name, phone..." oninput="filterUsers()">
+              <input id="user-search" placeholder="Search name, @username, email..." oninput="filterUsers()">
             </div>
             <select id="user-filter" onchange="filterUsers()" style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
               <option value="">Everyone</option>
@@ -1230,6 +1233,21 @@ function refreshCurrentPage() {
   }
 }
 
+// ── SOCIAL HANDLES ────────────────────────────────────
+// firebase_uid -> @username_handle from the user's social profile (if they created one)
+let socialHandles = {};
+async function loadSocialHandles() {
+  const rows = await query('social_accounts', 'select=firebase_uid,username_handle,username');
+  socialHandles = {};
+  (rows || []).forEach(a => { const h = a.username_handle || a.username; if (a.firebase_uid && h) socialHandles[a.firebase_uid] = h; });
+}
+function socialHandleLine(uid) {
+  const h = socialHandles[uid];
+  return h
+    ? `<div style="font-size:11px;color:var(--grey)">@${String(h).replace(/[&<>"]/g, '')}</div>`
+    : '<div style="font-size:11px;color:var(--grey);font-style:italic">No social profile</div>';
+}
+
 // ── DASHBOARD ─────────────────────────────────────────
 // Categorical order validated for colour-blind separation; slot 1 is the brand-adjacent rose
 const DASH_SERIES = ['#b8475a','#2a78d6','#eda100','#1baf7a','#4a3aa7','#e87ba4'];
@@ -1248,6 +1266,7 @@ async function loadDashboard() {
 
   window._dashStats = { users: users||[], posts: posts||[], txns: txns||[], kyc: kyc||[] };
   window._dashUsers = users || [];
+  await loadSocialHandles();
   renderDashStats();
   renderDashUsers();
 }
@@ -1543,7 +1562,8 @@ function renderDashUsers() {
   const filtered = search ? users.filter(u =>
     (u.display_name||'').toLowerCase().includes(search) ||
     (u.phone||'').includes(search) ||
-    (u.email||'').toLowerCase().includes(search)
+    (u.email||'').toLowerCase().includes(search) ||
+    (socialHandles[u.firebase_uid]||'').toLowerCase().includes(search.replace(/^@/, ''))
   ) : users.slice(0,8);
   const recentBody = document.getElementById('recent-users-body');
   if (!filtered.length) {
@@ -1552,7 +1572,7 @@ function renderDashUsers() {
   }
   recentBody.innerHTML = filtered.slice(0,20).map(u => `
     <tr>
-      <td><div class="avatar-cell"><div class="av" style="background:${colorFor(u.firebase_uid)}">${initials(u.display_name)}</div><div><div style="font-weight:600">${u.display_name||'—'}</div><div style="font-size:10px;color:var(--grey);font-family:'DM Mono',monospace">${u.firebase_uid?.substring(0,20)}...</div></div></div></td>
+      <td><div class="avatar-cell"><div class="av" style="background:${colorFor(u.firebase_uid)}">${initials(u.display_name)}</div><div><div style="font-weight:600">${u.display_name||'—'}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
       <td style="font-size:12px">${u.email||'—'}</td>
       <td style="font-size:12px;white-space:nowrap">${formatDateTime(u.created_at)}</td>
       <td>${u.referred_by ? '<span class="badge badge-green">Referred</span>' : '<span class="badge badge-grey">Direct</span>'}</td>
@@ -1576,6 +1596,7 @@ async function loadUsers() {
   (wallets||[]).forEach(w => walletMap[w.firebase_uid] = w);
   const kycMap = {};
   (kycData||[]).forEach(k => kycMap[k.firebase_uid] = k);
+  await loadSocialHandles();
   usersData = (data || []).map(u => ({
     ...u,
     _wallet: walletMap[u.firebase_uid] || null,
@@ -1597,7 +1618,7 @@ function getFilteredUsers() {
   const search = document.getElementById('user-search').value.toLowerCase();
   const filter = document.getElementById('user-filter').value;
   return usersInRange().filter(u => {
-    const matchSearch = !search || (u.display_name||'').toLowerCase().includes(search) || (u.phone||'').includes(search) || (u.email||'').toLowerCase().includes(search);
+    const matchSearch = !search || (u.display_name||'').toLowerCase().includes(search) || (u.phone||'').includes(search) || (u.email||'').toLowerCase().includes(search) || (socialHandles[u.firebase_uid]||'').toLowerCase().includes(search.replace(/^@/, ''));
     const g = genderOf(u);
     const matchFilter = !filter
       || (filter === 'male' && g === 'male')
@@ -1635,7 +1656,7 @@ function renderUsers() {
       : `<span class="badge ${u._kyc.status==='verified'?'badge-green':u._kyc.status==='rejected'?'badge-red':'badge-orange'}">${prettyType(u._kyc.status)}</span>`;
     return `
     <tr>
-      <td><div class="avatar-cell"><div class="av" style="background:${colorFor(u.firebase_uid)}">${initials(u.display_name)}</div><div><div style="font-weight:600">${u.display_name||'—'}</div><div style="font-size:11px;color:var(--grey)">${u.firebase_uid?.substring(0,18)}...</div></div></div></td>
+      <td><div class="avatar-cell"><div class="av" style="background:${colorFor(u.firebase_uid)}">${initials(u.display_name)}</div><div><div style="font-weight:600">${u.display_name||'—'}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
       <td style="font-size:12px">${u.email||'—'}</td>
       <td style="font-size:12px;color:${g==='unspecified'?'var(--grey)':'inherit'}">${GENDER_META[g][0]}</td>
       <td style="font-weight:600;color:var(--green)">${u._wallet ? '₹' + (u._wallet.balance/100).toFixed(2) : '₹0.00'}</td>
