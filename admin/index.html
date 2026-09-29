@@ -299,6 +299,26 @@
   .tool-select { background:var(--dark2); border:1px solid var(--dark4); border-radius:9px; padding:7px 10px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
   .metrics-tabs { margin-bottom:16px; }
   .metrics-kpis { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  .mode-switch { display:inline-flex; background:var(--dark3); border-radius:10px; padding:3px; gap:2px; }
+  .mode-switch label { position:relative; cursor:pointer; }
+  .mode-switch input { position:absolute; opacity:0; pointer-events:none; }
+  .mode-switch span { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; font-size:13px; font-weight:600; color:var(--grey2); transition:all 0.15s; white-space:nowrap; }
+  .mode-switch span::before { content:''; width:12px; height:12px; border-radius:50%; border:2px solid currentColor; box-sizing:border-box; }
+  .mode-switch input:checked + span { background:var(--dark2); color:var(--white); box-shadow:var(--shadow-sm); }
+  .mode-switch input:checked + span::before { border-color:#128C7E; background:radial-gradient(circle, #128C7E 0 3px, transparent 3.5px); }
+  .mode-switch input:focus-visible + span { outline:2px solid #128C7E; outline-offset:1px; }
+  body.mode-business .topbar { box-shadow:inset 0 -2px 0 #25D366; }
+  .nav-count { margin-left:auto; background:#25D366; color:#063; font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px; }
+  .nav-count:empty { display:none; }
+  .biz-logo { width:34px; height:34px; border-radius:9px; flex-shrink:0; background:var(--dark3) center/cover no-repeat; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; }
+  .biz-logo.lg { width:56px; height:56px; border-radius:14px; font-size:18px; }
+  .attn-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .attn-row:last-child { border-bottom:none; }
+  .biz-section { margin-top:18px; }
+  .biz-section h3 { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--grey); margin-bottom:10px; }
+  .biz-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .empty-cta { text-align:center; padding:36px 20px; color:var(--grey); font-size:13px; line-height:1.6; }
+  .empty-cta b { color:var(--white); display:block; font-size:15px; margin-bottom:4px; }
   @media (max-width:1280px) { .metrics-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); } }
   #page-metrics thead th { white-space:normal; line-height:1.3; vertical-align:bottom; }
   #page-metrics td, #page-metrics thead th { padding-left:12px; padding-right:12px; }
@@ -404,6 +424,10 @@
     input, select, textarea { font-size:16px !important; }
 
     .th-tools { width:100%; }
+    .mode-switch { order:10; width:100%; }
+    .mode-switch label { flex:1; }
+    .mode-switch span { width:100%; justify-content:center; }
+    .topbar { flex-wrap:wrap; }
     .th-tools .search-box { flex:1 1 100%; }
     .th-tools select, .th-tools .btn { flex:1 1 auto; justify-content:center; }
     .notif-form { padding:18px 16px; }
@@ -491,6 +515,7 @@
         <span>Admin Panel</span>
       </div>
     </div>
+    <div class="nav-group" data-mode="individual">
     <div class="nav-section">Overview</div>
     <div class="nav-item active" onclick="showPage('dashboard',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -534,6 +559,34 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
       Analytics
     </div>
+    </div>
+    <div class="nav-group" data-mode="business" style="display:none">
+    <div class="nav-section">Business</div>
+    <div class="nav-item" onclick="showPage('biz',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overview
+    </div>
+    <div class="nav-item" onclick="showPage('businesses',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M10 20v-5h4v5"/></svg>
+      Businesses
+    </div>
+    <div class="nav-item" onclick="showPage('kyb',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      KYB Verification <span class="nav-count" id="nav-kyb-count"></span>
+    </div>
+    <div class="nav-item" onclick="showPage('bsubs',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Subscriptions
+    </div>
+    <div class="nav-item" onclick="showPage('promos',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      Promoted Posts <span class="nav-count" id="nav-promo-count"></span>
+    </div>
+    <div class="nav-item" onclick="showPage('metrics',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Reels &amp; Reach
+    </div>
+    </div>
     <div class="nav-section">Communication</div>
     <div class="nav-item" onclick="showPage('notifications',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -563,11 +616,18 @@
 
   <!-- MOBILE: drawer scrim + bottom tab bar -->
   <div class="drawer-scrim" onclick="closeDrawer()"></div>
-  <nav class="bottom-nav" aria-label="Primary">
+  <nav class="bottom-nav" aria-label="Primary" data-mode="individual">
     <button data-page="dashboard" class="active" onclick="goPage('dashboard')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Home</button>
     <button data-page="users" onclick="goPage('users')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Users</button>
     <button data-page="content" onclick="goPage('content')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>Content</button>
     <button data-page="kyc" onclick="goPage('kyc')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>KYC</button>
+    <button data-page="more" onclick="openDrawer()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
+  </nav>
+  <nav class="bottom-nav" aria-label="Business" data-mode="business" style="display:none">
+    <button data-page="biz" onclick="goPage('biz')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview</button>
+    <button data-page="businesses" onclick="goPage('businesses')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M10 20v-5h4v5"/></svg>Businesses</button>
+    <button data-page="kyb" onclick="goPage('kyb')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>KYB</button>
+    <button data-page="promos" onclick="goPage('promos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>Promos</button>
     <button data-page="more" onclick="openDrawer()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>More</button>
   </nav>
 
@@ -601,6 +661,10 @@
       <div class="topbar-titles">
         <h1 id="page-title">Dashboard</h1>
         <div class="topbar-sub" id="topbar-date"></div>
+      </div>
+      <div class="mode-switch" role="radiogroup" aria-label="Account type">
+        <label><input type="radio" name="acct-mode" value="individual" checked onchange="setAccountMode(this.value)"><span>Individual</span></label>
+        <label><input type="radio" name="acct-mode" value="business" onchange="setAccountMode(this.value)"><span>Business</span></label>
       </div>
       <div class="topbar-actions">
         <span class="live-pill"><span class="live-dot"></span><span class="btn-text">Live</span></span>
@@ -741,6 +805,112 @@
           <tbody id="mu-body"><tr><td colspan="11"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
         </div>
         <p class="metrics-note"><b>Reach</b> = unique people who watched · <b>Plays</b> = every time the reel was started (repeat watches included) · <b>Counted views</b> = views that qualified for the public view counter · Hours are in IST.</p>
+      </div>
+
+      <!-- BUSINESS: OVERVIEW -->
+      <div class="page" id="page-biz">
+        <div class="dash-head page-head">
+          <div><h2>Business overview</h2><p id="biz-range-label">This month</p></div>
+          <div class="dash-filter" data-range="biz" data-default="month"></div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Business accounts</div><div class="stat-value" id="bz-total">—</div></div><div class="kpi-icon wine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M10 20v-5h4v5"/></svg></div></div><div class="kpi-foot"><span id="bz-total-d"></span><span class="stat-change" id="bz-total-c"></span></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">KYB verified</div><div class="stat-value" id="bz-kyb">—</div></div><div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div></div><div class="kpi-foot"><span id="bz-kyb-d"></span></div><div class="kyc-mini" id="bz-kyb-bar"></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Active subscriptions</div><div class="stat-value" id="bz-subs">—</div></div><div class="kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="bz-subs-c"></span></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Promos awaiting review</div><div class="stat-value" id="bz-promo">—</div></div><div class="kpi-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></div></div><div class="kpi-foot"><span id="bz-promo-d"></span></div></div>
+        </div>
+        <div class="mini-stats metrics-kpis">
+          <div class="mini-stat"><div class="ms-val" id="bz-imp">—</div><div class="ms-label">Promo impressions</div></div>
+          <div class="mini-stat"><div class="ms-val" id="bz-clicks">—</div><div class="ms-label">Promo clicks</div></div>
+          <div class="mini-stat"><div class="ms-val" id="bz-ctr">—</div><div class="ms-label">Click-through rate</div></div>
+          <div class="mini-stat"><div class="ms-val" id="bz-posts">—</div><div class="ms-label">Business posts</div></div>
+          <div class="mini-stat"><div class="ms-val" id="bz-plays">—</div><div class="ms-label">Reel plays</div></div>
+          <div class="mini-stat"><div class="ms-val" id="bz-reach">—</div><div class="ms-label">People reached</div></div>
+        </div>
+        <div class="dash-bottom">
+          <div class="table-card">
+            <div class="table-header"><h3>Top businesses in this period</h3></div>
+            <table><thead><tr><th>Business</th><th>KYB</th><th>Subscription</th><th>Reach</th><th>Promo impressions</th><th>Clicks</th></tr></thead>
+            <tbody id="bz-top-body"></tbody></table>
+          </div>
+          <div class="chart-card">
+            <div class="side-title">Needs your attention</div>
+            <div id="bz-attention"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUSINESS: LIST -->
+      <div class="page" id="page-businesses">
+        <div class="dash-head page-head">
+          <div><h2>Businesses</h2><p id="bizlist-range-label">Activity: this month</p></div>
+          <div class="dash-filter" data-range="bizlist" data-default="month"></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <h3>All business accounts</h3>
+            <div class="th-tools">
+              <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="bl-search" placeholder="Search business, owner, city..." oninput="renderBusinessList()"></div>
+              <select id="bl-kyb" class="tool-select" onchange="renderBusinessList()"><option value="">Any KYB status</option><option value="review">Needs review</option><option value="verified">Verified</option><option value="rejected">Rejected</option><option value="incomplete">Profile incomplete</option></select>
+              <select id="bl-sub" class="tool-select" onchange="renderBusinessList()"><option value="">Any subscription</option><option value="active">Active</option><option value="none">No active plan</option></select>
+            </div>
+          </div>
+          <table><thead><tr><th>Business</th><th>Owner</th><th>Location</th><th>KYB</th><th>Subscription</th><th>Posts</th><th>Reach</th><th>Promo impressions</th><th>Joined</th><th></th></tr></thead>
+          <tbody id="bl-body"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- BUSINESS: KYB -->
+      <div class="page" id="page-kyb">
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="ms-val" id="kyb-review">—</div><div class="ms-label">Needs review</div></div>
+          <div class="mini-stat"><div class="ms-val" id="kyb-verified">—</div><div class="ms-label">Verified</div></div>
+          <div class="mini-stat"><div class="ms-val" id="kyb-rejected">—</div><div class="ms-label">Rejected</div></div>
+          <div class="mini-stat"><div class="ms-val" id="kyb-incomplete">—</div><div class="ms-label">Profile incomplete</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <h3>KYB submissions</h3>
+            <select id="kyb-filter" class="tool-select" onchange="renderKyb()"><option value="review">Needs review</option><option value="verified">Verified</option><option value="rejected">Rejected</option><option value="">All</option></select>
+          </div>
+          <table><thead><tr><th>Business</th><th>Category</th><th>GSTIN</th><th>PAN</th><th>Contact</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="kyb-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- BUSINESS: SUBSCRIPTIONS -->
+      <div class="page" id="page-bsubs">
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="ms-val" id="bs-active">—</div><div class="ms-label">Active</div></div>
+          <div class="mini-stat"><div class="ms-val" id="bs-mrr">—</div><div class="ms-label">Monthly recurring revenue</div></div>
+          <div class="mini-stat"><div class="ms-val" id="bs-pending">—</div><div class="ms-label">Awaiting payment setup</div></div>
+          <div class="mini-stat"><div class="ms-val" id="bs-lapsed">—</div><div class="ms-label">On hold / cancelled / expired</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Business subscriptions</h3>
+            <select id="bs-filter" class="tool-select" onchange="renderBizSubs()"><option value="">All statuses</option><option value="active">Active</option><option value="pending_authorization">Awaiting payment setup</option><option value="on_hold">On hold</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option></select>
+          </div>
+          <table><thead><tr><th>Business</th><th>Status</th><th>Platform</th><th>Amount</th><th>Started</th><th>Expires</th><th>Next billing</th><th></th></tr></thead>
+          <tbody id="bs-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- BUSINESS: PROMOTED POSTS -->
+      <div class="page" id="page-promos">
+        <div class="dash-head page-head">
+          <div><h2>Promoted posts</h2><p id="promo-range-label">Impressions: last 7 days</p></div>
+          <div class="dash-filter" data-range="promo" data-default="7d"></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Promo review queue</h3>
+            <select id="promo-filter" class="tool-select" onchange="renderPromos()"><option value="pending_review">Awaiting review</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="">All</option></select>
+          </div>
+          <table><thead><tr><th>Post</th><th>Business</th><th>Posted</th><th>Status</th><th>Shown (all time)</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Actions</th></tr></thead>
+          <tbody id="promo-body"><tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+        </div>
+        <p class="metrics-note">Posts from a business with an <b>active subscription</b> land here automatically. Only <b>approved</b> posts are shown in the feed's business slot, and only while the subscription stays active.</p>
       </div>
 
       <!-- USERS -->
@@ -1029,6 +1199,20 @@
   </div>
 </div>
 
+<!-- BUSINESS DETAIL -->
+<div class="modal-overlay" id="biz-modal">
+  <div class="modal modal-wide">
+    <div class="report-head">
+      <div style="display:flex;gap:14px;align-items:center;min-width:0">
+        <div id="bm-logo" class="biz-logo lg"></div>
+        <div style="min-width:0"><h2 id="bm-name" style="margin-bottom:2px">Business</h2><p id="bm-sub" class="report-sub"></p></div>
+      </div>
+      <button class="report-close" onclick="closeModal('biz-modal')" aria-label="Close">×</button>
+    </div>
+    <div id="bm-body"></div>
+  </div>
+</div>
+
 <!-- METRICS DETAIL REPORT -->
 <div class="modal-overlay" id="metrics-modal">
   <div class="modal modal-wide" id="metrics-report">
@@ -1293,7 +1477,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
-  dashboard:'Dashboard', metrics:'Metrics', users:'Users', content:'Content', reports:'Reports', kyc:'KYC Verification',
+  dashboard:'Dashboard', metrics:'Metrics', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', users:'Users', content:'Content', reports:'Reports', kyc:'KYC Verification',
   wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
@@ -1307,7 +1491,7 @@ function showPage(name, el) {
   closeDrawer();
   window.scrollTo(0, 0);
   const loaders = {
-    dashboard: loadDashboard, metrics: loadMetrics, users: loadUsers, content: loadContent, reports: loadReports,
+    dashboard: loadDashboard, metrics: loadMetrics, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, users: loadUsers, content: loadContent, reports: loadReports,
     kyc: loadKYC, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts,
     analytics: loadAnalytics, notifications: loadNotifications, settings: loadSettings
   };
@@ -1316,7 +1500,7 @@ function showPage(name, el) {
 
 // Mobile: bottom tab bar routes through the matching sidebar item so both stay in sync
 function goPage(name) {
-  const nav = [...document.querySelectorAll('.sidebar .nav-item')].find(n => n.getAttribute('onclick').includes(`'${name}'`));
+  const nav = [...document.querySelectorAll(`.sidebar .nav-group[data-mode="${accountMode}"] .nav-item, .sidebar > .nav-item`)].find(n => n.getAttribute('onclick').includes(`'${name}'`));
   if (nav) showPage(name, nav);
 }
 function openDrawer() { document.getElementById('app').classList.add('drawer-open'); }
@@ -1342,9 +1526,356 @@ function refreshCurrentPage() {
   const active = document.querySelector('.nav-item.active');
   const page = active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (page) {
-    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
+    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
     if (loaders[page]) loaders[page]();
   }
+}
+
+// ── ACCOUNT MODE (Individual / Business) ────────────
+// Individual = the original admin, limited to non-business accounts.
+// Business = business profiles, KYB, subscriptions, promos and reach.
+let accountMode = 'individual';
+let businessUids = new Set();
+
+async function loadBusinessUids() {
+  const rows = await query('users', 'select=firebase_uid&account_type=eq.business');
+  businessUids = new Set((rows || []).map(r => r.firebase_uid));
+}
+function onlyIndividualUsers(rows) { return (rows || []).filter(u => u.account_type !== 'business' && !businessUids.has(u.firebase_uid)); }
+function onlyIndividualPosts(rows) { return (rows || []).filter(p => !businessUids.has(p.firebase_uid)); }
+
+function setAccountMode(mode) {
+  accountMode = mode;
+  document.body.classList.toggle('mode-business', mode === 'business');
+  document.querySelectorAll('input[name="acct-mode"]').forEach(r => { r.checked = r.value === mode; });
+  document.querySelectorAll('.nav-group, .bottom-nav').forEach(g => { g.style.display = g.dataset.mode === mode ? '' : 'none'; });
+  goPage(mode === 'business' ? 'biz' : 'dashboard');
+}
+
+// ── BUSINESS MODE ───────────────────────────────────
+let bizList = [], bizSubs = [], promoRows = [];
+const KYB_BADGE = { verified:['badge-green','Verified'], rejected:['badge-red','Rejected'], pending:['badge-orange','Pending review'], unverified:['badge-orange','Awaiting review'] };
+const SUB_BADGE = { active:['badge-green','Active'], pending_authorization:['badge-orange','Awaiting payment setup'], on_hold:['badge-orange','On hold'], cancelled:['badge-grey','Cancelled'], expired:['badge-grey','Expired'] };
+const PROMO_BADGE = { pending_review:['badge-orange','Awaiting review'], approved:['badge-green','Approved'], rejected:['badge-red','Rejected'] };
+
+function allTimeTs() { return { p_from: '2020-01-01T00:00:00Z', p_to: new Date(Date.now() + 864e5).toISOString() }; }
+function kybState(b) {
+  if (!b.business_name) return 'incomplete';
+  return b.verification_status === 'verified' ? 'verified' : b.verification_status === 'rejected' ? 'rejected' : 'review';
+}
+function subActive(b) { return b.sub_status === 'active' && (!b.sub_expires_at || new Date(b.sub_expires_at) > new Date()); }
+function badge(map, key) { const m = map[key] || ['badge-grey', key ? prettyType(key) : '—']; return `<span class="badge ${m[0]}">${m[1]}</span>`; }
+function bizLogo(b, lg) {
+  const name = b.business_name || b.owner_name || '?';
+  return b.logo_url
+    ? `<div class="biz-logo${lg ? ' lg' : ''}" style="background-image:url('${escHtml(b.logo_url)}')"></div>`
+    : `<div class="biz-logo${lg ? ' lg' : ''}" style="background-color:${colorFor(b.firebase_uid)}">${initials(name)}</div>`;
+}
+function bizNameCell(b) {
+  return `<div class="avatar-cell" style="min-width:190px">${bizLogo(b)}<div><div style="font-weight:600">${escHtml(b.business_name || 'Profile not completed')}</div><div class="cell-sub">${escHtml(b.category || (b.handle ? '@' + b.handle : '—'))}</div></div></div>`;
+}
+function subCell(b) {
+  if (!b.sub_status) return '<span class="badge badge-grey">No plan</span>';
+  const exp = b.sub_expires_at ? `<div class="cell-sub">${subActive(b) ? 'renews' : 'ended'} ${formatDate(b.sub_expires_at)}</div>` : '';
+  return badge(SUB_BADGE, b.sub_status) + exp;
+}
+const emptyBiz = (cols, title, text) => `<tr><td colspan="${cols}"><div class="empty-cta"><b>${title}</b>${text}</div></td></tr>`;
+
+function updateBizNavCounts() {
+  const review = bizList.filter(b => kybState(b) === 'review').length;
+  document.getElementById('nav-kyb-count').textContent = review || '';
+  document.getElementById('nav-promo-count').textContent = bizList.reduce((t, b) => t + Number(b.promo_pending || 0), 0) || '';
+}
+
+async function fetchBizList(ts) {
+  await loadBusinessUids();
+  bizList = await rpc('admin_business_list', ts) || [];
+  updateBizNavCounts();
+  return bizList;
+}
+
+async function loadBizOverview() {
+  const { from, to } = getRange('biz');
+  document.getElementById('biz-range-label').textContent = `Activity: ${rangeLabel(from, to)}`;
+  let list;
+  try { list = await fetchBizList(rangeToTs('biz')); }
+  catch (e) { document.getElementById('bz-top-body').innerHTML = emptyBiz(6, "Couldn't load businesses", escHtml(e.message)); return; }
+  const $ = id => document.getElementById(id);
+  const newInRange = list.filter(b => inDayRange(b.profile_created_at || b.signed_up_at, from, to)).length;
+  const complete = list.filter(b => b.business_name);
+  const verified = complete.filter(b => kybState(b) === 'verified').length;
+  const review = complete.filter(b => kybState(b) === 'review').length;
+  const rejected = complete.filter(b => kybState(b) === 'rejected').length;
+  const active = list.filter(subActive);
+  const mrr = active.reduce((t, b) => t + Number(b.sub_amount || 0), 0);
+  const promoPending = list.reduce((t, b) => t + Number(b.promo_pending || 0), 0);
+  const sum = k => list.reduce((t, b) => t + Number(b[k] || 0), 0);
+  $('bz-total').textContent = fmtNum(list.length);
+  $('bz-total-d').innerHTML = `<span class="chip ${newInRange ? 'up' : 'flat'}">+${newInRange} ${from || to ? 'in period' : 'total'}</span>`;
+  $('bz-total-c').textContent = list.length - complete.length ? `${list.length - complete.length} profile incomplete` : '';
+  $('bz-kyb').textContent = `${verified} / ${complete.length}`;
+  $('bz-kyb-d').innerHTML = review ? `<span class="chip warn">⚠ ${review} awaiting review</span>` : complete.length && verified === complete.length ? '<span class="chip up">✓ All verified</span>' : '<span class="chip flat">Nothing to review</span>';
+  $('bz-kyb-bar').innerHTML = complete.length ? [[verified, DASH_STATUS.verified], [review, DASH_STATUS.pending], [rejected, DASH_STATUS.rejected]].filter(x => x[0]).map(x => `<span style="flex:${x[0]};background:${x[1]}"></span>`).join('') : '';
+  $('bz-subs').textContent = fmtNum(active.length);
+  $('bz-subs-c').textContent = `₹${mrr.toLocaleString('en-IN')} / month`;
+  $('bz-promo').textContent = fmtNum(promoPending);
+  $('bz-promo-d').innerHTML = promoPending ? '<span class="chip warn">⚠ Review in Promoted Posts</span>' : '<span class="chip up">✓ Queue clear</span>';
+  const imp = sum('promo_impressions'), clicks = sum('promo_clicks');
+  $('bz-imp').textContent = fmtNum(imp);
+  $('bz-clicks').textContent = fmtNum(clicks);
+  $('bz-ctr').textContent = imp ? (clicks / imp * 100).toFixed(1) + '%' : '—';
+  $('bz-posts').textContent = fmtNum(sum('posts_in_range'));
+  $('bz-plays').textContent = fmtNum(sum('plays'));
+  $('bz-reach').textContent = fmtNum(sum('reach'));
+
+  const top = list.filter(b => b.reach || b.promo_impressions).sort((a, b) => (b.reach - a.reach) || (b.promo_impressions - a.promo_impressions)).slice(0, 8);
+  $('bz-top-body').innerHTML = !list.length
+    ? emptyBiz(6, 'No business accounts yet', 'Businesses appear here as soon as someone picks <b style="display:inline;font-size:inherit">Business</b> at signup in the app.')
+    : top.length ? top.map(b => `<tr class="clickable" onclick="openBusiness('${b.firebase_uid}')"><td>${bizNameCell(b)}</td><td>${badge(KYB_BADGE, b.verification_status)}</td><td>${subCell(b)}</td><td class="num-strong">${fmtNum(b.reach)}</td><td>${fmtNum(b.promo_impressions)}</td><td>${fmtNum(b.promo_clicks)}</td></tr>`).join('')
+    : emptyBiz(6, 'No activity in this period', 'Try a longer date range.');
+
+  const attn = [];
+  list.filter(b => kybState(b) === 'review').forEach(b => attn.push(`<div class="attn-row"><span>${escHtml(b.business_name)} · KYB awaiting review</span><button class="action-btn" onclick="openBusiness('${b.firebase_uid}')">Review</button></div>`));
+  if (promoPending) attn.push(`<div class="attn-row"><span>${promoPending} promoted post${promoPending === 1 ? '' : 's'} awaiting review</span><button class="action-btn" onclick="goPage('promos')">Open</button></div>`);
+  list.filter(b => ['on_hold', 'expired'].includes(b.sub_status)).forEach(b => attn.push(`<div class="attn-row"><span>${escHtml(b.business_name || b.owner_name || 'Business')} · subscription ${prettyType(b.sub_status).toLowerCase()}</span><button class="action-btn" onclick="openBusiness('${b.firebase_uid}')">View</button></div>`));
+  $('bz-attention').innerHTML = attn.length ? attn.join('') : '<div class="empty-cta" style="padding:20px"><b>All caught up</b>Nothing is waiting for you.</div>';
+}
+
+async function loadBusinessList() {
+  const { from, to } = getRange('bizlist');
+  document.getElementById('bizlist-range-label').textContent = `Posts, reach and promo impressions for ${rangeLabel(from, to)}`;
+  document.getElementById('bl-body').innerHTML = '<tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  try { await fetchBizList(rangeToTs('bizlist')); }
+  catch (e) { document.getElementById('bl-body').innerHTML = emptyBiz(10, "Couldn't load businesses", escHtml(e.message)); return; }
+  renderBusinessList();
+}
+
+function renderBusinessList() {
+  const q = (document.getElementById('bl-search').value || '').toLowerCase().replace(/^@/, '');
+  const kyb = document.getElementById('bl-kyb').value, sub = document.getElementById('bl-sub').value;
+  const rows = bizList.filter(b =>
+    (!q || [b.business_name, b.owner_name, b.handle, b.city, b.area, b.category, b.owner_email].some(v => (v || '').toLowerCase().includes(q))) &&
+    (!kyb || kybState(b) === kyb) &&
+    (!sub || (sub === 'active') === subActive(b)));
+  const body = document.getElementById('bl-body');
+  if (!bizList.length) { body.innerHTML = emptyBiz(10, 'No business accounts yet', 'They appear here as soon as someone picks Business at signup in the app.'); return; }
+  if (!rows.length) { body.innerHTML = emptyBiz(10, 'No matches', 'Try clearing the search or filters.'); return; }
+  body.innerHTML = rows.map(b => `<tr class="clickable" onclick="openBusiness('${b.firebase_uid}')">
+    <td>${bizNameCell(b)}</td>
+    <td><div style="font-weight:600">${escHtml(b.owner_name || '—')}</div><div class="cell-sub">${b.handle ? '@' + escHtml(b.handle) : escHtml(b.owner_email || '')}</div></td>
+    <td style="font-size:12px">${escHtml([b.area, b.city].filter(Boolean).join(', ') || '—')}</td>
+    <td>${b.business_name ? badge(KYB_BADGE, b.verification_status) : '<span class="badge badge-grey">Incomplete</span>'}</td>
+    <td>${subCell(b)}</td>
+    <td>${fmtNum(b.posts_in_range)}</td>
+    <td class="num-strong">${fmtNum(b.reach)}</td>
+    <td>${fmtNum(b.promo_impressions)}</td>
+    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(b.profile_created_at || b.signed_up_at)}</td>
+    <td><button class="action-btn" onclick="event.stopPropagation();openBusiness('${b.firebase_uid}')">View</button></td>
+  </tr>`).join('');
+}
+
+async function loadKyb() {
+  document.getElementById('kyb-body').innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  try { await fetchBizList(allTimeTs()); }
+  catch (e) { document.getElementById('kyb-body').innerHTML = emptyBiz(8, "Couldn't load KYB", escHtml(e.message)); return; }
+  renderKyb();
+}
+
+function renderKyb() {
+  const count = st => bizList.filter(b => kybState(b) === st).length;
+  document.getElementById('kyb-review').textContent = count('review');
+  document.getElementById('kyb-verified').textContent = count('verified');
+  document.getElementById('kyb-rejected').textContent = count('rejected');
+  document.getElementById('kyb-incomplete').textContent = count('incomplete');
+  const f = document.getElementById('kyb-filter').value;
+  const rows = bizList.filter(b => b.business_name && (!f || kybState(b) === f));
+  const body = document.getElementById('kyb-body');
+  if (!rows.length) { body.innerHTML = emptyBiz(8, f === 'review' ? 'Nothing to review' : 'No submissions', f === 'review' ? 'New business profiles will appear here for KYB review.' : 'Try another filter.'); return; }
+  body.innerHTML = rows.map(b => `<tr>
+    <td>${bizNameCell(b)}</td>
+    <td style="font-size:12px">${escHtml(b.category || '—')}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(b.gstin || '—')}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(b.pan || '—')}</td>
+    <td style="font-size:12px">${escHtml(b.contact_number || '—')}</td>
+    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(b.profile_updated_at || b.profile_created_at)}</td>
+    <td>${badge(KYB_BADGE, b.verification_status)}${b.admin_note ? `<div class="cell-sub" style="max-width:200px">${escHtml(b.admin_note)}</div>` : ''}</td>
+    <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${kybState(b) !== 'verified' ? `<button class="action-btn success" onclick="setKyb('${b.firebase_uid}','verified')">Verify</button>` : ''}
+      ${kybState(b) !== 'rejected' ? `<button class="action-btn danger" onclick="setKyb('${b.firebase_uid}','rejected')">Reject</button>` : ''}
+      <button class="action-btn" onclick="openBusiness('${b.firebase_uid}')">Details</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+async function patchWhere(table, col, val, data) {
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/${table}?${col}=eq.${encodeURIComponent(val)}`, {
+    method: 'PATCH',
+    headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify(data)
+  });
+  return r.ok;
+}
+
+// Best-effort push to the business owner; a failed push never blocks the decision
+function notifyOwner(uid, title, body) {
+  fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/send-notification`, {
+    method: 'POST',
+    headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to_firebase_uid: uid, title, body, type: 'general' })
+  }).catch(() => {});
+}
+
+async function setKyb(uid, status) {
+  const b = bizList.find(x => x.firebase_uid === uid);
+  if (!b) return;
+  let note = null;
+  if (status === 'rejected') {
+    note = prompt(`Reason for rejecting KYB of "${b.business_name}"? The business will see this.`, b.admin_note || '');
+    if (note === null) return;
+    note = note.trim() || 'Details could not be verified';
+  } else if (!confirm(`Mark "${b.business_name}" as KYB verified?`)) return;
+  const ok = await patchWhere('business_profiles', 'firebase_uid', uid, { verification_status: status, admin_note: note });
+  if (!ok) { showToast('Could not update KYB', 'error'); return; }
+  notifyOwner(uid, status === 'verified' ? 'Your business is verified ✅' : 'Business verification update',
+    status === 'verified' ? `${b.business_name} has been verified on ThanqYou.` : `We couldn't verify ${b.business_name}: ${note}`);
+  showToast(status === 'verified' ? 'Business verified' : 'KYB rejected', 'success');
+  b.verification_status = status; b.admin_note = note;
+  updateBizNavCounts();
+  if (document.getElementById('page-kyb').classList.contains('active')) renderKyb();
+  if (document.getElementById('page-businesses').classList.contains('active')) renderBusinessList();
+  if (document.getElementById('biz-modal').classList.contains('open')) openBusiness(uid);
+}
+
+async function openBusiness(uid) {
+  const b = bizList.find(x => x.firebase_uid === uid);
+  if (!b) return;
+  document.getElementById('bm-logo').outerHTML = bizLogo(b, true).replace('class="biz-logo lg"', 'id="bm-logo" class="biz-logo lg"');
+  document.getElementById('bm-name').textContent = b.business_name || 'Profile not completed';
+  document.getElementById('bm-sub').textContent = [b.category, [b.area, b.city].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Business account';
+  const field = (l, v, mono) => `<div class="detail-field"><div class="df-label">${l}</div><div class="df-value"${mono ? ' style="font-family:\'DM Mono\',monospace;font-size:13px"' : ''}>${v || '—'}</div></div>`;
+  const kybButtons = b.business_name ? `<div class="biz-actions">
+      ${kybState(b) !== 'verified' ? `<button class="btn btn-red" style="background:var(--green)" onclick="setKyb('${uid}','verified')">Verify business</button>` : ''}
+      ${kybState(b) !== 'rejected' ? `<button class="btn btn-ghost" onclick="setKyb('${uid}','rejected')">Reject with reason</button>` : ''}
+    </div>` : '<p class="cell-sub">The owner picked Business but has not submitted the business form yet.</p>';
+  document.getElementById('bm-body').innerHTML = `
+    <div class="biz-section" style="margin-top:0"><h3>Business details</h3><div class="detail-grid">
+      ${field('Business name', escHtml(b.business_name))}${field('Category', escHtml(b.category))}
+      ${field('City / area', escHtml([b.area, b.city].filter(Boolean).join(', ')))}${field('Contact number', escHtml(b.contact_number))}
+      ${field('Description', escHtml(b.description))}${field('Profile created', formatDateTime(b.profile_created_at))}
+    </div></div>
+    <div class="biz-section"><h3>KYB verification</h3><div class="detail-grid">
+      ${field('GSTIN', escHtml(b.gstin), true)}${field('PAN', escHtml(b.pan), true)}
+      ${field('Status', b.business_name ? badge(KYB_BADGE, b.verification_status) : '<span class="badge badge-grey">Incomplete</span>')}${field('Admin note', escHtml(b.admin_note))}
+    </div>${kybButtons}</div>
+    <div class="biz-section"><h3>Owner</h3><div class="detail-grid">
+      ${field('Name', escHtml(b.owner_name))}${field('Social username', b.handle ? '@' + escHtml(b.handle) : '')}
+      ${field('Email', escHtml(b.owner_email))}${field('Phone', escHtml(b.owner_phone))}
+    </div></div>
+    <div class="biz-section"><h3>Subscription</h3><div class="detail-grid">
+      ${field('Status', b.sub_status ? badge(SUB_BADGE, b.sub_status) : '<span class="badge badge-grey">No plan</span>')}${field('Amount', b.sub_amount ? '₹' + Number(b.sub_amount).toLocaleString('en-IN') + ' / month' : '')}
+      ${field('Started', formatDateTime(b.sub_started_at))}${field('Expires / renews', formatDateTime(b.sub_expires_at))}
+    </div><div id="bm-payments" class="cell-sub" style="margin-top:8px">${b.sub_id ? 'Loading payment history…' : ''}</div></div>
+    <div class="biz-section"><h3>Promoted posts</h3><div class="detail-grid">
+      ${field('Awaiting review', fmtNum(b.promo_pending))}${field('Approved', fmtNum(b.promo_approved))}
+      ${field('Rejected', fmtNum(b.promo_rejected))}${field('Promo impressions (period)', fmtNum(b.promo_impressions) + ' · ' + fmtNum(b.promo_clicks) + ' clicks')}
+    </div></div>`;
+  openModal('biz-modal');
+  if (b.sub_id) {
+    const pays = await query('business_subscription_payments', `select=event_type,amount,status,event_time,created_at&business_subscription_id=eq.${b.sub_id}&order=created_at.desc&limit=20`);
+    const box = document.getElementById('bm-payments');
+    if (box) box.innerHTML = pays.length
+      ? `<div class="table-card"><table><thead><tr><th>Event</th><th>Amount</th><th>Status</th><th>When</th></tr></thead><tbody>${pays.map(x => `<tr><td>${escHtml(prettyType(x.event_type))}</td><td>${x.amount ? '₹' + Number(x.amount).toLocaleString('en-IN') : '—'}</td><td>${escHtml(x.status || '—')}</td><td style="font-size:12px;white-space:nowrap">${formatDateTime(x.event_time || x.created_at)}</td></tr>`).join('')}</tbody></table></div>`
+      : 'No payment events recorded yet.';
+  }
+}
+
+async function loadBizSubs() {
+  document.getElementById('bs-body').innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  try {
+    const [subs] = await Promise.all([query('business_subscriptions', 'select=*&order=created_at.desc'), fetchBizList(allTimeTs())]);
+    bizSubs = subs || [];
+  } catch (e) { document.getElementById('bs-body').innerHTML = emptyBiz(8, "Couldn't load subscriptions", escHtml(e.message)); return; }
+  renderBizSubs();
+}
+
+function renderBizSubs() {
+  const live = s => s.status === 'active' && (!s.expires_at || new Date(s.expires_at) > new Date());
+  const active = bizSubs.filter(live);
+  document.getElementById('bs-active').textContent = active.length;
+  document.getElementById('bs-mrr').textContent = '₹' + active.reduce((t, s) => t + Number(s.amount || 0), 0).toLocaleString('en-IN');
+  document.getElementById('bs-pending').textContent = bizSubs.filter(s => s.status === 'pending_authorization').length;
+  document.getElementById('bs-lapsed').textContent = bizSubs.filter(s => ['on_hold', 'cancelled', 'expired'].includes(s.status)).length;
+  const f = document.getElementById('bs-filter').value;
+  const rows = bizSubs.filter(s => !f || s.status === f);
+  const body = document.getElementById('bs-body');
+  if (!rows.length) { body.innerHTML = emptyBiz(8, bizSubs.length ? 'No matches' : 'No subscriptions yet', bizSubs.length ? 'Try another status.' : 'Subscriptions appear here when a business starts the ₹199/month plan in the app.'); return; }
+  const byUid = Object.fromEntries(bizList.map(b => [b.firebase_uid, b]));
+  body.innerHTML = rows.map(s => { const b = byUid[s.firebase_uid] || { firebase_uid: s.firebase_uid }; return `<tr>
+    <td>${bizNameCell(b)}</td>
+    <td>${badge(SUB_BADGE, s.status)}</td>
+    <td>${escHtml(prettyType(s.platform))}</td>
+    <td>${s.amount ? '₹' + Number(s.amount).toLocaleString('en-IN') : '—'}</td>
+    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(s.started_at)}</td>
+    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(s.expires_at)}</td>
+    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(s.next_billing_at)}</td>
+    <td>${byUid[s.firebase_uid] ? `<button class="action-btn" onclick="openBusiness('${s.firebase_uid}')">Business</button>` : ''}</td>
+  </tr>`; }).join('');
+}
+
+async function loadPromos() {
+  const { from, to } = getRange('promo');
+  document.getElementById('promo-range-label').textContent = `Impressions & clicks: ${rangeLabel(from, to)}`;
+  document.getElementById('promo-body').innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  try {
+    [promoRows] = await Promise.all([rpc('admin_promo_content', rangeToTs('promo')), fetchBizList(allTimeTs())]);
+  } catch (e) { document.getElementById('promo-body').innerHTML = emptyBiz(9, "Couldn't load promoted posts", escHtml(e.message)); return; }
+  renderPromos();
+}
+
+function renderPromos() {
+  const f = document.getElementById('promo-filter').value;
+  const rows = (promoRows || []).filter(r => !f || r.status === f);
+  const body = document.getElementById('promo-body');
+  if (!rows.length) { body.innerHTML = emptyBiz(9, f === 'pending_review' ? 'Nothing awaiting review' : 'No promoted posts', 'Posts from subscribed businesses appear here automatically.'); return; }
+  body.innerHTML = rows.map(r => {
+    const isReel = (r.media_types || []).includes('video');
+    const media = (r.media_urls || [])[0];
+    return `<tr>
+    <td><div class="post-cell"><span class="badge ${isReel ? 'badge-red' : 'badge-blue'}">${isReel ? 'Reel' : 'Post'}</span>
+      <div class="pc-text"><div class="pc-cap">${escHtml(r.caption || '(no caption)')}</div><div class="pc-sub">${media ? `<a href="${escHtml(media)}" target="_blank" rel="noopener" style="color:var(--blue)">Open media ↗</a>` : '—'}</div></div></div></td>
+    <td><div style="font-weight:600">${escHtml(r.business_name || '—')}</div><div class="cell-sub">${r.handle ? '@' + escHtml(r.handle) : ''}${r.sub_active ? '' : ' · plan inactive'}</div></td>
+    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(r.post_created_at)}</td>
+    <td>${badge(PROMO_BADGE, r.status)}${r.admin_note ? `<div class="cell-sub" style="max-width:180px">${escHtml(r.admin_note)}</div>` : ''}</td>
+    <td>${fmtNum(r.show_count)}</td>
+    <td>${fmtNum(r.impressions)}</td>
+    <td>${fmtNum(r.clicks)}</td>
+    <td>${r.impressions ? (r.clicks / r.impressions * 100).toFixed(1) + '%' : '—'}</td>
+    <td><div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${r.status !== 'approved' ? `<button class="action-btn success" onclick="setPromo('${r.id}','approved')">Approve</button>` : ''}
+      ${r.status !== 'rejected' ? `<button class="action-btn danger" onclick="setPromo('${r.id}','rejected')">Reject</button>` : ''}
+    </div></td>
+  </tr>`; }).join('');
+}
+
+async function setPromo(id, status) {
+  const r = promoRows.find(x => x.id === id);
+  if (!r) return;
+  let note = null;
+  if (status === 'rejected') {
+    note = prompt('Reason for rejecting this promoted post? The business will see this.', r.admin_note || '');
+    if (note === null) return;
+    note = note.trim() || 'Not suitable for promotion';
+  } else if (!confirm('Approve this post for the feed\'s business promo slot?')) return;
+  const ok = await update('business_promo_content', id, { status, admin_note: note });
+  if (!ok) { showToast('Could not update promo', 'error'); return; }
+  notifyOwner(r.firebase_uid, status === 'approved' ? 'Your promoted post is live 🎉' : 'Promoted post update',
+    status === 'approved' ? 'Your post was approved and will now be shown to users in the feed.' : `Your post wasn't approved for promotion: ${note}`);
+  showToast(status === 'approved' ? 'Promo approved' : 'Promo rejected', 'success');
+  r.status = status; r.admin_note = note;
+  const b = bizList.find(x => x.firebase_uid === r.firebase_uid);
+  if (b) { b.promo_pending = promoRows.filter(x => x.firebase_uid === r.firebase_uid && x.status === 'pending_review').length; }
+  updateBizNavCounts();
+  renderPromos();
 }
 
 // ── METRICS (reach proof per post / creator) ─────────
@@ -1403,13 +1934,16 @@ function setMetricsTab(tab) {
 
 async function loadMetrics() {
   const { from, to } = getRange('metrics');
-  document.getElementById('metrics-range-label').textContent = `Showing ${rangeLabel(from, to)}`;
+  document.getElementById('metrics-range-label').textContent = `${accountMode === 'business' ? 'Business accounts' : 'Individual accounts'} · ${rangeLabel(from, to)}`;
+  document.querySelector('#page-metrics .dash-head h2').textContent = accountMode === 'business' ? 'Business reels & reach' : 'Reach metrics';
+  document.querySelector('#metrics-tabs [data-tab="users"]').textContent = accountMode === 'business' ? 'Businesses' : 'Users';
   const loading = '<tr><td colspan="11"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>';
   document.getElementById('mp-body').innerHTML = loading;
   document.getElementById('mu-body').innerHTML = loading;
   try {
     const args = rangeToTs('metrics');
-    [metricsPosts, metricsUsers] = await Promise.all([rpc('admin_post_metrics', args), rpc('admin_creator_metrics', args)]);
+    const typed = { ...args, p_account_type: accountMode };
+    [metricsPosts, metricsUsers] = await Promise.all([rpc('admin_post_metrics', typed), rpc('admin_creator_metrics', typed)]);
   } catch (e) {
     const err = `<tr><td colspan="11"><div class="empty-state"><p>Couldn't load metrics: ${escHtml(e.message)}</p></div></td></tr>`;
     document.getElementById('mp-body').innerHTML = err;
@@ -1598,11 +2132,12 @@ const DASH_OTHER = '#b9b2ad';
 const DASH_STATUS = { verified:'#0ca30c', pending:'#fab219', rejected:'#d03b3b', notStarted:'#d8d2cf' };
 
 async function loadDashboard() {
+  await loadBusinessUids();
   document.getElementById('topbar-date').textContent =
     new Date().toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
   const [users, posts, txns, kyc] = await Promise.all([
-    query('users', 'select=firebase_uid,display_name,email,gender,referred_by,created_at&order=created_at.desc'),
-    query('posts', 'select=id,media_types,created_at&is_deleted=eq.false'),
+    query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&order=created_at.desc').then(onlyIndividualUsers),
+    query('posts', 'select=id,firebase_uid,media_types,created_at&is_deleted=eq.false').then(onlyIndividualPosts),
     query('wallet_transactions', 'select=rupees,type,created_at'),
     query('user_kyc', 'select=id,firebase_uid,status,submitted_at')
   ]);
@@ -1630,7 +2165,7 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 
 // ── DATE RANGE FILTER (shared by Dashboard, Users, Content) ──
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
-const RANGE_RENDER = { dash: () => renderDashStats(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics() };
+const RANGE_RENDER = { dash: () => renderDashStats(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos() };
 
 function rangeControlsHTML(prefix, active) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
@@ -1928,6 +2463,7 @@ let usersData = [];
 let usersCurrentPage = 0;
 
 async function loadUsers() {
+  await loadBusinessUids();
   document.getElementById('users-body').innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const [data, wallets, kycData] = await Promise.all([
     query('users', 'select=*&order=created_at.desc'),
@@ -1940,7 +2476,7 @@ async function loadUsers() {
   const kycMap = {};
   (kycData||[]).forEach(k => kycMap[k.firebase_uid] = k);
   await loadSocialHandles();
-  usersData = (data || []).map(u => ({
+  usersData = onlyIndividualUsers(data).map(u => ({
     ...u,
     _wallet: walletMap[u.firebase_uid] || null,
     _kyc: kycMap[u.firebase_uid] || null
@@ -2407,10 +2943,11 @@ setupRealtime();
 // ── NEW FUNCTIONS ─────────────────────────────────────────────────────────────
 var contentData=[],creatorData=[],selectedCreatorUid=null,allAccounts={};
 async function loadContent(){
+  await loadBusinessUids();
   document.getElementById('creator-list').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('content-body').innerHTML='<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
   var res=await Promise.all([query('posts','select=*&is_deleted=eq.false&order=created_at.desc'),query('social_accounts','select=social_uid,username_handle,username,social_avatar_url')]);
-  contentData=res[0]||[];(res[1]||[]).forEach(function(a){allAccounts[a.social_uid]=a;});
+  contentData=onlyIndividualPosts(res[0]);(res[1]||[]).forEach(function(a){allAccounts[a.social_uid]=a;});
   renderContentRange();
 }
 function handleOf(uid){var a=allAccounts[uid];return (a&&(a.username_handle||a.username))||String(uid||'').substring(0,10);}
