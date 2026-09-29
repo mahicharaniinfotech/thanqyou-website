@@ -65,7 +65,8 @@ NAV_BLOCK = '''<nav>
 </nav>'''
 
 FOOTER_BLOCK = '''<footer>
-  &copy; 2026 ThanQYou. All rights reserved. &nbsp;|&nbsp;
+  &copy; 2026 MAANYA IT &amp; HR SERVICES. All rights reserved.<br>
+  ThanQYou is owned and operated by MAANYA IT &amp; HR SERVICES, Ground Floor, Plot No 235, Road No 93, Near Yaari House, Kapra, Hyderabad, Medchal Malkajgiri District, Telangana 500083, India.<br>
   <a href="/">Home</a> &nbsp;|&nbsp;
   <a href="/privacy-policy.html">Privacy</a> &nbsp;|&nbsp;
   <a href="/terms-of-service.html">Terms</a> &nbsp;|&nbsp;
@@ -96,7 +97,7 @@ def page(title, body):
 
 PRIVACY_BODY = '''<h1>Privacy Policy</h1>
 <p class="updated">Last updated: September 2026</p>
-<p>ThanQYou ("we", "us", "our") operates the ThanQYou mobile application, combining messaging, social features, and an ad-revenue-sharing earning system. This policy explains what information we collect, why, and how you can control it.</p>
+<p>The ThanQYou mobile application is owned and operated by <strong>MAANYA IT &amp; HR SERVICES</strong>, a partnership firm registered in India with its principal place of business at Ground Floor, Plot No 235, Road No 93, Near Yaari House, Kapra, Hyderabad, Medchal Malkajgiri District, Telangana 500083, India ("ThanQYou", "we", "us", "our"). The app combines messaging, social features, and an ad-revenue-sharing earning system. This policy explains what information we collect, why, and how you can control it.</p>
 
 <h2>1. Information We Collect</h2>
 <h3>Account &amp; Identity</h3>
@@ -174,12 +175,17 @@ PRIVACY_BODY = '''<h1>Privacy Policy</h1>
 
 <h2>10. Contact Us</h2>
 <p>For privacy questions or data requests: <a class="inline" href="mailto:contact@thanqyou.com">contact@thanqyou.com</a></p>
+<div class="card">
+  <p><strong>MAANYA IT &amp; HR SERVICES</strong> (Partnership firm)<br>
+  Ground Floor, Plot No 235, Road No 93, Near Yaari House, Kapra, Hyderabad, Medchal Malkajgiri District, Telangana 500083, India<br>
+  GSTIN: 36ACFFM5558A1ZB</p>
+</div>
 '''
 
 
 TERMS_BODY = '''<h1>Terms &amp; Conditions</h1>
 <p class="updated">Last updated: September 2026</p>
-<p>By creating a ThanQYou account, you agree to these Terms. If you do not agree, please do not use the app.</p>
+<p>These Terms are an agreement between you and <strong>MAANYA IT &amp; HR SERVICES</strong>, a partnership firm registered in India with its principal place of business at Ground Floor, Plot No 235, Road No 93, Near Yaari House, Kapra, Hyderabad, Medchal Malkajgiri District, Telangana 500083, India ("ThanQYou", "we", "us"), which owns and operates the ThanQYou app. By creating a ThanQYou account, you agree to these Terms. If you do not agree, please do not use the app.</p>
 
 <h2>1. Eligibility</h2>
 <p>You must be at least 15 years old to register. By registering, you confirm the information you provide is accurate and matches your government-issued ID (Aadhaar/Passport).</p>
@@ -226,6 +232,11 @@ TERMS_BODY = '''<h1>Terms &amp; Conditions</h1>
 
 <h2>10. Contact Us</h2>
 <p>For questions: <a class="inline" href="mailto:support@thanqyou.com">support@thanqyou.com</a></p>
+<div class="card">
+  <p><strong>MAANYA IT &amp; HR SERVICES</strong> (Partnership firm)<br>
+  Ground Floor, Plot No 235, Road No 93, Near Yaari House, Kapra, Hyderabad, Medchal Malkajgiri District, Telangana 500083, India<br>
+  GSTIN: 36ACFFM5558A1ZB</p>
+</div>
 '''
 
 

@@ -91,7 +91,9 @@ footer a{color:var(--wine);text-decoration:none;font-weight:600;}
   </div>
 </main>
 <footer>
-  &copy; 2026 ThanQYou. All rights reserved. &nbsp;|&nbsp; <a href="/">Home</a>
+  &copy; 2026 MAANYA IT &amp; HR SERVICES. All rights reserved.<br>
+  ThanQYou is owned and operated by MAANYA IT &amp; HR SERVICES, Ground Floor, Plot No 235, Road No 93, Near Yaari House, Kapra, Hyderabad, Medchal Malkajgiri District, Telangana 500083, India.<br>
+  <a href="/">Home</a>
 </footer>
 </body>
 </html>
