@@ -296,6 +296,36 @@
   .creators-panel { width:280px; min-width:280px; flex-shrink:0; }
   .content-split > .table-card:last-child { flex:1; min-width:0; }
   .th-tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .tool-select { background:var(--dark2); border:1px solid var(--dark4); border-radius:9px; padding:7px 10px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
+  .metrics-tabs { margin-bottom:16px; }
+  .metrics-kpis { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  @media (max-width:1280px) { .metrics-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  #page-metrics thead th { white-space:normal; line-height:1.3; vertical-align:bottom; }
+  #page-metrics td, #page-metrics thead th { padding-left:12px; padding-right:12px; }
+  #page-metrics tbody tr.clickable { cursor:pointer; }
+  .cell-sub { font-size:11px; color:var(--grey); }
+  .metrics-note { font-size:12px; color:var(--grey); margin-top:14px; line-height:1.6; }
+  .post-cell { display:flex; align-items:center; gap:10px; min-width:180px; max-width:260px; }
+  .post-cell .pc-text { min-width:0; }
+  .post-cell .pc-cap { font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .post-cell .pc-sub { font-size:11px; color:var(--grey); }
+  .num-strong { font-weight:700; }
+  .modal.modal-wide { width:920px; }
+  .report-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .report-brand { font-size:11px; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+  .report-head h2 { margin-bottom:4px; word-break:break-word; }
+  .report-sub { font-size:12px; color:var(--grey); }
+  .report-close { background:none; border:none; color:var(--grey); cursor:pointer; font-size:24px; line-height:1; padding:0 4px; }
+  .report-block { margin-bottom:14px; }
+  .report-generated { font-size:11px; color:var(--grey); margin-top:4px; }
+  @media print {
+    body.printing-report > *:not(#metrics-modal) { display:none !important; }
+    body.printing-report { background:#fff; }
+    body.printing-report #metrics-modal { position:static; display:block !important; background:none; backdrop-filter:none; padding:0; }
+    body.printing-report .modal { width:100% !important; max-width:none; max-height:none; overflow:visible; box-shadow:none; border:none; padding:0; }
+    body.printing-report .report-block, body.printing-report .mini-stat { break-inside:avoid; box-shadow:none; }
+    .no-print { display:none !important; }
+  }
   .sub-row { background:#FAF9F8; }
   .sub-row:hover { background:#F5F3F1 !important; }
   .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:20px; }
@@ -465,6 +495,10 @@
     <div class="nav-item active" onclick="showPage('dashboard',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('metrics',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Metrics
     </div>
     <div class="nav-section">Management</div>
     <div class="nav-item" onclick="showPage('users',this)">
@@ -663,6 +697,50 @@
             <div class="breakdown" id="content-breakdown"></div>
           </div>
         </div>
+      </div>
+
+      <!-- METRICS -->
+      <div class="page" id="page-metrics">
+        <div class="dash-head page-head">
+          <div><h2>Reach metrics</h2><p id="metrics-range-label">Last 7 days</p></div>
+          <div class="dash-filter" data-range="metrics" data-default="7d"></div>
+        </div>
+        <div class="seg metrics-tabs" id="metrics-tabs" role="tablist" aria-label="Metrics view">
+          <button class="active" data-tab="posts" onclick="setMetricsTab('posts')">Posts</button>
+          <button data-tab="users" onclick="setMetricsTab('users')">Users</button>
+        </div>
+        <div class="mini-stats metrics-kpis">
+          <div class="mini-stat"><div class="ms-val" id="mt-active">—</div><div class="ms-label">Posts with plays</div></div>
+          <div class="mini-stat"><div class="ms-val" id="mt-plays">—</div><div class="ms-label">Plays</div></div>
+          <div class="mini-stat"><div class="ms-val" id="mt-views">—</div><div class="ms-label">Counted views</div></div>
+          <div class="mini-stat"><div class="ms-val" id="mt-watch">—</div><div class="ms-label">Watch time</div></div>
+          <div class="mini-stat"><div class="ms-val" id="mt-likes">—</div><div class="ms-label">Likes</div></div>
+          <div class="mini-stat"><div class="ms-val" id="mt-shares">—</div><div class="ms-label">Shares</div></div>
+        </div>
+        <div class="table-card" id="metrics-posts-card">
+          <div class="table-header">
+            <h3>Post performance</h3>
+            <div class="th-tools">
+              <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="mp-search" placeholder="Search caption or @creator..." oninput="renderMetricsPosts()"></div>
+              <select id="mp-type" onchange="renderMetricsPosts()" class="tool-select"><option value="">All posts</option><option value="reel">Reels only</option><option value="photo">Photos only</option></select>
+              <button class="btn btn-ghost" onclick="downloadMetricsCSV('posts')">Download CSV</button>
+            </div>
+          </div>
+          <table><thead><tr><th>Post</th><th>Uploaded</th><th>Reach</th><th>Plays</th><th>Counted views</th><th>Avg watch</th><th>Likes</th><th>Shares</th><th>Feed impressions</th><th>Peak hour (IST)</th><th></th></tr></thead>
+          <tbody id="mp-body"><tr><td colspan="11"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+        </div>
+        <div class="table-card" id="metrics-users-card" style="display:none">
+          <div class="table-header">
+            <h3>Creator reach</h3>
+            <div class="th-tools">
+              <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="mu-search" placeholder="Search name or @username..." oninput="renderMetricsUsers()"></div>
+              <button class="btn btn-ghost" onclick="downloadMetricsCSV('users')">Download CSV</button>
+            </div>
+          </div>
+          <table><thead><tr><th>Creator</th><th>Posts uploaded</th><th>Reach</th><th>Plays</th><th>Counted views</th><th>Watch time</th><th>Likes</th><th>Shares</th><th>Peak hour (IST)</th><th>Top post</th><th></th></tr></thead>
+          <tbody id="mu-body"><tr><td colspan="11"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+        </div>
+        <p class="metrics-note"><b>Reach</b> = unique people who watched · <b>Plays</b> = every time the reel was started (repeat watches included) · <b>Counted views</b> = views that qualified for the public view counter · Hours are in IST.</p>
       </div>
 
       <!-- USERS -->
@@ -951,6 +1029,42 @@
   </div>
 </div>
 
+<!-- METRICS DETAIL REPORT -->
+<div class="modal-overlay" id="metrics-modal">
+  <div class="modal modal-wide" id="metrics-report">
+    <div class="report-head">
+      <div>
+        <div class="report-brand">ThanqYou · Reach report</div>
+        <h2 id="md-title">Report</h2>
+        <p id="md-sub" class="report-sub"></p>
+      </div>
+      <button class="no-print report-close" onclick="closeModal('metrics-modal')" aria-label="Close">×</button>
+    </div>
+    <div class="mini-stats" id="md-kpis"></div>
+    <div class="chart-card report-block">
+      <div class="chart-head"><div><h3>When it was watched</h3><p id="md-peak">Plays by hour of day (IST)</p></div></div>
+      <div class="chart-box" style="height:220px"><canvas id="md-hourly" role="img" aria-label="Plays by hour of day"></canvas></div>
+    </div>
+    <div class="chart-card report-block">
+      <div class="chart-head">
+        <div><h3>Day by day</h3><p id="md-daily-sub">Daily plays and unique viewers</p></div>
+        <div class="chart-legend"><span><i style="background:#2a78d6"></i>Plays</span><span><i style="background:#b8475a"></i>Reach</span><span><i style="background:#1baf7a"></i>Likes</span></div>
+      </div>
+      <div class="chart-box" style="height:220px"><canvas id="md-daily" role="img" aria-label="Daily plays, reach and likes"></canvas></div>
+    </div>
+    <div class="table-card report-block">
+      <div class="table-header"><h3 id="md-viewers-title">Who watched</h3></div>
+      <table><thead><tr><th>Viewer</th><th>Plays</th><th>Watch time</th><th>First watched</th><th>Last watched</th></tr></thead>
+      <tbody id="md-viewers"></tbody></table>
+    </div>
+    <p class="report-generated" id="md-generated"></p>
+    <div class="modal-actions no-print">
+      <button class="btn btn-ghost" onclick="downloadMetricsCSV('viewers')">Download viewers CSV</button>
+      <button class="btn btn-red" onclick="printMetricsReport()">Print / Save as PDF</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -1179,7 +1293,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
-  dashboard:'Dashboard', users:'Users', content:'Content', reports:'Reports', kyc:'KYC Verification',
+  dashboard:'Dashboard', metrics:'Metrics', users:'Users', content:'Content', reports:'Reports', kyc:'KYC Verification',
   wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
@@ -1193,7 +1307,7 @@ function showPage(name, el) {
   closeDrawer();
   window.scrollTo(0, 0);
   const loaders = {
-    dashboard: loadDashboard, users: loadUsers, content: loadContent, reports: loadReports,
+    dashboard: loadDashboard, metrics: loadMetrics, users: loadUsers, content: loadContent, reports: loadReports,
     kyc: loadKYC, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts,
     analytics: loadAnalytics, notifications: loadNotifications, settings: loadSettings
   };
@@ -1222,15 +1336,244 @@ new MutationObserver(() => {
   if (_labelQueued) return;
   _labelQueued = true;
   requestAnimationFrame(() => { _labelQueued = false; labelTableCells(); });
-}).observe(document.getElementById('app'), { childList: true, subtree: true });
+}).observe(document.body, { childList: true, subtree: true });
 
 function refreshCurrentPage() {
   const active = document.querySelector('.nav-item.active');
   const page = active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (page) {
-    const loaders = {dashboard:loadDashboard,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
+    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
     if (loaders[page]) loaders[page]();
   }
+}
+
+// ── METRICS (reach proof per post / creator) ─────────
+let metricsTab = 'posts', metricsPosts = [], metricsUsers = [], metricsDetail = null;
+
+function escHtml(t) { return String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDuration(sec) {
+  sec = Math.round(Number(sec) || 0);
+  if (sec < 60) return `${sec}s`;
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s2 = sec % 60;
+  return h ? `${h}h ${m}m` : `${m}m ${s2}s`;
+}
+function fmtHourSlot(h) {
+  if (h === null || h === undefined) return '—';
+  const lbl = x => { const x12 = x % 12 || 12; return `${x12} ${x % 24 < 12 ? 'AM' : 'PM'}`; };
+  return `${lbl(h)} – ${lbl(h + 1)}`;
+}
+function fmtHourShort(h) {
+  if (h === null || h === undefined) return '—';
+  const a = h % 12 || 12, b = (h + 1) % 12 || 12, pa = h < 12 ? 'AM' : 'PM', pb = (h + 1) % 24 < 12 ? 'AM' : 'PM';
+  return pa === pb ? `${a}–${b} ${pb}` : `${a} ${pa}–${b} ${pb}`;
+}
+function dateTimeCell(ts) {
+  if (!ts) return '—';
+  const t = new Date(ts).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true });
+  return `${formatDate(ts)}<div class="cell-sub">${t}</div>`;
+}
+function fmtNum(n) { return Number(n || 0).toLocaleString('en-IN'); }
+
+// Converts the page's date range (local calendar days) into the RPC's [from, to) timestamps
+function rangeToTs(prefix) {
+  const { from, to } = getRange(prefix);
+  return {
+    p_from: from ? new Date(from + 'T00:00:00').toISOString() : '2020-01-01T00:00:00Z',
+    p_to: to ? new Date(addDays(to, 1) + 'T00:00:00').toISOString() : new Date(Date.now() + 864e5).toISOString()
+  };
+}
+
+async function rpc(fn, args) {
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/rpc/${fn}`, {
+    method: 'POST',
+    headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args)
+  });
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw new Error((d && (d.message || d.error)) || `HTTP ${r.status}`);
+  return d;
+}
+
+function setMetricsTab(tab) {
+  metricsTab = tab;
+  document.querySelectorAll('#metrics-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('metrics-posts-card').style.display = tab === 'posts' ? '' : 'none';
+  document.getElementById('metrics-users-card').style.display = tab === 'users' ? '' : 'none';
+}
+
+async function loadMetrics() {
+  const { from, to } = getRange('metrics');
+  document.getElementById('metrics-range-label').textContent = `Showing ${rangeLabel(from, to)}`;
+  const loading = '<tr><td colspan="11"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>';
+  document.getElementById('mp-body').innerHTML = loading;
+  document.getElementById('mu-body').innerHTML = loading;
+  try {
+    const args = rangeToTs('metrics');
+    [metricsPosts, metricsUsers] = await Promise.all([rpc('admin_post_metrics', args), rpc('admin_creator_metrics', args)]);
+  } catch (e) {
+    const err = `<tr><td colspan="11"><div class="empty-state"><p>Couldn't load metrics: ${escHtml(e.message)}</p></div></td></tr>`;
+    document.getElementById('mp-body').innerHTML = err;
+    document.getElementById('mu-body').innerHTML = err;
+    return;
+  }
+  const sum = k => metricsPosts.reduce((t, r) => t + Number(r[k] || 0), 0);
+  document.getElementById('mt-active').textContent = fmtNum(metricsPosts.filter(r => r.plays > 0).length);
+  document.getElementById('mt-plays').textContent = fmtNum(sum('plays'));
+  document.getElementById('mt-views').textContent = fmtNum(sum('views'));
+  document.getElementById('mt-watch').textContent = fmtDuration(sum('watch_seconds'));
+  document.getElementById('mt-likes').textContent = fmtNum(sum('likes'));
+  document.getElementById('mt-shares').textContent = fmtNum(sum('shares'));
+  renderMetricsPosts();
+  renderMetricsUsers();
+}
+
+function renderMetricsPosts() {
+  const q = (document.getElementById('mp-search').value || '').toLowerCase().replace(/^@/, '');
+  const type = document.getElementById('mp-type').value;
+  const rows = metricsPosts.filter(r =>
+    (!q || (r.caption || '').toLowerCase().includes(q) || (r.handle || '').toLowerCase().includes(q)) &&
+    (!type || (type === 'reel') === !!r.is_reel));
+  const body = document.getElementById('mp-body');
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><p>No post activity in this period</p></div></td></tr>'; return; }
+  body.innerHTML = rows.map(r => `<tr class="clickable" onclick="openMetricsDetail('post','${r.post_id}')">
+    <td><div class="post-cell"><span class="badge ${r.is_reel ? 'badge-red' : 'badge-blue'}">${r.is_reel ? 'Reel' : 'Post'}</span>
+      <div class="pc-text"><div class="pc-cap">${escHtml(r.caption || '(no caption)')}</div><div class="pc-sub">@${escHtml(r.handle || '—')}</div></div></div></td>
+    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(r.created_at)}</td>
+    <td class="num-strong">${fmtNum(r.reach)}</td>
+    <td>${fmtNum(r.plays)}</td>
+    <td>${fmtNum(r.views)}</td>
+    <td>${r.plays ? fmtDuration(r.watch_seconds / r.plays) : '—'}</td>
+    <td>${fmtNum(r.likes)}</td>
+    <td>${fmtNum(r.shares)}</td>
+    <td>${fmtNum(r.impressions)}</td>
+    <td style="white-space:nowrap">${fmtHourShort(r.peak_hour)}</td>
+    <td><button class="action-btn" onclick="event.stopPropagation();openMetricsDetail('post','${r.post_id}')">Report</button></td>
+  </tr>`).join('');
+}
+
+function renderMetricsUsers() {
+  const q = (document.getElementById('mu-search').value || '').toLowerCase().replace(/^@/, '');
+  const rows = metricsUsers.filter(r => !q || (r.handle || '').toLowerCase().includes(q) || (r.display_name || '').toLowerCase().includes(q));
+  const body = document.getElementById('mu-body');
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><p>No creator activity in this period</p></div></td></tr>'; return; }
+  body.innerHTML = rows.map(r => `<tr class="clickable" onclick="openMetricsDetail('user','${escHtml(r.social_uid)}')">
+    <td><div class="avatar-cell"><div class="av" style="background:${colorFor(r.social_uid)}">${initials(r.display_name || r.handle)}</div>
+      <div><div style="font-weight:600">${escHtml(r.display_name || '—')}</div><div style="font-size:11px;color:var(--grey)">@${escHtml(r.handle || '—')}</div></div></div></td>
+    <td>${fmtNum(r.posts_uploaded)}</td>
+    <td class="num-strong">${fmtNum(r.reach)}</td>
+    <td>${fmtNum(r.plays)}</td>
+    <td>${fmtNum(r.views)}</td>
+    <td>${fmtDuration(r.watch_seconds)}</td>
+    <td>${fmtNum(r.likes)}</td>
+    <td>${fmtNum(r.shares)}</td>
+    <td style="white-space:nowrap">${fmtHourShort(r.peak_hour)}</td>
+    <td style="font-size:12px;max-width:150px">${r.top_post_id ? `<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(r.top_post_caption || '(no caption)')}</div><div class="cell-sub">${fmtNum(r.top_post_plays)} plays</div>` : '—'}</td>
+    <td><button class="action-btn" onclick="event.stopPropagation();openMetricsDetail('user','${escHtml(r.social_uid)}')">Report</button></td>
+  </tr>`).join('');
+}
+
+async function openMetricsDetail(kind, id) {
+  const src = kind === 'post' ? metricsPosts.find(r => r.post_id === id) : metricsUsers.find(r => r.social_uid === id);
+  if (!src) return;
+  const { from, to } = getRange('metrics');
+  const period = rangeLabel(from, to);
+  document.getElementById('md-title').textContent = kind === 'post'
+    ? `${src.is_reel ? 'Reel' : 'Post'} by @${src.handle || '—'}`
+    : `${src.display_name || 'Creator'} (@${src.handle || '—'})`;
+  document.getElementById('md-sub').textContent = kind === 'post'
+    ? `“${(src.caption || 'no caption').slice(0, 120)}” · uploaded ${formatDateTime(src.created_at)} · period: ${period}`
+    : `${fmtNum(src.posts_uploaded)} posts uploaded in period · period: ${period}`;
+  document.getElementById('md-kpis').innerHTML = '<div class="loading" style="grid-column:1/-1"><div class="spinner"></div> Building report...</div>';
+  document.getElementById('md-viewers').innerHTML = '';
+  document.getElementById('md-generated').textContent = '';
+  openModal('metrics-modal');
+  try {
+    const args = { ...rangeToTs('metrics'), p_post_id: kind === 'post' ? id : null, p_social_uid: kind === 'user' ? id : null };
+    metricsDetail = await rpc('admin_metrics_detail', args);
+    metricsDetail._name = kind === 'post' ? `post-${id.slice(0, 8)}` : `creator-${src.handle || id.slice(0, 8)}`;
+  } catch (e) {
+    document.getElementById('md-kpis').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Couldn't build report: ${escHtml(e.message)}</p></div>`;
+    return;
+  }
+  const d = metricsDetail;
+  const kpi = (v, l) => `<div class="mini-stat"><div class="ms-val">${v}</div><div class="ms-label">${l}</div></div>`;
+  document.getElementById('md-kpis').innerHTML =
+    kpi(fmtNum(d.reach), 'People reached') + kpi(fmtNum(d.plays), 'Plays') + kpi(fmtNum(d.views), 'Counted views') +
+    kpi(d.plays ? fmtDuration(d.watch_seconds / d.plays) : '—', 'Avg watch per play') + kpi(fmtDuration(d.watch_seconds), 'Total watch time') +
+    kpi(fmtNum(d.likes), 'Likes') + kpi(fmtNum(src.shares), 'Shares');
+
+  const hourly = d.hourly || new Array(24).fill(0);
+  const peak = hourly.some(n => n) ? hourly.indexOf(Math.max(...hourly)) : null;
+  document.getElementById('md-peak').textContent = peak === null
+    ? 'Plays by hour of day (IST) · no plays in this period'
+    : `Plays by hour of day (IST) · most watched ${fmtHourSlot(peak)} (${fmtNum(hourly[peak])} plays)`;
+  if (window._mdHourly) window._mdHourly.destroy();
+  window._mdHourly = new Chart(document.getElementById('md-hourly'), {
+    type: 'bar',
+    data: { labels: hourly.map((_, h) => { const x = h % 12 || 12; return `${x}${h < 12 ? 'a' : 'p'}`; }),
+      datasets: [{ label: 'Plays', data: hourly, backgroundColor: hourly.map((_, h) => h === peak ? '#b8475a' : '#e7c3ca'), borderRadius: 4, borderSkipped: 'bottom', maxBarThickness: 22 }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false }, tooltip: { ...CHART_TOOLTIP, callbacks: { title: c => fmtHourSlot(c[0].dataIndex) + ' IST' } } },
+      scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#7A726D', font: CHART_FONT, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+                y: { beginAtZero: true, grid: { color: '#EFEBE8' }, border: { display: false }, ticks: { color: '#7A726D', font: CHART_FONT, precision: 0, maxTicksLimit: 5 } } } }
+  });
+
+  const daily = d.daily || [];
+  document.getElementById('md-daily-sub').textContent = daily.length ? `${fmtDay(daily[0].day)} – ${fmtDay(daily[daily.length - 1].day)}` : 'No days in range';
+  const line = (label, key, color) => ({ label, data: daily.map(x => x[key]), borderColor: color, backgroundColor: color, borderWidth: 2,
+    cubicInterpolationMode: 'monotone', pointRadius: daily.length <= 31 ? 3 : 0, pointHoverRadius: 5 });
+  if (window._mdDaily) window._mdDaily.destroy();
+  window._mdDaily = new Chart(document.getElementById('md-daily'), {
+    type: 'line',
+    data: { labels: daily.map(x => new Date(x.day + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })),
+      datasets: [line('Plays', 'plays', '#2a78d6'), line('Reach', 'reach', '#b8475a'), line('Likes', 'likes', '#1baf7a')] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: CHART_TOOLTIP },
+      scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#7A726D', font: CHART_FONT, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+                y: { beginAtZero: true, grid: { color: '#EFEBE8' }, border: { display: false }, ticks: { color: '#7A726D', font: CHART_FONT, precision: 0, maxTicksLimit: 5 } } } }
+  });
+
+  const viewers = d.viewers || [];
+  document.getElementById('md-viewers-title').textContent = viewers.length >= 100 ? 'Who watched (latest 100)' : `Who watched (${viewers.length})`;
+  document.getElementById('md-viewers').innerHTML = viewers.length ? viewers.map(v => `<tr>
+    <td><div style="font-weight:600">${escHtml(v.name || 'Unknown user')}</div><div style="font-size:11px;color:var(--grey)">${v.handle ? '@' + escHtml(v.handle) : 'No social profile'}</div></td>
+    <td>${fmtNum(v.plays)}</td>
+    <td>${fmtDuration(v.seconds)}</td>
+    <td style="font-size:12px;white-space:nowrap">${formatDateTime(v.first_seen)}</td>
+    <td style="font-size:12px;white-space:nowrap">${formatDateTime(v.last_seen)}</td>
+  </tr>`).join('') : '<tr><td colspan="5"><div class="empty-state"><p>Nobody watched in this period</p></div></td></tr>';
+  document.getElementById('md-generated').textContent = `Generated ${new Date().toLocaleString('en-IN')} from ThanqYou watch records.`;
+}
+
+function printMetricsReport() {
+  document.body.classList.add('printing-report');
+  const done = () => { document.body.classList.remove('printing-report'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
+
+function downloadMetricsCSV(kind) {
+  let head, rows;
+  if (kind === 'posts') {
+    head = ['Post ID', 'Type', 'Creator', 'Caption', 'Uploaded', 'Reach', 'Plays', 'Counted views', 'Watch seconds', 'Likes', 'Shares', 'Feed impressions', 'Peak hour IST'];
+    rows = metricsPosts.map(r => [r.post_id, r.is_reel ? 'Reel' : 'Post', '@' + (r.handle || ''), r.caption || '', r.created_at, r.reach, r.plays, r.views, r.watch_seconds, r.likes, r.shares, r.impressions, fmtHourSlot(r.peak_hour)]);
+  } else if (kind === 'users') {
+    head = ['Creator', 'Username', 'Posts uploaded', 'Reach', 'Plays', 'Counted views', 'Watch seconds', 'Likes', 'Shares', 'Feed impressions', 'Peak hour IST', 'Top post', 'Top post plays'];
+    rows = metricsUsers.map(r => [r.display_name || '', '@' + (r.handle || ''), r.posts_uploaded, r.reach, r.plays, r.views, r.watch_seconds, r.likes, r.shares, r.impressions, fmtHourSlot(r.peak_hour), r.top_post_caption || '', r.top_post_plays || 0]);
+  } else {
+    if (!metricsDetail) return;
+    head = ['Viewer', 'Username', 'Plays', 'Watch seconds', 'First watched', 'Last watched'];
+    rows = (metricsDetail.viewers || []).map(v => [v.name || '', v.handle ? '@' + v.handle : '', v.plays, v.seconds, v.first_seen, v.last_seen]);
+  }
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = '\ufeff' + [head, ...rows].map(r => r.map(cell).join(',')).join('\r\n');
+  const { from, to } = getRange('metrics');
+  const name = `thanqyou-${kind === 'viewers' ? metricsDetail._name + '-viewers' : kind + '-metrics'}-${from || 'all'}${to && to !== from ? '_' + to : ''}.csv`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 // ── SOCIAL HANDLES ────────────────────────────────────
@@ -1287,7 +1630,7 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 
 // ── DATE RANGE FILTER (shared by Dashboard, Users, Content) ──
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
-const RANGE_RENDER = { dash: () => renderDashStats(), users: () => filterUsers(), content: () => renderContentRange() };
+const RANGE_RENDER = { dash: () => renderDashStats(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics() };
 
 function rangeControlsHTML(prefix, active) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
