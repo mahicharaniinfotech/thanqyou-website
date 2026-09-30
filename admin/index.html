@@ -299,6 +299,11 @@
   .tool-select { background:var(--dark2); border:1px solid var(--dark4); border-radius:9px; padding:7px 10px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
   .metrics-tabs { margin-bottom:16px; }
   .metrics-kpis { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  .section-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
+  .section-bar h3 { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--grey); margin-right:auto; }
+  .setup-card { background:#FFF8EC; border:1px solid #F3D9A8; border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; font-size:13px; line-height:1.6; }
+  .setup-card b { color:var(--white); }
+  .setup-card code { font-family:'DM Mono',monospace; font-size:12px; background:#fff; border:1px solid #F3D9A8; border-radius:5px; padding:0 5px; }
   .mode-switch { display:inline-flex; background:var(--dark3); border-radius:10px; padding:3px; gap:2px; }
   .mode-switch label { position:relative; cursor:pointer; }
   .mode-switch input { position:absolute; opacity:0; pointer-events:none; }
@@ -586,6 +591,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Reels &amp; Reach
     </div>
+    </div>
+    <div class="nav-section">App</div>
+    <div class="nav-item" onclick="showPage('installs',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      App Installs
     </div>
     <div class="nav-section">Communication</div>
     <div class="nav-item" onclick="showPage('notifications',this)">
@@ -911,6 +921,66 @@
           <tbody id="promo-body"><tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
         </div>
         <p class="metrics-note">Posts from a business with an <b>active subscription</b> land here automatically. Only <b>approved</b> posts are shown in the feed's business slot, and only while the subscription stays active.</p>
+      </div>
+
+      <!-- APP INSTALLS -->
+      <div class="page" id="page-installs">
+        <div class="dash-head page-head">
+          <div><h2>App installs &amp; activity</h2><p id="apps-range-label">This month</p></div>
+          <div class="dash-filter" data-range="apps" data-default="month"></div>
+        </div>
+        <div class="section-bar">
+          <h3>Store downloads</h3>
+          <span class="cell-sub" id="apps-sync-line"></span>
+          <button class="btn btn-ghost" id="apps-sync-btn" onclick="syncStores(true)">Sync now</button>
+        </div>
+        <div id="apps-store-setup"></div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Android downloads</div><div class="stat-value" id="ap-and-dl">—</div></div><div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 21h14"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="ap-and-dl-c"></span></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">iOS downloads</div><div class="stat-value" id="ap-ios-dl">—</div></div><div class="kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 21h14"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="ap-ios-dl-c"></span></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Installed on Android phones</div><div class="stat-value" id="ap-and-active">—</div></div><div class="kpi-icon wine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="ap-and-active-c"></span></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Android uninstalls</div><div class="stat-value" id="ap-and-un">—</div></div><div class="kpi-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="ap-and-un-c"></span></div></div>
+        </div>
+        <div class="chart-card report-block">
+          <div class="chart-head">
+            <div><h3>Daily downloads</h3><p id="ap-chart-sub">From Google Play Console and App Store Connect</p></div>
+            <div class="chart-legend"><span><i style="background:#1baf7a"></i>Android</span><span><i style="background:#2a78d6"></i>iOS</span></div>
+          </div>
+          <div class="chart-box" style="height:240px"><canvas id="ap-chart" role="img" aria-label="Daily downloads by store"></canvas></div>
+        </div>
+
+        <div class="section-bar"><h3>Registered users</h3></div>
+        <div class="mini-stats metrics-kpis">
+          <div class="mini-stat"><div class="ms-val" id="ap-users">—</div><div class="ms-label">Total users</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ap-android">—</div><div class="ms-label">Android users</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ap-ios">—</div><div class="ms-label">iOS users</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ap-unknown">—</div><div class="ms-label">Platform not yet known</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ap-reach">—</div><div class="ms-label">App still installed (push reachable)</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ap-gone">—</div><div class="ms-label">Uninstalled (push bounced)</div></div>
+        </div>
+
+        <div class="section-bar"><h3>Who is using the app</h3></div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Online right now</div><div class="stat-value" id="ap-online">—</div></div><div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="ap-online-c"></span></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Active in last 24 hours</div><div class="stat-value" id="ap-a24">—</div></div><div class="kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="ap-a24-c"></span></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Active in last 7 days</div><div class="stat-value" id="ap-a7">—</div></div><div class="kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="ap-a7-c"></span></div></div>
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Active in last 30 days</div><div class="stat-value" id="ap-a30">—</div></div><div class="kpi-icon wine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="ap-a30-c"></span></div></div>
+        </div>
+        <div class="dash-bottom">
+          <div class="table-card">
+            <div class="table-header">
+              <h3 id="ap-online-title">Online right now</h3>
+              <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="ap-online-search" placeholder="Search name or @username..." oninput="renderOnlineUsers()"></div>
+            </div>
+            <table><thead><tr><th>User</th><th>Platform</th><th>App version</th><th>Account</th><th>Opened app</th></tr></thead>
+            <tbody id="ap-online-body"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+          </div>
+          <div class="chart-card">
+            <div class="side-title">App versions in use</div>
+            <div class="breakdown" id="ap-versions"></div>
+          </div>
+        </div>
+        <p class="metrics-note"><b>Downloads</b> and <b>installed on Android phones</b> come straight from Google Play Console and App Store Connect (Apple does not report uninstalls or installed devices). <b>Platform</b> and <b>app version</b> are reported by the app from build 1.0.0+19, so users on older builds show as "not yet known" until they update. <b>Still installed</b> counts users whose phone still accepts push notifications; <b>uninstalled</b> counts phones where a push bounced because the app was removed. <b>Online right now</b> = app open in the foreground.</p>
       </div>
 
       <!-- USERS -->
@@ -1477,7 +1547,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
-  dashboard:'Dashboard', metrics:'Metrics', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', users:'Users', content:'Content', reports:'Reports', kyc:'KYC Verification',
+  dashboard:'Dashboard', metrics:'Metrics', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', content:'Content', reports:'Reports', kyc:'KYC Verification',
   wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
@@ -1491,7 +1561,7 @@ function showPage(name, el) {
   closeDrawer();
   window.scrollTo(0, 0);
   const loaders = {
-    dashboard: loadDashboard, metrics: loadMetrics, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, users: loadUsers, content: loadContent, reports: loadReports,
+    dashboard: loadDashboard, metrics: loadMetrics, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, installs: loadInstalls, users: loadUsers, content: loadContent, reports: loadReports,
     kyc: loadKYC, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts,
     analytics: loadAnalytics, notifications: loadNotifications, settings: loadSettings
   };
@@ -1526,9 +1596,147 @@ function refreshCurrentPage() {
   const active = document.querySelector('.nav-item.active');
   const page = active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (page) {
-    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
+    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,installs:loadInstalls,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
     if (loaders[page]) loaders[page]();
   }
+}
+
+// ── APP INSTALLS (store downloads, platforms, activity) ─────
+let appsData = null, appsOnline = [], appsSyncing = false;
+const PLATFORM_BADGE = { android:['badge-green','Android'], ios:['badge-blue','iOS'] };
+const PLATFORM_COLOR = { android:'#1baf7a', ios:'#2a78d6', unknown:'#b9b2ad' };
+
+function timeAgo(ts) {
+  if (!ts) return '—';
+  const m = Math.max(0, Math.round((Date.now() - new Date(ts)) / 60000));
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `${h} h ago` : formatDateTime(ts);
+}
+const splitLine = (a, i) => `Android ${fmtNum(a)} · iOS ${fmtNum(i)}`;
+
+async function loadInstalls() {
+  const { from, to } = getRange('apps');
+  document.getElementById('apps-range-label').textContent = `Store downloads for ${rangeLabel(from, to)} · user activity as of now`;
+  try {
+    [appsData, appsOnline] = await Promise.all([rpc('admin_app_overview', rangeToTs('apps')), rpc('admin_online_users', {})]);
+  } catch (e) {
+    document.getElementById('apps-store-setup').innerHTML = `<div class="setup-card">Couldn't load app stats: ${escHtml(e.message)}</div>`;
+    return;
+  }
+  renderInstalls();
+  const stale = st => !st || !st.last_attempt_at || Date.now() - new Date(st.last_attempt_at) > 6 * 3600e3;
+  const sync = appsData.sync || {};
+  if (stale(sync.google_play) || stale(sync.app_store)) syncStores(false);
+}
+
+async function syncStores(manual) {
+  if (appsSyncing) return;
+  appsSyncing = true;
+  const btn = document.getElementById('apps-sync-btn');
+  btn.disabled = true; btn.textContent = 'Syncing…';
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/fetch-store-stats`, {
+      method: 'POST',
+      headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(manual ? { days: 30 } : {})
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw new Error(d.error || `HTTP ${r.status}`);
+    const errs = (d.results || []).filter(x => x.error);
+    if (manual) showToast(errs.length ? `Sync finished with errors (${errs.map(x => x.store === 'app_store' ? 'App Store' : 'Google Play').join(', ')})` : 'Store numbers updated', errs.length ? 'error' : 'success');
+  } catch (e) {
+    if (manual) showToast('Sync failed: ' + e.message, 'error');
+  } finally {
+    appsSyncing = false; btn.disabled = false; btn.textContent = 'Sync now';
+  }
+  // Refresh the figures without triggering another automatic sync
+  try { appsData = await rpc('admin_app_overview', rangeToTs('apps')); renderInstalls(); } catch (_) {}
+}
+
+function storeSetupHtml(sync) {
+  const gp = sync.google_play || {}, as = sync.app_store || {};
+  const parts = [];
+  if (!gp.configured) parts.push(`<div><b>Google Play not connected.</b> In Supabase → Edge Functions → Secrets add <code>PLAY_SERVICE_ACCOUNT_JSON</code> (a Google Cloud service-account key, invited in Play Console → Users &amp; permissions with “View app information and download bulk reports”) and <code>PLAY_REPORTS_BUCKET</code> (Play Console → Download reports → Statistics → copy the Cloud Storage URI, e.g. <code>pubsite_prod_rev_…</code>).</div>`);
+  else if (gp.last_error) parts.push(`<div><b>Google Play sync error:</b> ${escHtml(gp.last_error)}</div>`);
+  if (!as.configured) parts.push(`<div><b>App Store not connected.</b> Add <code>ASC_ISSUER_ID</code>, <code>ASC_KEY_ID</code>, <code>ASC_PRIVATE_KEY</code> (App Store Connect → Users and Access → Integrations → API key with the “Sales” role), <code>ASC_VENDOR_NUMBER</code> (Payments and Financial Reports) and <code>ASC_APP_ID</code> (the app's Apple ID).</div>`);
+  else if (as.last_error) parts.push(`<div><b>App Store sync error:</b> ${escHtml(as.last_error)}</div>`);
+  return parts.length ? `<div class="setup-card">${parts.join('<div style="height:8px"></div>')}</div>` : '';
+}
+
+function renderInstalls() {
+  const d = appsData || {}, u = d.users || {}, st = d.store || {}, sync = d.sync || {};
+  const gp = st.google_play || {}, as = st.app_store || {};
+  const $ = id => document.getElementById(id);
+  const gpOn = !!(sync.google_play && sync.google_play.configured), asOn = !!(sync.app_store && sync.app_store.configured);
+  const syncedAt = [sync.google_play, sync.app_store].map(x => x && x.last_success_at).filter(Boolean).sort().pop();
+  $('apps-sync-line').textContent = syncedAt ? `Last synced ${timeAgo(syncedAt)}` : 'Not synced yet';
+  $('apps-store-setup').innerHTML = storeSetupHtml(sync);
+
+  $('ap-and-dl').textContent = gpOn ? fmtNum(gp.downloads_range) : '—';
+  $('ap-and-dl-c').textContent = gpOn ? `${fmtNum(gp.downloads_total)} all time` : 'Google Play not connected';
+  $('ap-ios-dl').textContent = asOn ? fmtNum(as.downloads_range) : '—';
+  $('ap-ios-dl-c').textContent = asOn ? `${fmtNum(as.downloads_total)} all time · ${fmtNum(as.redownloads_range)} re-downloads` : 'App Store not connected';
+  $('ap-and-active').textContent = gpOn && gp.active_installs != null ? fmtNum(gp.active_installs) : '—';
+  $('ap-and-active-c').textContent = gpOn && gp.last_date ? `Play Console, as of ${fmtDay(gp.last_date)}` : 'Google Play not connected';
+  $('ap-and-un').textContent = gpOn ? fmtNum(gp.uninstalls_range) : '—';
+  $('ap-and-un-c').textContent = gpOn ? `${fmtNum(gp.uninstalls_total)} all time` : 'Google Play not connected';
+
+  const byDay = {};
+  (d.daily || []).forEach(r => { (byDay[r.day] = byDay[r.day] || { android: 0, ios: 0 })[r.store === 'google_play' ? 'android' : 'ios'] = r.downloads || 0; });
+  const days = Object.keys(byDay).sort();
+  $('ap-chart-sub').textContent = days.length ? `${fmtDay(days[0])} – ${fmtDay(days[days.length - 1])}` : 'No store data for this period yet';
+  if (window._apChart) window._apChart.destroy();
+  window._apChart = new Chart($('ap-chart'), {
+    type: 'bar',
+    data: { labels: days.map(x => new Date(x + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })),
+      datasets: [
+        { label: 'Android', data: days.map(x => byDay[x].android), backgroundColor: PLATFORM_COLOR.android, borderRadius: 4, borderSkipped: 'bottom', maxBarThickness: 18 },
+        { label: 'iOS', data: days.map(x => byDay[x].ios), backgroundColor: PLATFORM_COLOR.ios, borderRadius: 4, borderSkipped: 'bottom', maxBarThickness: 18 }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: CHART_TOOLTIP },
+      scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#7A726D', font: CHART_FONT, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+                y: { beginAtZero: true, grid: { color: '#EFEBE8' }, border: { display: false }, ticks: { color: '#7A726D', font: CHART_FONT, precision: 0, maxTicksLimit: 5 } } } }
+  });
+
+  $('ap-users').textContent = fmtNum(u.total);
+  $('ap-android').textContent = fmtNum(u.android);
+  $('ap-ios').textContent = fmtNum(u.ios);
+  $('ap-unknown').textContent = fmtNum(u.unknown);
+  $('ap-reach').textContent = fmtNum(u.reachable);
+  $('ap-gone').textContent = fmtNum(u.uninstalled);
+
+  $('ap-online').textContent = fmtNum(u.online);
+  $('ap-online-c').textContent = splitLine(u.online_android, u.online_ios);
+  $('ap-a24').textContent = fmtNum(u.a24);
+  $('ap-a24-c').textContent = splitLine(u.a24_android, u.a24_ios);
+  $('ap-a7').textContent = fmtNum(u.a7);
+  $('ap-a7-c').textContent = splitLine(u.a7_android, u.a7_ios);
+  $('ap-a30').textContent = fmtNum(u.a30);
+  $('ap-a30-c').textContent = splitLine(u.a30_android, u.a30_ios);
+
+  const versions = d.versions || [];
+  const vTotal = versions.reduce((t, v) => t + Number(v.users || 0), 0);
+  $('ap-versions').innerHTML = versions.length
+    ? versions.slice(0, 8).map(v => breakdownRow(`${escHtml(v.version)} · ${v.platform === 'ios' ? 'iOS' : v.platform === 'android' ? 'Android' : 'unknown'}`, Number(v.users), vTotal, PLATFORM_COLOR[v.platform] || PLATFORM_COLOR.unknown)).join('')
+    : '<div class="empty-cta" style="padding:16px">No data yet</div>';
+  renderOnlineUsers();
+}
+
+function renderOnlineUsers() {
+  const q = (document.getElementById('ap-online-search').value || '').toLowerCase().replace(/^@/, '');
+  const rows = (appsOnline || []).filter(r => !q || (r.display_name || '').toLowerCase().includes(q) || (r.handle || '').toLowerCase().includes(q));
+  document.getElementById('ap-online-title').textContent = `Online right now (${fmtNum((appsOnline || []).length)})`;
+  const body = document.getElementById('ap-online-body');
+  if (!rows.length) { body.innerHTML = `<tr><td colspan="5"><div class="empty-cta"><b>${q ? 'No matches' : 'Nobody has the app open right now'}</b>${q ? 'Try another search.' : 'This list updates every time you refresh.'}</div></td></tr>`; return; }
+  body.innerHTML = rows.map(r => `<tr>
+    <td><div class="avatar-cell"><div class="av" style="background:${colorFor(r.firebase_uid)}">${initials(r.display_name)}</div><div><div style="font-weight:600">${escHtml(r.display_name || '—')}</div><div class="cell-sub">${r.handle ? '@' + escHtml(r.handle) : 'No social profile'}</div></div></div></td>
+    <td>${r.platform ? badge(PLATFORM_BADGE, r.platform) : '<span class="badge badge-grey">Unknown</span>'}</td>
+    <td style="font-size:12px">${escHtml(r.app_version || 'older build')}</td>
+    <td>${r.account_type === 'business' ? '<span class="badge badge-purple">Business</span>' : '<span class="badge badge-grey">Individual</span>'}</td>
+    <td style="font-size:12px;white-space:nowrap">${timeAgo(r.last_seen_at)}</td>
+  </tr>`).join('');
 }
 
 // ── ACCOUNT MODE (Individual / Business) ────────────
@@ -2165,7 +2373,7 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 
 // ── DATE RANGE FILTER (shared by Dashboard, Users, Content) ──
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
-const RANGE_RENDER = { dash: () => renderDashStats(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos() };
+const RANGE_RENDER = { dash: () => renderDashStats(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls() };
 
 function rangeControlsHTML(prefix, active) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
