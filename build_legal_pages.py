@@ -82,6 +82,7 @@ def page(title, body):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title} - ThanQYou</title>
+<link rel="icon" type="image/png" href="/images/app_icon.png">
 {STYLE_BLOCK}
 </head>
 <body>
