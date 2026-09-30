@@ -299,6 +299,11 @@
   .tool-select { background:var(--dark2); border:1px solid var(--dark4); border-radius:9px; padding:7px 10px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
   .metrics-tabs { margin-bottom:16px; }
   .metrics-kpis { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  #page-biz .stats-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+  #page-biz thead th, #page-businesses thead th { white-space:normal; line-height:1.3; vertical-align:bottom; }
+  #page-biz td, #page-biz thead th, #page-businesses td, #page-businesses thead th { padding-left:10px; padding-right:10px; }
+  @media (max-width:1280px) { #page-biz .stats-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (max-width:900px) { #page-biz .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   .section-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:6px 0 12px; }
   .section-bar h3 { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--grey); margin-right:auto; }
   .setup-card { background:#FFF8EC; border:1px solid #F3D9A8; border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; font-size:13px; line-height:1.6; }
@@ -828,6 +833,8 @@
           <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">KYB verified</div><div class="stat-value" id="bz-kyb">—</div></div><div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div></div><div class="kpi-foot"><span id="bz-kyb-d"></span></div><div class="kyc-mini" id="bz-kyb-bar"></div></div>
           <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Active subscriptions</div><div class="stat-value" id="bz-subs">—</div></div><div class="kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div></div><div class="kpi-foot"><span class="stat-change" id="bz-subs-c"></span></div></div>
           <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Promos awaiting review</div><div class="stat-value" id="bz-promo">—</div></div><div class="kpi-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></div></div><div class="kpi-foot"><span id="bz-promo-d"></span></div></div>
+        
+          <div class="stat-card"><div class="kpi-top"><div><div class="stat-label">Earnings</div><div class="stat-value" id="bz-earn">—</div></div><div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12"/><path d="M6 8h12"/><path d="M6 13l8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></div></div><div class="kpi-foot"><span id="bz-earn-d"></span><span class="stat-change" id="bz-earn-c"></span></div></div>
         </div>
         <div class="mini-stats metrics-kpis">
           <div class="mini-stat"><div class="ms-val" id="bz-imp">—</div><div class="ms-label">Promo impressions</div></div>
@@ -840,7 +847,7 @@
         <div class="dash-bottom">
           <div class="table-card">
             <div class="table-header"><h3>Top businesses in this period</h3></div>
-            <table><thead><tr><th>Business</th><th>KYB</th><th>Subscription</th><th>Reach</th><th>Promo impressions</th><th>Clicks</th></tr></thead>
+            <table><thead><tr><th>Business</th><th>KYB</th><th>Subscription</th><th>Reach</th><th>Promo impressions</th><th>Earnings</th></tr></thead>
             <tbody id="bz-top-body"></tbody></table>
           </div>
           <div class="chart-card">
@@ -858,14 +865,14 @@
         </div>
         <div class="table-card">
           <div class="table-header">
-            <h3>All business accounts</h3>
+            <h3>All business accounts <span class="cell-sub" style="font-weight:500;text-transform:none;letter-spacing:0">· click a row for details</span></h3>
             <div class="th-tools">
               <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="bl-search" placeholder="Search business, owner, city..." oninput="renderBusinessList()"></div>
               <select id="bl-kyb" class="tool-select" onchange="renderBusinessList()"><option value="">Any KYB status</option><option value="review">Needs review</option><option value="verified">Verified</option><option value="rejected">Rejected</option><option value="incomplete">Profile incomplete</option></select>
               <select id="bl-sub" class="tool-select" onchange="renderBusinessList()"><option value="">Any subscription</option><option value="active">Active</option><option value="none">No active plan</option></select>
             </div>
           </div>
-          <table><thead><tr><th>Business</th><th>Owner</th><th>Location</th><th>KYB</th><th>Subscription</th><th>Posts</th><th>Reach</th><th>Promo impressions</th><th>Joined</th><th></th></tr></thead>
+          <table><thead><tr><th>Business</th><th>Owner</th><th>Location</th><th>KYB</th><th>Subscription</th><th>Posts</th><th>Reach</th><th>Promo impressions</th><th>Earnings</th><th>Joined</th></tr></thead>
           <tbody id="bl-body"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
         </div>
       </div>
@@ -1780,7 +1787,7 @@ function bizLogo(b, lg) {
     : `<div class="biz-logo${lg ? ' lg' : ''}" style="background-color:${colorFor(b.firebase_uid)}">${initials(name)}</div>`;
 }
 function bizNameCell(b) {
-  return `<div class="avatar-cell" style="min-width:190px">${bizLogo(b)}<div><div style="font-weight:600">${escHtml(b.business_name || 'Profile not completed')}</div><div class="cell-sub">${escHtml(b.category || (b.handle ? '@' + b.handle : '—'))}</div></div></div>`;
+  return `<div class="avatar-cell" style="min-width:165px">${bizLogo(b)}<div><div style="font-weight:600">${escHtml(b.business_name || 'Profile not completed')}</div><div class="cell-sub">${escHtml(b.category || (b.handle ? '@' + b.handle : '—'))}</div></div></div>`;
 }
 function subCell(b) {
   if (!b.sub_status) return '<span class="badge badge-grey">No plan</span>';
@@ -1798,6 +1805,19 @@ function updateBizNavCounts() {
 async function fetchBizList(ts) {
   await loadBusinessUids();
   bizList = await rpc('admin_business_list', ts) || [];
+  // Wallet credits (e.g. the Rs.2 early-user signup bonus) for business accounts
+  const uids = bizList.map(b => b.firebase_uid);
+  const txns = uids.length ? await query('wallet_transactions', `select=firebase_uid,rupees,source,created_at&firebase_uid=in.(${uids.map(encodeURIComponent).join(',')})`) : [];
+  const from = new Date(ts.p_from), to = new Date(ts.p_to), today = localDay(new Date());
+  bizList.forEach(b => { b.earn_total = 0; b.earn_range = 0; b.earn_today = 0; });
+  const byUid = Object.fromEntries(bizList.map(b => [b.firebase_uid, b]));
+  (txns || []).forEach(t => {
+    const b = byUid[t.firebase_uid]; if (!b) return;
+    const r = parseFloat(t.rupees || 0), at = new Date(t.created_at);
+    b.earn_total += r;
+    if (at >= from && at < to) b.earn_range += r;
+    if (localDay(t.created_at) === today) b.earn_today += r;
+  });
   updateBizNavCounts();
   return bizList;
 }
@@ -1826,6 +1846,10 @@ async function loadBizOverview() {
   $('bz-kyb-bar').innerHTML = complete.length ? [[verified, DASH_STATUS.verified], [review, DASH_STATUS.pending], [rejected, DASH_STATUS.rejected]].filter(x => x[0]).map(x => `<span style="flex:${x[0]};background:${x[1]}"></span>`).join('') : '';
   $('bz-subs').textContent = fmtNum(active.length);
   $('bz-subs-c').textContent = `₹${mrr.toLocaleString('en-IN')} / month`;
+  const earnRange = sum('earn_range'), earnToday = sum('earn_today'), earnTotal = sum('earn_total');
+  $('bz-earn').textContent = fmtINR(earnRange);
+  $('bz-earn-d').innerHTML = `<span class="chip ${earnToday ? 'up' : 'flat'}">+${fmtINR(earnToday)} today</span>`;
+  $('bz-earn-c').textContent = from || to ? `${fmtINR(earnTotal)} all time` : '';
   $('bz-promo').textContent = fmtNum(promoPending);
   $('bz-promo-d').innerHTML = promoPending ? '<span class="chip warn">⚠ Review in Promoted Posts</span>' : '<span class="chip up">✓ Queue clear</span>';
   const imp = sum('promo_impressions'), clicks = sum('promo_clicks');
@@ -1836,10 +1860,10 @@ async function loadBizOverview() {
   $('bz-plays').textContent = fmtNum(sum('plays'));
   $('bz-reach').textContent = fmtNum(sum('reach'));
 
-  const top = list.filter(b => b.reach || b.promo_impressions).sort((a, b) => (b.reach - a.reach) || (b.promo_impressions - a.promo_impressions)).slice(0, 8);
+  const top = list.filter(b => b.reach || b.promo_impressions || b.earn_range).sort((a, b) => (b.reach - a.reach) || (b.promo_impressions - a.promo_impressions) || (b.earn_range - a.earn_range)).slice(0, 8);
   $('bz-top-body').innerHTML = !list.length
     ? emptyBiz(6, 'No business accounts yet', 'Businesses appear here as soon as someone picks <b style="display:inline;font-size:inherit">Business</b> at signup in the app.')
-    : top.length ? top.map(b => `<tr class="clickable" onclick="openBusiness('${b.firebase_uid}')"><td>${bizNameCell(b)}</td><td>${badge(KYB_BADGE, b.verification_status)}</td><td>${subCell(b)}</td><td class="num-strong">${fmtNum(b.reach)}</td><td>${fmtNum(b.promo_impressions)}</td><td>${fmtNum(b.promo_clicks)}</td></tr>`).join('')
+    : top.length ? top.map(b => `<tr class="clickable" onclick="openBusiness('${b.firebase_uid}')"><td>${bizNameCell(b)}</td><td>${badge(KYB_BADGE, b.verification_status)}</td><td>${subCell(b)}</td><td class="num-strong">${fmtNum(b.reach)}</td><td>${fmtNum(b.promo_impressions)}</td><td style="color:var(--green);font-weight:600">${fmtINR(b.earn_range)}</td></tr>`).join('')
     : emptyBiz(6, 'No activity in this period', 'Try a longer date range.');
 
   const attn = [];
@@ -1877,8 +1901,8 @@ function renderBusinessList() {
     <td>${fmtNum(b.posts_in_range)}</td>
     <td class="num-strong">${fmtNum(b.reach)}</td>
     <td>${fmtNum(b.promo_impressions)}</td>
+    <td style="color:var(--green);font-weight:600;white-space:nowrap">${fmtINR(b.earn_total || 0)}</td>
     <td style="font-size:12px;white-space:nowrap">${dateTimeCell(b.profile_created_at || b.signed_up_at)}</td>
-    <td><button class="action-btn" onclick="event.stopPropagation();openBusiness('${b.firebase_uid}')">View</button></td>
   </tr>`).join('');
 }
 
@@ -1985,7 +2009,7 @@ async function openBusiness(uid) {
     </div><div id="bm-payments" class="cell-sub" style="margin-top:8px">${b.sub_id ? 'Loading payment history…' : ''}</div></div>
     <div class="biz-section"><h3>Promoted posts</h3><div class="detail-grid">
       ${field('Awaiting review', fmtNum(b.promo_pending))}${field('Approved', fmtNum(b.promo_approved))}
-      ${field('Rejected', fmtNum(b.promo_rejected))}${field('Promo impressions (period)', fmtNum(b.promo_impressions) + ' · ' + fmtNum(b.promo_clicks) + ' clicks')}
+      ${field('Rejected', fmtNum(b.promo_rejected))}${field('Wallet earnings (all time)', fmtINR(b.earn_total || 0))}${field('Promo impressions (period)', fmtNum(b.promo_impressions) + ' · ' + fmtNum(b.promo_clicks) + ' clicks')}
     </div></div>`;
   openModal('biz-modal');
   if (b.sub_id) {
