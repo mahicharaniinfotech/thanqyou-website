@@ -1781,6 +1781,8 @@ function kybState(b) {
   // 'pending' = KYB document submitted (submit-kyb); 'unverified' = nothing submitted yet
   return s === 'verified' ? 'verified' : s === 'rejected' ? 'rejected' : s === 'pending' ? 'review' : 'unsubmitted';
 }
+// No business form yet -> Incomplete, whatever verification_status says
+function kybBadge(b) { return b.business_name ? badge(KYB_BADGE, b.verification_status) : '<span class="badge badge-grey">Incomplete</span>'; }
 function subActive(b) { return b.sub_status === 'active' && (!b.sub_expires_at || new Date(b.sub_expires_at) > new Date()); }
 function badge(map, key) { const m = map[key] || ['badge-grey', key ? prettyType(key) : '—']; return `<span class="badge ${m[0]}">${m[1]}</span>`; }
 function bizLogo(b, lg) {
@@ -1866,7 +1868,7 @@ async function loadBizOverview() {
   const top = list.filter(b => b.reach || b.promo_impressions || b.earn_range).sort((a, b) => (b.reach - a.reach) || (b.promo_impressions - a.promo_impressions) || (b.earn_range - a.earn_range)).slice(0, 8);
   $('bz-top-body').innerHTML = !list.length
     ? emptyBiz(6, 'No business accounts yet', 'Businesses appear here as soon as someone picks <b style="display:inline;font-size:inherit">Business</b> at signup in the app.')
-    : top.length ? top.map(b => `<tr class="clickable" onclick="openBusiness('${b.firebase_uid}')"><td>${bizNameCell(b)}</td><td>${badge(KYB_BADGE, b.verification_status)}</td><td>${subCell(b)}</td><td class="num-strong">${fmtNum(b.reach)}</td><td>${fmtNum(b.promo_impressions)}</td><td style="color:var(--green);font-weight:600">${fmtINR(b.earn_range)}</td></tr>`).join('')
+    : top.length ? top.map(b => `<tr class="clickable" onclick="openBusiness('${b.firebase_uid}')"><td>${bizNameCell(b)}</td><td>${kybBadge(b)}</td><td>${subCell(b)}</td><td class="num-strong">${fmtNum(b.reach)}</td><td>${fmtNum(b.promo_impressions)}</td><td style="color:var(--green);font-weight:600">${fmtINR(b.earn_range)}</td></tr>`).join('')
     : emptyBiz(6, 'No activity in this period', 'Try a longer date range.');
 
   const attn = [];
@@ -1899,7 +1901,7 @@ function renderBusinessList() {
     <td>${bizNameCell(b)}</td>
     <td><div style="font-weight:600">${escHtml(b.owner_name || '—')}</div><div class="cell-sub">${b.handle ? '@' + escHtml(b.handle) : escHtml(b.owner_email || '')}</div></td>
     <td style="font-size:12px">${escHtml([b.area, b.city].filter(Boolean).join(', ') || '—')}</td>
-    <td>${b.business_name ? badge(KYB_BADGE, b.verification_status) : '<span class="badge badge-grey">Incomplete</span>'}</td>
+    <td>${kybBadge(b)}</td>
     <td>${subCell(b)}</td>
     <td>${fmtNum(b.posts_in_range)}</td>
     <td class="num-strong">${fmtNum(b.reach)}</td>
@@ -2070,7 +2072,7 @@ async function openBusiness(uid) {
     </div></div>
     <div class="biz-section"><h3>KYB verification</h3><div class="detail-grid">
       ${field('GSTIN', escHtml(b.gstin), true)}${field('PAN', escHtml(b.pan), true)}
-      ${field('Status', b.business_name ? badge(KYB_BADGE, b.verification_status) : '<span class="badge badge-grey">Incomplete</span>')}${field('Admin note', escHtml(b.admin_note))}
+      ${field('Status', kybBadge(b))}${field('Admin note', escHtml(b.admin_note))}
     </div>${kybButtons}</div>
     <div class="biz-section"><h3>Owner</h3><div class="detail-grid">
       ${field('Name', escHtml(b.owner_name))}${field('Social username', b.handle ? '@' + escHtml(b.handle) : '')}
