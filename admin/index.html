@@ -868,7 +868,7 @@
             <h3>All business accounts <span class="cell-sub" style="font-weight:500;text-transform:none;letter-spacing:0">· click a row for details</span></h3>
             <div class="th-tools">
               <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="bl-search" placeholder="Search business, owner, city..." oninput="renderBusinessList()"></div>
-              <select id="bl-kyb" class="tool-select" onchange="renderBusinessList()"><option value="">Any KYB status</option><option value="review">Needs review</option><option value="verified">Verified</option><option value="rejected">Rejected</option><option value="incomplete">Profile incomplete</option></select>
+              <select id="bl-kyb" class="tool-select" onchange="renderBusinessList()"><option value="">Any KYB status</option><option value="review">Needs review</option><option value="verified">Verified</option><option value="rejected">Rejected</option><option value="unsubmitted">KYB not submitted</option><option value="incomplete">Profile incomplete</option></select>
               <select id="bl-sub" class="tool-select" onchange="renderBusinessList()"><option value="">Any subscription</option><option value="active">Active</option><option value="none">No active plan</option></select>
             </div>
           </div>
@@ -883,14 +883,15 @@
           <div class="mini-stat"><div class="ms-val" id="kyb-review">—</div><div class="ms-label">Needs review</div></div>
           <div class="mini-stat"><div class="ms-val" id="kyb-verified">—</div><div class="ms-label">Verified</div></div>
           <div class="mini-stat"><div class="ms-val" id="kyb-rejected">—</div><div class="ms-label">Rejected</div></div>
+          <div class="mini-stat"><div class="ms-val" id="kyb-unsubmitted">—</div><div class="ms-label">Not submitted</div></div>
           <div class="mini-stat"><div class="ms-val" id="kyb-incomplete">—</div><div class="ms-label">Profile incomplete</div></div>
         </div>
         <div class="table-card">
           <div class="table-header">
             <h3>KYB submissions</h3>
-            <select id="kyb-filter" class="tool-select" onchange="renderKyb()"><option value="review">Needs review</option><option value="verified">Verified</option><option value="rejected">Rejected</option><option value="">All</option></select>
+            <select id="kyb-filter" class="tool-select" onchange="renderKyb()"><option value="review">Needs review</option><option value="verified">Verified</option><option value="rejected">Rejected</option><option value="unsubmitted">Not submitted</option><option value="">All</option></select>
           </div>
-          <table><thead><tr><th>Business</th><th>Category</th><th>GSTIN</th><th>PAN</th><th>Contact</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+          <table><thead><tr><th>Business</th><th>Category</th><th>Document</th><th>GSTIN / PAN</th><th>Contact</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="kyb-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
         </div>
       </div>
@@ -1769,14 +1770,16 @@ function setAccountMode(mode) {
 
 // ── BUSINESS MODE ───────────────────────────────────
 let bizList = [], bizSubs = [], promoRows = [];
-const KYB_BADGE = { verified:['badge-green','Verified'], rejected:['badge-red','Rejected'], pending:['badge-orange','Pending review'], unverified:['badge-orange','Awaiting review'] };
+const KYB_BADGE = { verified:['badge-green','Verified'], rejected:['badge-red','Rejected'], pending:['badge-orange','Awaiting review'], unverified:['badge-grey','Not submitted'] };
 const SUB_BADGE = { active:['badge-green','Active'], pending_authorization:['badge-orange','Awaiting payment setup'], on_hold:['badge-orange','On hold'], cancelled:['badge-grey','Cancelled'], expired:['badge-grey','Expired'] };
 const PROMO_BADGE = { pending_review:['badge-orange','Awaiting review'], approved:['badge-green','Approved'], rejected:['badge-red','Rejected'] };
 
 function allTimeTs() { return { p_from: '2020-01-01T00:00:00Z', p_to: new Date(Date.now() + 864e5).toISOString() }; }
 function kybState(b) {
   if (!b.business_name) return 'incomplete';
-  return b.verification_status === 'verified' ? 'verified' : b.verification_status === 'rejected' ? 'rejected' : 'review';
+  const s = b.verification_status;
+  // 'pending' = KYB document submitted (submit-kyb); 'unverified' = nothing submitted yet
+  return s === 'verified' ? 'verified' : s === 'rejected' ? 'rejected' : s === 'pending' ? 'review' : 'unsubmitted';
 }
 function subActive(b) { return b.sub_status === 'active' && (!b.sub_expires_at || new Date(b.sub_expires_at) > new Date()); }
 function badge(map, key) { const m = map[key] || ['badge-grey', key ? prettyType(key) : '—']; return `<span class="badge ${m[0]}">${m[1]}</span>`; }
@@ -1906,10 +1909,62 @@ function renderBusinessList() {
   </tr>`).join('');
 }
 
+// KYB decisions go through the review-kyb edge function, never a direct
+// PATCH: on approve it registers the GSTIN/PAN in kyb_registry (blocking
+// reuse on another account) and marks user_kyc verified so payouts work;
+// on either decision it deletes the uploaded document and notifies the owner.
+async function reviewKyb(payload) {
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/review-kyb`, {
+    method: 'POST',
+    headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  let data = {};
+  try { data = await r.json(); } catch (_) {}
+  if (!r.ok) {
+    const e = new Error(data.error || `HTTP ${r.status}`);
+    e.code = data.error; e.data = data;
+    throw e;
+  }
+  return data;
+}
+
+const KYB_ERRORS = {
+  not_pending: 'This submission was already reviewed.',
+  business_profile_missing: 'Business profile no longer exists.',
+  no_document: 'No document on file for this business.',
+  no_kyb_identifier: 'Submission has no GSTIN / PAN / document number - reject it so the business resubmits.',
+};
+function kybErrorText(e) {
+  if (e.code === 'already_registered') return `This GSTIN/PAN is already verified on another account (${e.data.other_firebase_uid || 'unknown'}). Reject this submission.`;
+  return KYB_ERRORS[e.code] || e.message;
+}
+
+const KYB_DOC_LABEL = { gst: 'GST certificate', pan: 'PAN card', other: 'Other document' };
+function kybDocCell(b) {
+  if (!b.kyb_doc_type) return '<span class="cell-sub">—</span>';
+  const num = b.kyb_doc_type === 'other' && b.kyb_doc_number ? `<div class="cell-sub" style="font-family:'DM Mono',monospace">${escHtml(b.kyb_doc_number)}</div>` : '';
+  return `<div style="font-size:12px">${KYB_DOC_LABEL[b.kyb_doc_type] || escHtml(b.kyb_doc_type)}</div>${num}`;
+}
+
+// Pending submissions carry document fields admin_business_list doesn't return
+async function mergeKybSubmissions() {
+  const { items } = await reviewKyb({ action: 'list' });
+  const byUid = Object.fromEntries((items || []).map(x => [x.firebase_uid, x]));
+  bizList.forEach(b => {
+    const s = byUid[b.firebase_uid];
+    b.kyb_doc_type = s ? s.kyb_doc_type : null;
+    b.kyb_doc_number = s ? s.kyb_doc_number : null;
+    b.kyb_submitted_at = s ? s.kyb_submitted_at : null;
+  });
+}
+
 async function loadKyb() {
   document.getElementById('kyb-body').innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
   try { await fetchBizList(allTimeTs()); }
   catch (e) { document.getElementById('kyb-body').innerHTML = emptyBiz(8, "Couldn't load KYB", escHtml(e.message)); return; }
+  try { await mergeKybSubmissions(); }
+  catch (e) { showToast("Couldn't load KYB documents: " + kybErrorText(e), 'error'); }
   renderKyb();
 }
 
@@ -1918,34 +1973,41 @@ function renderKyb() {
   document.getElementById('kyb-review').textContent = count('review');
   document.getElementById('kyb-verified').textContent = count('verified');
   document.getElementById('kyb-rejected').textContent = count('rejected');
+  document.getElementById('kyb-unsubmitted').textContent = count('unsubmitted');
   document.getElementById('kyb-incomplete').textContent = count('incomplete');
   const f = document.getElementById('kyb-filter').value;
-  const rows = bizList.filter(b => b.business_name && (!f || kybState(b) === f));
+  const rows = bizList.filter(b => b.business_name && (!f || kybState(b) === f))
+    .sort((a, b) => new Date(a.kyb_submitted_at || 0) - new Date(b.kyb_submitted_at || 0));
   const body = document.getElementById('kyb-body');
-  if (!rows.length) { body.innerHTML = emptyBiz(8, f === 'review' ? 'Nothing to review' : 'No submissions', f === 'review' ? 'New business profiles will appear here for KYB review.' : 'Try another filter.'); return; }
+  if (!rows.length) { body.innerHTML = emptyBiz(8, f === 'review' ? 'Nothing to review' : 'No businesses', f === 'review' ? 'Businesses appear here once they submit a KYB document in the app.' : 'Try another filter.'); return; }
   body.innerHTML = rows.map(b => `<tr>
     <td>${bizNameCell(b)}</td>
     <td style="font-size:12px">${escHtml(b.category || '—')}</td>
-    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(b.gstin || '—')}</td>
-    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(b.pan || '—')}</td>
+    <td>${kybDocCell(b)}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(b.gstin || '—')}<div class="cell-sub">${escHtml(b.pan || '')}</div></td>
     <td style="font-size:12px">${escHtml(b.contact_number || '—')}</td>
-    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(b.profile_updated_at || b.profile_created_at)}</td>
+    <td style="font-size:12px;white-space:nowrap">${b.kyb_submitted_at ? dateTimeCell(b.kyb_submitted_at) : '—'}</td>
     <td>${badge(KYB_BADGE, b.verification_status)}${b.admin_note ? `<div class="cell-sub" style="max-width:200px">${escHtml(b.admin_note)}</div>` : ''}</td>
     <td><div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${kybState(b) !== 'verified' ? `<button class="action-btn success" onclick="setKyb('${b.firebase_uid}','verified')">Verify</button>` : ''}
-      ${kybState(b) !== 'rejected' ? `<button class="action-btn danger" onclick="setKyb('${b.firebase_uid}','rejected')">Reject</button>` : ''}
+      ${kybState(b) === 'review' ? `
+      <button class="action-btn" onclick="viewKybDoc('${b.firebase_uid}')">View document</button>
+      <button class="action-btn success" onclick="setKyb('${b.firebase_uid}','verified')">Approve</button>
+      <button class="action-btn danger" onclick="setKyb('${b.firebase_uid}','rejected')">Reject</button>` : ''}
       <button class="action-btn" onclick="openBusiness('${b.firebase_uid}')">Details</button>
     </div></td>
   </tr>`).join('');
 }
 
-async function patchWhere(table, col, val, data) {
-  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/${table}?${col}=eq.${encodeURIComponent(val)}`, {
-    method: 'PATCH',
-    headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify(data)
-  });
-  return r.ok;
+async function viewKybDoc(uid) {
+  // Open the tab synchronously so the popup blocker allows it
+  const tab = window.open('', '_blank');
+  try {
+    const { url } = await reviewKyb({ action: 'view', firebase_uid: uid });
+    if (tab) { tab.opener = null; tab.location.href = url; } else window.location.assign(url);
+  } catch (e) {
+    if (tab) tab.close();
+    showToast(kybErrorText(e), 'error');
+  }
 }
 
 // Best-effort push to the business owner; a failed push never blocks the decision
@@ -1962,16 +2024,24 @@ async function setKyb(uid, status) {
   if (!b) return;
   let note = null;
   if (status === 'rejected') {
-    note = prompt(`Reason for rejecting KYB of "${b.business_name}"? The business will see this.`, b.admin_note || '');
+    note = prompt(`Reason for rejecting KYB of "${b.business_name}"? The business will see this.`, '');
     if (note === null) return;
     note = note.trim() || 'Details could not be verified';
-  } else if (!confirm(`Mark "${b.business_name}" as KYB verified?`)) return;
-  const ok = await patchWhere('business_profiles', 'firebase_uid', uid, { verification_status: status, admin_note: note });
-  if (!ok) { showToast('Could not update KYB', 'error'); return; }
-  notifyOwner(uid, status === 'verified' ? 'Your business is verified ✅' : 'Business verification update',
-    status === 'verified' ? `${b.business_name} has been verified on ThanqYou.` : `We couldn't verify ${b.business_name}: ${note}`);
+  } else {
+    note = prompt(`Approve KYB for "${b.business_name}"?\nOptional note (leave blank for none):`, '');
+    if (note === null) return;
+    note = note.trim() || null;
+  }
+  try {
+    await reviewKyb({ action: status === 'verified' ? 'approve' : 'reject', firebase_uid: uid, note: note || undefined });
+  } catch (e) {
+    showToast(kybErrorText(e), 'error');
+    if (e.code === 'not_pending') loadKyb();
+    return;
+  }
   showToast(status === 'verified' ? 'Business verified' : 'KYB rejected', 'success');
   b.verification_status = status; b.admin_note = note;
+  b.kyb_doc_type = b.kyb_doc_number = b.kyb_submitted_at = null;
   updateBizNavCounts();
   if (document.getElementById('page-kyb').classList.contains('active')) renderKyb();
   if (document.getElementById('page-businesses').classList.contains('active')) renderBusinessList();
@@ -1985,10 +2055,13 @@ async function openBusiness(uid) {
   document.getElementById('bm-name').textContent = b.business_name || 'Profile not completed';
   document.getElementById('bm-sub').textContent = [b.category, [b.area, b.city].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'Business account';
   const field = (l, v, mono) => `<div class="detail-field"><div class="df-label">${l}</div><div class="df-value"${mono ? ' style="font-family:\'DM Mono\',monospace;font-size:13px"' : ''}>${v || '—'}</div></div>`;
-  const kybButtons = b.business_name ? `<div class="biz-actions">
-      ${kybState(b) !== 'verified' ? `<button class="btn btn-red" style="background:var(--green)" onclick="setKyb('${uid}','verified')">Verify business</button>` : ''}
-      ${kybState(b) !== 'rejected' ? `<button class="btn btn-ghost" onclick="setKyb('${uid}','rejected')">Reject with reason</button>` : ''}
-    </div>` : '<p class="cell-sub">The owner picked Business but has not submitted the business form yet.</p>';
+  const kybButtons = !b.business_name ? '<p class="cell-sub">The owner picked Business but has not submitted the business form yet.</p>'
+    : kybState(b) === 'review' ? `<div class="biz-actions">
+      <button class="btn btn-ghost" onclick="viewKybDoc('${uid}')">View document</button>
+      <button class="btn btn-red" style="background:var(--green)" onclick="setKyb('${uid}','verified')">Verify business</button>
+      <button class="btn btn-ghost" onclick="setKyb('${uid}','rejected')">Reject with reason</button>
+    </div>`
+    : kybState(b) === 'unsubmitted' ? '<p class="cell-sub">The business has not submitted a KYB document yet.</p>' : '';
   document.getElementById('bm-body').innerHTML = `
     <div class="biz-section" style="margin-top:0"><h3>Business details</h3><div class="detail-grid">
       ${field('Business name', escHtml(b.business_name))}${field('Category', escHtml(b.category))}
