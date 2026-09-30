@@ -1750,7 +1750,7 @@ async function loadBusinessUids() {
   businessUids = new Set((rows || []).map(r => r.firebase_uid));
 }
 function onlyIndividualUsers(rows) { return (rows || []).filter(u => u.account_type !== 'business' && !businessUids.has(u.firebase_uid)); }
-function onlyIndividualPosts(rows) { return (rows || []).filter(p => !businessUids.has(p.firebase_uid)); }
+function onlyIndividualPosts(rows) { return (rows || []).filter(p => !businessUids.has(p.firebase_uid)); } // any rows keyed by firebase_uid
 
 function setAccountMode(mode) {
   accountMode = mode;
@@ -2346,7 +2346,7 @@ async function loadDashboard() {
   const [users, posts, txns, kyc] = await Promise.all([
     query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&order=created_at.desc').then(onlyIndividualUsers),
     query('posts', 'select=id,firebase_uid,media_types,created_at&is_deleted=eq.false').then(onlyIndividualPosts),
-    query('wallet_transactions', 'select=rupees,type,created_at'),
+    query('wallet_transactions', 'select=firebase_uid,rupees,type,created_at').then(onlyIndividualPosts),
     query('user_kyc', 'select=id,firebase_uid,status,submitted_at')
   ]);
 
@@ -2947,11 +2947,13 @@ let txnExpanded = new Set();
 
 async function loadWallet() {
   document.getElementById('txn-body').innerHTML = '<tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  await loadBusinessUids();
   const [data, users] = await Promise.all([
     query('wallet_transactions', 'select=*&order=created_at.desc'),
     query('users', 'select=firebase_uid,display_name'),
   ]);
-  txnData = data || [];
+  // Individual panel: wallet figures exclude business accounts (same rule as Dashboard)
+  txnData = onlyIndividualPosts(data);
   walletUsersMap = {};
   (users||[]).forEach(u => walletUsersMap[u.firebase_uid] = u);
   const total = txnData.reduce((s,t)=>s+parseFloat(t.rupees||0),0);
