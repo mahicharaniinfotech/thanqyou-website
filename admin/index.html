@@ -593,6 +593,14 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
       Promoted Posts <span class="nav-count" id="nav-promo-count"></span>
     </div>
+    <div class="nav-item" onclick="showPage('users',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Users
+    </div>
+    <div class="nav-item" onclick="showPage('content',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Content
+    </div>
     <div class="nav-item" onclick="showPage('metrics',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Reels &amp; Reach
@@ -1760,6 +1768,9 @@ async function loadBusinessUids() {
 }
 function onlyIndividualUsers(rows) { return (rows || []).filter(u => u.account_type !== 'business' && !businessUids.has(u.firebase_uid)); }
 function onlyIndividualPosts(rows) { return (rows || []).filter(p => !businessUids.has(p.firebase_uid)); } // any rows keyed by firebase_uid
+// Shared pages (Users, Content) show whichever side the mode toggle is on
+function usersForMode(rows) { return accountMode === 'business' ? (rows || []).filter(u => u.account_type === 'business' || businessUids.has(u.firebase_uid)) : onlyIndividualUsers(rows); }
+function postsForMode(rows) { return accountMode === 'business' ? (rows || []).filter(p => businessUids.has(p.firebase_uid)) : onlyIndividualPosts(rows); }
 
 function setAccountMode(mode) {
   accountMode = mode;
@@ -1844,8 +1855,9 @@ async function loadBizOverview() {
   const mrr = active.reduce((t, b) => t + Number(b.sub_amount || 0), 0);
   const promoPending = list.reduce((t, b) => t + Number(b.promo_pending || 0), 0);
   const sum = k => list.reduce((t, b) => t + Number(b[k] || 0), 0);
-  $('bz-total').textContent = fmtNum(list.length);
-  $('bz-total-d').innerHTML = `<span class="chip ${newInRange ? 'up' : 'flat'}">+${newInRange} ${from || to ? 'in period' : 'total'}</span>`;
+  // Follows the date filter like the other cards: accounts created in the period, all-time total underneath
+  $('bz-total').textContent = fmtNum(from || to ? newInRange : list.length);
+  $('bz-total-d').innerHTML = from || to ? `<span class="chip flat">${fmtNum(list.length)} total</span>` : '';
   $('bz-total-c').textContent = list.length - complete.length ? `${list.length - complete.length} profile incomplete` : '';
   $('bz-kyb').textContent = `${verified} / ${complete.length}`;
   $('bz-kyb-d').innerHTML = review ? `<span class="chip warn">⚠ ${review} awaiting review</span>` : complete.length && verified === complete.length ? '<span class="chip up">✓ All verified</span>' : '<span class="chip flat">Nothing to review</span>';
@@ -2784,7 +2796,8 @@ async function loadUsers() {
   const kycMap = {};
   (kycData||[]).forEach(k => kycMap[k.firebase_uid] = k);
   await loadSocialHandles();
-  usersData = onlyIndividualUsers(data).map(u => ({
+  document.querySelector('#page-users .dash-head h2').textContent = accountMode === 'business' ? 'Business signups' : 'Signups';
+  usersData = usersForMode(data).map(u => ({
     ...u,
     _wallet: walletMap[u.firebase_uid] || null,
     _kyc: kycMap[u.firebase_uid] || null
@@ -3257,7 +3270,8 @@ async function loadContent(){
   document.getElementById('creator-list').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('content-body').innerHTML='<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
   var res=await Promise.all([query('posts','select=*&is_deleted=eq.false&order=created_at.desc'),query('social_accounts','select=social_uid,username_handle,username,social_avatar_url')]);
-  contentData=onlyIndividualPosts(res[0]);(res[1]||[]).forEach(function(a){allAccounts[a.social_uid]=a;});
+  document.querySelector('#page-content .dash-head h2').textContent=accountMode==='business'?'Business uploads':'Uploads';
+  contentData=postsForMode(res[0]);(res[1]||[]).forEach(function(a){allAccounts[a.social_uid]=a;});
   renderContentRange();
 }
 function handleOf(uid){var a=allAccounts[uid];return (a&&(a.username_handle||a.username))||String(uid||'').substring(0,10);}
