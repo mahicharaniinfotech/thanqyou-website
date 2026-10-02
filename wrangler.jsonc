@@ -1,0 +1,10 @@
+// Cloudflare Workers static-assets site for thanqyou.com.
+// Files listed in .assetsignore are never published.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "thanqyou-website",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "."
+  }
+}

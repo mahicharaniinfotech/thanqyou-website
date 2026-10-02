@@ -1,0 +1,9 @@
+# Files Cloudflare must never publish (gitignore syntax)
+.git
+.gitignore
+.assetsignore
+.wrangler
+wrangler.jsonc
+.netlify
+.idea
+*.py
