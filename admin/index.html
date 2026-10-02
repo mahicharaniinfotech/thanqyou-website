@@ -1691,14 +1691,17 @@ function renderInstalls() {
   $('apps-sync-line').textContent = syncedAt ? `Last synced ${timeAgo(syncedAt)}` : 'Not synced yet';
   $('apps-store-setup').innerHTML = storeSetupHtml(sync);
 
-  $('ap-and-dl').textContent = gpOn ? fmtNum(gp.downloads_range) : '—';
-  $('ap-and-dl-c').textContent = gpOn ? `${fmtNum(gp.downloads_total)} all time` : 'Google Play not connected';
+  // Configured isn't enough: until a sync has stored Play data, its numbers are unknown, not zero
+  const gpData = gpOn && !!gp.last_date;
+  const gpWait = gpOn ? 'Waiting for Google Play data' : 'Google Play not connected';
+  $('ap-and-dl').textContent = gpData ? fmtNum(gp.downloads_range) : '—';
+  $('ap-and-dl-c').textContent = gpData ? `${fmtNum(gp.downloads_total)} all time` : `${gpWait} · ${fmtNum(u.android)} Android users in the app`;
   $('ap-ios-dl').textContent = asOn ? fmtNum(as.downloads_range) : '—';
   $('ap-ios-dl-c').textContent = asOn ? `${fmtNum(as.downloads_total)} all time · ${fmtNum(as.redownloads_range)} re-downloads` : 'App Store not connected';
-  $('ap-and-active').textContent = gpOn && gp.active_installs != null ? fmtNum(gp.active_installs) : '—';
-  $('ap-and-active-c').textContent = gpOn && gp.last_date ? `Play Console, as of ${fmtDay(gp.last_date)}` : 'Google Play not connected';
-  $('ap-and-un').textContent = gpOn ? fmtNum(gp.uninstalls_range) : '—';
-  $('ap-and-un-c').textContent = gpOn ? `${fmtNum(gp.uninstalls_total)} all time` : 'Google Play not connected';
+  $('ap-and-active').textContent = gpData && gp.active_installs != null ? fmtNum(gp.active_installs) : '—';
+  $('ap-and-active-c').textContent = gpData ? `Play Console, as of ${fmtDay(gp.last_date)}` : gpWait;
+  $('ap-and-un').textContent = gpData ? fmtNum(gp.uninstalls_range) : '—';
+  $('ap-and-un-c').textContent = gpData ? `${fmtNum(gp.uninstalls_total)} all time` : `${gpWait} · ${fmtNum(u.uninstalled)} push bounced`;
 
   const byDay = {};
   (d.daily || []).forEach(r => { (byDay[r.day] = byDay[r.day] || { android: 0, ios: 0 })[r.store === 'google_play' ? 'android' : 'ios'] = r.downloads || 0; });
