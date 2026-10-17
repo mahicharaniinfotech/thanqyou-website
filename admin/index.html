@@ -541,6 +541,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Users
     </div>
+    <div class="nav-item" onclick="showPage('activity',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Last Login
+    </div>
     <div class="nav-item" onclick="showPage('content',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
       Content
@@ -596,6 +600,10 @@
     <div class="nav-item" onclick="showPage('users',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Users
+    </div>
+    <div class="nav-item" onclick="showPage('activity',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Last Login
     </div>
     <div class="nav-item" onclick="showPage('content',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -1031,6 +1039,46 @@
           <table><thead><tr><th>User</th><th>Email</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
           <tbody id="users-body"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
           <div class="pagination"><span id="users-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="usersPage(-1)">← Prev</button><button class="pag-btn active" id="users-page-num">1</button><button class="pag-btn" onclick="usersPage(1)">Next →</button></div></div>
+        </div>
+      </div>
+
+      <!-- LAST LOGIN & ACTIVITY -->
+      <div class="page" id="page-activity">
+        <div class="dash-head page-head">
+          <div><h2 id="act-title">Last login &amp; activity</h2><p>Status as of now · refresh to update</p></div>
+        </div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="ms-val" id="act-online">—</div><div class="ms-label">Online now</div></div>
+          <div class="mini-stat"><div class="ms-val" id="act-24h">—</div><div class="ms-label">Active in last 24 hours</div></div>
+          <div class="mini-stat"><div class="ms-val" id="act-7d">—</div><div class="ms-label">Active in last 7 days</div></div>
+          <div class="mini-stat"><div class="ms-val" id="act-30">—</div><div class="ms-label">Inactive 30+ days</div></div>
+          <div class="mini-stat"><div class="ms-val" id="act-gone">—</div><div class="ms-label">Push bounced since last use</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Users</h3>
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input id="act-search" placeholder="Search name, @username, email, phone..." oninput="filterActivity()">
+            </div>
+            <select id="act-filter" class="tool-select" onchange="filterActivity()">
+              <option value="">Everyone</option>
+              <option value="online">Online now</option>
+              <option value="today">Active in last 24 hours</option>
+              <option value="week">Active in last 7 days</option>
+              <option value="idle">Inactive 7–30 days</option>
+              <option value="dormant">Inactive 30+ days</option>
+              <option value="gone">Push bounced (may have uninstalled)</option>
+            </select>
+            <select id="act-sort" class="tool-select" onchange="filterActivity()">
+              <option value="active">Sort: last active</option>
+              <option value="login">Sort: last login</option>
+              <option value="idle">Sort: longest inactive</option>
+            </select>
+          </div>
+          <table><thead><tr><th>User</th><th>Status</th><th>Last login</th><th>Last active</th><th>Platform</th><th>Joined</th></tr></thead>
+          <tbody id="act-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+          <div class="pagination"><span id="act-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="activityPage(-1)">← Prev</button><button class="pag-btn active" id="act-page-num">1</button><button class="pag-btn" onclick="activityPage(1)">Next →</button></div></div>
         </div>
       </div>
 
@@ -1564,7 +1612,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
-  dashboard:'Dashboard', metrics:'Metrics', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', content:'Content', reports:'Reports', kyc:'KYC Verification',
+  dashboard:'Dashboard', metrics:'Metrics', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', activity:'Last Login', content:'Content', reports:'Reports', kyc:'KYC Verification',
   wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
@@ -1578,7 +1626,7 @@ function showPage(name, el) {
   closeDrawer();
   window.scrollTo(0, 0);
   const loaders = {
-    dashboard: loadDashboard, metrics: loadMetrics, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, installs: loadInstalls, users: loadUsers, content: loadContent, reports: loadReports,
+    dashboard: loadDashboard, metrics: loadMetrics, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, installs: loadInstalls, users: loadUsers, activity: loadActivity, content: loadContent, reports: loadReports,
     kyc: loadKYC, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts,
     analytics: loadAnalytics, notifications: loadNotifications, settings: loadSettings
   };
@@ -1613,7 +1661,7 @@ function refreshCurrentPage() {
   const active = document.querySelector('.nav-item.active');
   const page = active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (page) {
-    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,installs:loadInstalls,users:loadUsers,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
+    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,installs:loadInstalls,users:loadUsers,activity:loadActivity,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
     if (loaders[page]) loaders[page]();
   }
 }
@@ -2879,6 +2927,103 @@ function usersPage(dir) {
   const maxPage = Math.max(0, Math.ceil(getFilteredUsers().length / PAGE_SIZE) - 1);
   usersCurrentPage = Math.max(0, Math.min(maxPage, usersCurrentPage + dir));
   renderUsers();
+}
+
+// ── LAST LOGIN & ACTIVITY ─────────────────────────────
+// Last login = latest sign-in on a phone (active_mobile_sessions, written by
+// register-mobile-session). Last active = latest of the three activity stamps
+// the app writes on open/resume. Online uses the same rule as App Installs.
+let activityData = [], activityPage_ = 0;
+const ACT_STATUS = {
+  online: ['badge-green', 'Online'], today: ['badge-blue', 'Active today'], week: ['badge-blue', 'Active this week'],
+  idle: ['badge-orange', 'Inactive 7–30 days'], dormant: ['badge-grey', 'Inactive 30+ days'],
+};
+
+// Status is activity only; a bounced push (_gone) is shown beside it, since
+// tokens also bounce for people who are still using the app
+function activityStatus(u, now) {
+  const age = u._active ? now - new Date(u._active) : Infinity;
+  if (u.is_online && u.last_seen_at && now - new Date(u.last_seen_at) < 12 * 3600e3) return 'online';
+  if (age < 864e5) return 'today';
+  if (age < 7 * 864e5) return 'week';
+  if (age < 30 * 864e5) return 'idle';
+  return 'dormant';
+}
+
+function agoLine(ts) {
+  if (!ts) return '';
+  const d = Math.floor((Date.now() - new Date(ts)) / 864e5);
+  return `<div class="cell-sub">${d < 1 ? timeAgo(ts) : d === 1 ? 'yesterday' : d + ' days ago'}</div>`;
+}
+
+async function loadActivity() {
+  document.getElementById('act-body').innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('act-title').textContent = accountMode === 'business' ? 'Business last login & activity' : 'Last login & activity';
+  await loadBusinessUids();
+  const [users, sessions] = await Promise.all([
+    query('users', 'select=firebase_uid,display_name,email,phone,account_type,created_at,is_online,last_seen_at,last_seen,last_active_at,platform,app_version,fcm_token_invalid_at'),
+    query('active_mobile_sessions', 'select=firebase_uid,logged_in_at'),
+    loadSocialHandles()
+  ]);
+  const lastLogin = {};
+  (sessions || []).forEach(s => { if (s.logged_in_at && (!lastLogin[s.firebase_uid] || s.logged_in_at > lastLogin[s.firebase_uid])) lastLogin[s.firebase_uid] = s.logged_in_at; });
+  const now = Date.now();
+  activityData = usersForMode(users).map(u => {
+    const stamps = [u.last_seen_at, u.last_seen, u.last_active_at].filter(Boolean).sort();
+    const row = { ...u, _login: lastLogin[u.firebase_uid] || null, _active: stamps.pop() || null };
+    row._status = activityStatus(row, now);
+    // Push bounced as "app not installed" and they haven't opened the app since
+    row._gone = !!u.fcm_token_invalid_at && (!row._active || new Date(row._active) < new Date(u.fcm_token_invalid_at));
+    return row;
+  });
+  const count = st => activityData.filter(u => u._status === st).length;
+  document.getElementById('act-online').textContent = count('online');
+  document.getElementById('act-24h').textContent = count('online') + count('today');
+  document.getElementById('act-7d').textContent = count('online') + count('today') + count('week');
+  document.getElementById('act-30').textContent = count('dormant');
+  document.getElementById('act-gone').textContent = activityData.filter(u => u._gone).length;
+  filterActivity();
+}
+
+function getFilteredActivity() {
+  const q = (document.getElementById('act-search').value || '').toLowerCase().replace(/^@/, '');
+  const f = document.getElementById('act-filter').value;
+  const sort = document.getElementById('act-sort').value;
+  // The 24h / 7-day filters include everyone more recent too, matching the cards
+  const within = { online: ['online'], today: ['online', 'today'], week: ['online', 'today', 'week'] };
+  const rows = activityData.filter(u =>
+    (!f || (f === 'gone' ? u._gone : (within[f] || [f]).includes(u._status))) &&
+    (!q || [u.display_name, u.email, u.phone, socialHandles[u.firebase_uid]].some(v => (v || '').toLowerCase().includes(q))));
+  const t = ts => ts ? new Date(ts).getTime() : 0;
+  if (sort === 'login') rows.sort((a, b) => t(b._login) - t(a._login));
+  else if (sort === 'idle') rows.sort((a, b) => t(a._active) - t(b._active));
+  else rows.sort((a, b) => (b._status === 'online') - (a._status === 'online') || t(b._active) - t(a._active));
+  return rows;
+}
+
+function filterActivity() { activityPage_ = 0; renderActivity(); }
+
+function renderActivity() {
+  const rows = getFilteredActivity();
+  const start = activityPage_ * PAGE_SIZE, page = rows.slice(start, start + PAGE_SIZE);
+  document.getElementById('act-count').textContent = rows.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length}` : '0 users';
+  document.getElementById('act-page-num').textContent = activityPage_ + 1;
+  const body = document.getElementById('act-body');
+  if (!page.length) { body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
+  body.innerHTML = page.map(u => `<tr>
+    <td><div class="avatar-cell"><div class="av" style="background:${colorFor(u.firebase_uid)}">${initials(u.display_name)}</div><div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
+    <td>${badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
+    <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : '<span class="cell-sub">Not recorded</span>'}</td>
+    <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}</td>
+    <td>${u.platform ? badge(PLATFORM_BADGE, u.platform) : '<span class="badge badge-grey">Unknown</span>'}<div class="cell-sub">${escHtml(u.app_version || 'older build')}</div></td>
+    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(u.created_at)}</td>
+  </tr>`).join('');
+}
+
+function activityPage(dir) {
+  const maxPage = Math.max(0, Math.ceil(getFilteredActivity().length / PAGE_SIZE) - 1);
+  activityPage_ = Math.max(0, Math.min(maxPage, activityPage_ + dir));
+  renderActivity();
 }
 
 async function viewUser(uid) {
