@@ -1670,10 +1670,15 @@ function formatRupees(paise) {
   return `₹${(paise/100).toFixed(2)}`;
 }
 
+// NFKC turns styled "fancy text" letters (e.g. a name typed as 𝑶𝒗𝒆𝒓𝒕𝒉𝒊𝒏𝒌𝒆𝒓)
+// into plain ones; Array.from keeps 4-byte characters and emoji whole
 function initials(name) {
-  if (!name) return '?';
-  return name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  const words = String(name ?? '').normalize('NFKC').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '?';
+  return Array.from(words.map(w => Array.from(w)[0]).join('')).slice(0, 2).join('').toUpperCase();
 }
+// Lower-cased plain text for searching, so "overthinker" finds 𝑶𝒗𝒆𝒓𝒕𝒉𝒊𝒏𝒌𝒆𝒓
+function plainLower(s) { return String(s ?? '').normalize('NFKC').toLowerCase(); }
 
 const COLORS = ['#E74C3C','#E67E22','#F1C40F','#2ECC71','#1ABC9C','#3498DB','#9B59B6','#E91E63'];
 function colorFor(str) { return COLORS[Math.abs(str?.charCodeAt(0)||0) % COLORS.length]; }
@@ -1865,8 +1870,8 @@ function renderInstalls() {
 }
 
 function renderOnlineUsers() {
-  const q = (document.getElementById('ap-online-search').value || '').toLowerCase().replace(/^@/, '');
-  const rows = (appsOnline || []).filter(r => !q || (r.display_name || '').toLowerCase().includes(q) || (r.handle || '').toLowerCase().includes(q));
+  const q = plainLower(document.getElementById('ap-online-search').value).replace(/^@/, '');
+  const rows = (appsOnline || []).filter(r => !q || plainLower(r.display_name).includes(q) || plainLower(r.handle).includes(q));
   document.getElementById('ap-online-title').textContent = `Online right now (${fmtNum((appsOnline || []).length)})`;
   const body = document.getElementById('ap-online-body');
   if (!rows.length) { body.innerHTML = `<tr><td colspan="5"><div class="empty-cta"><b>${q ? 'No matches' : 'Nobody has the app open right now'}</b>${q ? 'Try another search.' : 'This list updates every time you refresh.'}</div></td></tr>`; return; }
@@ -2024,10 +2029,10 @@ async function loadBusinessList() {
 }
 
 function renderBusinessList() {
-  const q = (document.getElementById('bl-search').value || '').toLowerCase().replace(/^@/, '');
+  const q = plainLower(document.getElementById('bl-search').value).replace(/^@/, '');
   const kyb = document.getElementById('bl-kyb').value, sub = document.getElementById('bl-sub').value;
   const rows = bizList.filter(b =>
-    (!q || [b.business_name, b.owner_name, b.handle, b.city, b.area, b.category, b.owner_email].some(v => (v || '').toLowerCase().includes(q))) &&
+    (!q || [b.business_name, b.owner_name, b.handle, b.city, b.area, b.category, b.owner_email].some(v => plainLower(v).includes(q))) &&
     (!kyb || kybState(b) === kyb) &&
     (!sub || (sub === 'active') === subActive(b)));
   const body = document.getElementById('bl-body');
@@ -2410,10 +2415,10 @@ async function loadMetrics() {
 }
 
 function renderMetricsPosts() {
-  const q = (document.getElementById('mp-search').value || '').toLowerCase().replace(/^@/, '');
+  const q = plainLower(document.getElementById('mp-search').value).replace(/^@/, '');
   const type = document.getElementById('mp-type').value;
   const rows = metricsPosts.filter(r =>
-    (!q || (r.caption || '').toLowerCase().includes(q) || (r.handle || '').toLowerCase().includes(q)) &&
+    (!q || plainLower(r.caption).includes(q) || plainLower(r.handle).includes(q)) &&
     (!type || (type === 'reel') === !!r.is_reel));
   const body = document.getElementById('mp-body');
   if (!rows.length) { body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><p>No post activity in this period</p></div></td></tr>'; return; }
@@ -2434,8 +2439,8 @@ function renderMetricsPosts() {
 }
 
 function renderMetricsUsers() {
-  const q = (document.getElementById('mu-search').value || '').toLowerCase().replace(/^@/, '');
-  const rows = metricsUsers.filter(r => !q || (r.handle || '').toLowerCase().includes(q) || (r.display_name || '').toLowerCase().includes(q));
+  const q = plainLower(document.getElementById('mu-search').value).replace(/^@/, '');
+  const rows = metricsUsers.filter(r => !q || plainLower(r.handle).includes(q) || plainLower(r.display_name).includes(q));
   const body = document.getElementById('mu-body');
   if (!rows.length) { body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><p>No creator activity in this period</p></div></td></tr>'; return; }
   body.innerHTML = rows.map(r => `<tr class="clickable" onclick="openMetricsDetail('user','${escHtml(r.social_uid)}')">
@@ -2499,13 +2504,13 @@ async function loadMetricsCreators() {
 }
 
 function getFilteredCreators() {
-  const q = (document.getElementById('mc-search').value || '').toLowerCase().replace(/^@/, '');
+  const q = plainLower(document.getElementById('mc-search').value).replace(/^@/, '');
   const seg = document.getElementById('mc-segment').value, sort = document.getElementById('mc-sort').value;
   const quietBefore = Date.now() - QUIET_DAYS * 864e5;
   const rows = metricsCreators.filter(c =>
     (seg === 'all' || (seg === 'top' && (c.reach || c.plays || c.likes)) || (seg === 'active' && c.uploads) ||
       (seg === 'quiet' && c.total && (!c.last || new Date(c.last) < quietBefore))) &&
-    (!q || [c.name, c.handle, c.email].some(v => v.toLowerCase().includes(q))));
+    (!q || [c.name, c.handle, c.email].some(v => plainLower(v).includes(q))));
   const t = ts => ts ? new Date(ts).getTime() : 0;
   const by = { reach: c => [c.reach, c.plays, c.uploads], uploads: c => [c.uploads, c.reach, c.total], likes: c => [c.likes, c.reach], plays: c => [c.plays, c.reach], last: c => [t(c.last)] }[sort];
   return rows.sort((a, b) => { const x = by(a), y = by(b); for (let i = 0; i < x.length; i++) if (y[i] !== x[i]) return y[i] - x[i]; return 0; });
@@ -3109,12 +3114,12 @@ function filterDashUsers() {
 }
 
 function renderDashUsers() {
-  const search = (document.getElementById('dash-search')?.value||'').toLowerCase();
+  const search = plainLower(document.getElementById('dash-search')?.value);
   const users = window._dashUsers || [];
   const filtered = search ? users.filter(u =>
-    (u.display_name||'').toLowerCase().includes(search) ||
+    plainLower(u.display_name).includes(search) ||
     (u.phone||'').includes(search) ||
-    (u.email||'').toLowerCase().includes(search) ||
+    plainLower(u.email).includes(search) ||
     (socialHandles[u.firebase_uid]||'').toLowerCase().includes(search.replace(/^@/, ''))
   ) : users.slice(0,8);
   const recentBody = document.getElementById('recent-users-body');
@@ -3169,10 +3174,10 @@ function usersInRange() {
 
 // Range + search + dropdown (drives the table)
 function getFilteredUsers() {
-  const search = document.getElementById('user-search').value.toLowerCase();
+  const search = plainLower(document.getElementById('user-search').value);
   const filter = document.getElementById('user-filter').value;
   return usersInRange().filter(u => {
-    const matchSearch = !search || (u.display_name||'').toLowerCase().includes(search) || (u.phone||'').includes(search) || (u.email||'').toLowerCase().includes(search) || (socialHandles[u.firebase_uid]||'').toLowerCase().includes(search.replace(/^@/, ''));
+    const matchSearch = !search || plainLower(u.display_name).includes(search) || (u.phone||'').includes(search) || plainLower(u.email).includes(search) || plainLower(socialHandles[u.firebase_uid]).includes(search.replace(/^@/, ''));
     const g = genderOf(u);
     const matchFilter = !filter
       || (filter === 'male' && g === 'male')
@@ -3289,14 +3294,14 @@ async function loadActivity() {
 }
 
 function getFilteredActivity() {
-  const q = (document.getElementById('act-search').value || '').toLowerCase().replace(/^@/, '');
+  const q = plainLower(document.getElementById('act-search').value).replace(/^@/, '');
   const f = document.getElementById('act-filter').value;
   const sort = document.getElementById('act-sort').value;
   // The 24h / 7-day filters include everyone more recent too, matching the cards
   const within = { online: ['online'], today: ['online', 'today'], week: ['online', 'today', 'week'] };
   const rows = activityData.filter(u =>
     (!f || (f === 'gone' ? u._gone : (within[f] || [f]).includes(u._status))) &&
-    (!q || [u.display_name, u.email, u.phone, socialHandles[u.firebase_uid]].some(v => (v || '').toLowerCase().includes(q))));
+    (!q || [u.display_name, u.email, u.phone, socialHandles[u.firebase_uid]].some(v => plainLower(v).includes(q))));
   const t = ts => ts ? new Date(ts).getTime() : 0;
   if (sort === 'login') rows.sort((a, b) => t(b._login) - t(a._login));
   else if (sort === 'idle') rows.sort((a, b) => t(a._active) - t(b._active));
@@ -3558,12 +3563,12 @@ function toggleTxnUser(uid) {
 }
 
 function renderTxns() {
-  const search = document.getElementById('txn-search').value.toLowerCase();
+  const search = plainLower(document.getElementById('txn-search').value);
   const filter = document.getElementById('txn-filter').value;
   const typeColors = {welcome:'badge-green',referral:'badge-purple',earn:'badge-blue',payout:'badge-orange'};
   let filtered = txnData.filter(t => {
     const u = walletUsersMap[t.firebase_uid];
-    const name = (u?.display_name || '').toLowerCase();
+    const name = plainLower(u?.display_name);
     const ms = !search || (t.firebase_uid||'').toLowerCase().includes(search) || name.includes(search) || (t.type||'').includes(search);
     const mf = !filter || t.type === filter;
     return ms && mf;
@@ -3603,11 +3608,11 @@ function renderTxns() {
 }
 
 function txnPage(dir) {
-  const search = document.getElementById('txn-search').value.toLowerCase();
+  const search = plainLower(document.getElementById('txn-search').value);
   const filter = document.getElementById('txn-filter').value;
   const filtered = txnData.filter(t => {
     const u = walletUsersMap[t.firebase_uid];
-    const name = (u?.display_name || '').toLowerCase();
+    const name = plainLower(u?.display_name);
     const ms = !search || (t.firebase_uid||'').toLowerCase().includes(search) || name.includes(search) || (t.type||'').includes(search);
     const mf = !filter || t.type === filter;
     return ms && mf;
@@ -3685,8 +3690,8 @@ function notifUserLine(u) {
 function renderNotifUserResults() {
   const box = document.getElementById('notif-user-results');
   if (!notifUsers) return;
-  const q = (document.getElementById('notif-user-search').value || '').toLowerCase().trim().replace(/^@/, '');
-  const rows = notifUsers.filter(u => !q || [u.display_name, u.email, u.phone, socialHandles[u.firebase_uid]].some(v => (v || '').toLowerCase().includes(q))).slice(0, 20);
+  const q = plainLower(document.getElementById('notif-user-search').value).trim().replace(/^@/, '');
+  const rows = notifUsers.filter(u => !q || [u.display_name, u.email, u.phone, socialHandles[u.firebase_uid]].some(v => plainLower(v).includes(q))).slice(0, 20);
   box.classList.toggle('open', !notifPicked || !!q);
   if (!rows.length) { box.innerHTML = '<div class="empty-state" style="padding:14px"><p>No users match</p></div>'; return; }
   box.innerHTML = (q ? '' : '<div class="cell-sub" style="padding:8px 12px 2px">Recently active, type to search</div>') + rows.map(u => {
@@ -3821,7 +3826,7 @@ function renderContentRange(){
   updateContentTitle();
   filterContent();
 }
-function filterCreators(){var q=(document.getElementById('creator-search').value||'').toLowerCase();renderCreatorList(q?creatorData.filter(function(c){return c.handle.toLowerCase().includes(q);}):creatorData);}
+function filterCreators(){var q=plainLower(document.getElementById('creator-search').value);renderCreatorList(q?creatorData.filter(function(c){return c.handle.toLowerCase().includes(q);}):creatorData);}
 function renderCreatorList(list){
   var total=(window._contentRangePosts||[]).length;
   var all='<div class="creator-row'+(selectedCreatorUid?'':' active')+'" onclick="selectCreator(null)"><div class="av" style="background:var(--red)">★</div><div style="flex:1;min-width:0"><div class="cr-name">All creators</div><div class="cr-sub">'+total+' post'+(total===1?'':'s')+'</div></div></div>';
@@ -3841,10 +3846,10 @@ function selectCreator(uid){
   filterContent();
 }
 function filterContent(){
-  var search=(document.getElementById('content-search').value||'').toLowerCase();
+  var search=plainLower(document.getElementById('content-search').value);
   var creator=selectedCreatorUid&&creatorData.find(function(c){return c.uid===selectedCreatorUid;});
   var source=creator?creator.posts:(window._contentRangePosts||[]);
-  var filtered=source.filter(function(p){return!search||(p.caption||'').toLowerCase().includes(search);});
+  var filtered=source.filter(function(p){return!search||plainLower(p.caption).includes(search);});
   if(!filtered.length){document.getElementById('content-body').innerHTML='<tr><td colspan="7"><div class="empty-state"><p>No uploads in this period</p></div></td></tr>';return;}
   document.getElementById('content-body').innerHTML=filtered.map(function(p){
     var isReel=(p.media_types||[]).includes('video');
@@ -3991,7 +3996,7 @@ async function loadPayouts(){
   renderPayoutSummary(_allPayoutData);
 }
 function filterPayouts(){
-  var q=(document.getElementById('py-search').value||'').toLowerCase();
+  var q=plainLower(document.getElementById('py-search').value);
   var isPending=document.getElementById('py-cycle-filter').value==='open';
   var base=isPending?_allPayoutData.filter(function(r){return r.pending>0;}):_allPayoutData;
   renderPayoutRows(q?base.filter(function(r){return r.handle.toLowerCase().includes(q);}):base);
