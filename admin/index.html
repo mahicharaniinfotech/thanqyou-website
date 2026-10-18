@@ -855,6 +855,7 @@
                 <option value="plays">Sort: plays</option>
                 <option value="last">Sort: last upload</option>
               </select>
+              <button class="btn btn-red" onclick="emailCreators()" id="mc-email">Send email</button>
               <button class="btn btn-ghost" onclick="copyCreatorEmails()" id="mc-copy">Copy emails</button>
               <button class="btn btn-ghost" onclick="downloadMetricsCSV('creators')">Download CSV</button>
             </div>
@@ -1102,6 +1103,7 @@
               <option value="login">Sort: last login</option>
               <option value="idle">Sort: longest inactive</option>
             </select>
+            <button class="btn btn-red" onclick="emailActivityUsers()" id="act-email">Email these users</button>
           </div>
           <table><thead><tr><th>User</th><th>Status</th><th>Last login</th><th>Last active</th><th>Platform</th><th>Joined</th></tr></thead>
           <tbody id="act-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
@@ -1351,6 +1353,29 @@
 </div>
 
 <!-- USER DETAIL MODAL -->
+<div class="modal-overlay" id="email-modal">
+  <div class="modal">
+    <div class="report-head">
+      <div style="min-width:0"><h2 style="margin-bottom:2px">Send email</h2><p id="em-sub" class="report-sub"></p></div>
+      <button class="report-close" onclick="closeModal('email-modal')" aria-label="Close">×</button>
+    </div>
+    <div class="form-group"><label>From</label><input value="ThanqYou Support <support@thanqyou.com>" disabled></div>
+    <div class="form-group"><label>Subject</label><input id="em-subject" maxlength="150"></div>
+    <div class="form-group"><label>Message</label><textarea id="em-message" rows="10" maxlength="5000"></textarea>
+      <div class="cell-sub" style="margin-top:6px">Write <b>{name}</b> where the person's first name should go. Each person gets their own email, and replies go to support@thanqyou.com.</div></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Button text (optional)</label><input id="em-cta-text" maxlength="60"></div>
+      <div class="form-group"><label>Button link</label><input id="em-cta-url" placeholder="https://..."></div>
+    </div>
+    <div class="form-group"><label>Send yourself a test first</label>
+      <div style="display:flex;gap:8px"><input id="em-test" type="email" placeholder="your@email.com"><button class="btn btn-ghost" onclick="sendAdminEmail(true)" style="white-space:nowrap">Send test</button></div></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px">
+      <button class="btn btn-ghost" onclick="closeModal('email-modal')">Cancel</button>
+      <button class="btn btn-red" id="em-send" onclick="sendAdminEmail(false)">Send</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="user-modal">
   <div class="modal">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -2474,6 +2499,7 @@ function renderMetricsCreators() {
   const rows = getFilteredCreators(), body = document.getElementById('mc-body');
   const targets = creatorTargets(), withEmail = targets.filter(c => c.email).length;
   document.getElementById('mc-copy').textContent = `Copy emails (${withEmail})`;
+  document.getElementById('mc-email').textContent = `Send email (${withEmail})`;
   document.getElementById('mc-count').textContent = `${rows.length} shown · ${rows.filter(c => c.email).length} with email${mcSelected.size ? ` · ${mcSelected.size} selected` : ''}`;
   document.getElementById('mc-all').checked = rows.length > 0 && rows.every(c => mcSelected.has(c.social_uid));
   if (!rows.length) {
@@ -2510,6 +2536,89 @@ async function copyCreatorEmails() {
   catch (_) { window.prompt('Copy these emails:', text); return; }
   const missing = targets.length - targets.filter(c => c.email).length;
   showToast(`Copied ${emails.length} email${emails.length === 1 ? '' : 's'}${missing ? ` · ${missing} without email skipped` : ''} — paste into BCC`, 'success');
+}
+
+// ── EMAIL COMPOSER (sends via the admin-send-email function) ──
+// The panel only sends user IDs; the function looks up each address,
+// fills in {name} and mails everyone separately from support@thanqyou.com.
+const EMAIL_MAX = 500;
+const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.thanqyou';
+const EMAIL_TEMPLATES = {
+  creators: {
+    subject: 'Keep creating on ThanQYou, {name}!',
+    message: `Hi {name},\n\nThank you for sharing your content on ThanQYou! People are watching and enjoying what you post.\n\nEvery reel you upload helps you reach more people and earn more from your views and likes. We'd love to see more from you, so why not post something new this week?\n\nKeep creating,\nTeam ThanQYou`,
+    cta_text: 'Open ThanQYou', cta_url: PLAY_URL,
+  },
+  users: {
+    subject: 'We miss you on ThanQYou, {name}',
+    message: `Hi {name},\n\nIt's been a little while since we last saw you on ThanQYou. New reels are being shared every day, and you can earn just by watching and creating.\n\nCome back and see what's new!\n\nTeam ThanQYou`,
+    cta_text: 'Open ThanQYou', cta_url: PLAY_URL,
+  },
+};
+let emailRecipients = [];
+
+function openEmailComposer(people, kind) {
+  const withEmail = people.filter(p => (p.email || '').trim());
+  if (!withEmail.length) { showToast('None of these people has an email address', 'error'); return; }
+  if (withEmail.length > EMAIL_MAX) { showToast(`That's ${withEmail.length} people; send to at most ${EMAIL_MAX} at a time (filter or tick fewer)`, 'error'); return; }
+  emailRecipients = withEmail.map(p => p.firebase_uid);
+  const t = EMAIL_TEMPLATES[kind] || EMAIL_TEMPLATES.users;
+  const skipped = people.length - withEmail.length;
+  document.getElementById('em-sub').textContent = `To ${withEmail.length} ${withEmail.length === 1 ? 'person' : 'people'}${skipped ? ` · ${skipped} without email will be skipped` : ''}`;
+  document.getElementById('em-subject').value = t.subject;
+  document.getElementById('em-message').value = t.message;
+  document.getElementById('em-cta-text').value = t.cta_text;
+  document.getElementById('em-cta-url').value = t.cta_url;
+  const me = (document.getElementById('admin-email-disp').textContent || '').trim();
+  const test = document.getElementById('em-test');
+  if (!test.value && /@/.test(me)) test.value = me;
+  document.getElementById('em-send').textContent = `Send to ${withEmail.length}`;
+  openModal('email-modal');
+}
+
+function emailCreators() {
+  openEmailComposer(creatorTargets().map(c => ({ firebase_uid: c.firebase_uid, email: c.email })), 'creators');
+}
+
+function emailActivityUsers() {
+  openEmailComposer(getFilteredActivity().map(u => ({ firebase_uid: u.firebase_uid, email: u.email })), 'users');
+}
+
+async function sendAdminEmail(test) {
+  const payload = {
+    subject: document.getElementById('em-subject').value.trim(),
+    message: document.getElementById('em-message').value.trim(),
+    cta_text: document.getElementById('em-cta-text').value.trim(),
+    cta_url: document.getElementById('em-cta-url').value.trim(),
+  };
+  if (!payload.subject || !payload.message) { showToast('Add a subject and a message', 'error'); return; }
+  if (payload.cta_text && !/^https:\/\//i.test(payload.cta_url)) { showToast('Button link must start with https://', 'error'); return; }
+  if (test) {
+    payload.test_to = document.getElementById('em-test').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.test_to)) { showToast('Enter an email address for the test', 'error'); return; }
+  } else {
+    if (!confirm(`Send this email to ${emailRecipients.length} ${emailRecipients.length === 1 ? 'person' : 'people'} from support@thanqyou.com?`)) return;
+    payload.firebase_uids = emailRecipients;
+  }
+  const btn = document.getElementById('em-send');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/admin-send-email`, {
+      method: 'POST',
+      headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.success) throw new Error(d.error || `HTTP ${r.status}`);
+    if (test) { showToast(`Test sent to ${payload.test_to}. Check the inbox (and spam)`, 'success'); return; }
+    const extra = [d.failed ? `${d.failed} failed` : '', d.skipped ? `${d.skipped} skipped (no email)` : ''].filter(Boolean).join(' · ');
+    showToast(`Email sent to ${d.sent} ${d.sent === 1 ? 'person' : 'people'}${extra ? ' · ' + extra : ''}`, d.failed ? 'error' : 'success');
+    closeModal('email-modal');
+  } catch (e) {
+    showToast('Could not send: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function openMetricsDetail(kind, id) {
@@ -3143,6 +3252,7 @@ function filterActivity() { activityPage_ = 0; renderActivity(); }
 
 function renderActivity() {
   const rows = getFilteredActivity();
+  document.getElementById('act-email').textContent = `Email these users (${rows.filter(u => (u.email || '').trim()).length})`;
   const start = activityPage_ * PAGE_SIZE, page = rows.slice(start, start + PAGE_SIZE);
   document.getElementById('act-count').textContent = rows.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length}` : '0 users';
   document.getElementById('act-page-num').textContent = activityPage_ + 1;
