@@ -183,6 +183,14 @@
   .avatar-cell { display:flex; align-items:center; gap:11px; }
   .av { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:white; flex-shrink:0; position:relative; overflow:hidden; }
   .av img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .nu-results { margin-top:6px; border:1px solid var(--line); border-radius:10px; max-height:280px; overflow-y:auto; display:none; background:var(--dark2); }
+  .nu-results.open { display:block; }
+  .nu-row { display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; }
+  .nu-row:hover { background:var(--dark3); }
+  .nu-row + .nu-row { border-top:1px solid var(--line); }
+  .nu-picked { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--red); border-radius:10px; margin-bottom:8px; }
+  .nu-main { flex:1; min-width:0; }
+  .nu-main .cell-sub { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
   /* BADGES */
   .badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:600; white-space:nowrap; }
@@ -1285,12 +1293,22 @@
             </div>
             <div class="form-group">
               <label>Target</label>
-              <select id="notif-target">
+              <select id="notif-target" onchange="onNotifTargetChange()">
                 <option value="all">All users</option>
                 <option value="active">Active Users (last 7 days)</option>
                 <option value="no_kyc">Users without verified KYC</option>
+                <option value="user">A single user</option>
               </select>
             </div>
+          </div>
+          <div class="form-group" id="notif-user-group" style="display:none">
+            <label>User</label>
+            <div id="notif-user-picked"></div>
+            <div class="search-box" style="width:100%">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input id="notif-user-search" placeholder="Search name, @username, email or phone..." oninput="renderNotifUserResults()" onfocus="renderNotifUserResults()" autocomplete="off">
+            </div>
+            <div id="notif-user-results" class="nu-results"></div>
           </div>
           <div class="form-group">
             <label>Message</label>
@@ -3633,25 +3651,99 @@ async function loadReferrals() {
 }
 
 // ── NOTIFICATIONS ─────────────────────────────────────
-const NOTIF_TARGETS = { all:'All users', active:'Active (last 7 days)', no_kyc:'No KYC' };
+const NOTIF_TARGETS = { all:'All users', active:'Active (last 7 days)', no_kyc:'No KYC', festival:'Festival reminder', user:'Single user' };
+
+// ── Single-user target: pick one person ──
+let notifUsers = null, notifPicked = null;
+
+function notifPushStatus(u) {
+  if (!u.fcm_token) return ['badge-grey', 'No phone registered (inbox only)'];
+  if (u.fcm_token_invalid_at) return ['badge-orange', 'Push bounced before, will still try'];
+  return ['badge-green', 'Can receive push'];
+}
+
+async function onNotifTargetChange() {
+  const single = document.getElementById('notif-target').value === 'user';
+  document.getElementById('notif-user-group').style.display = single ? '' : 'none';
+  if (!single || notifUsers) return;
+  document.getElementById('notif-user-results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('notif-user-results').classList.add('open');
+  const [rows] = await Promise.all([
+    query('users', 'select=firebase_uid,display_name,email,phone,account_type,fcm_token,fcm_token_invalid_at,last_seen_at,last_active_at'),
+    loadSocialHandles()
+  ]);
+  notifUsers = (rows || []).map(u => ({ ...u, _active: [u.last_seen_at, u.last_active_at].filter(Boolean).sort().pop() || '' }))
+    .sort((a, b) => (b._active > a._active) - (b._active < a._active));
+  renderNotifUserResults();
+}
+
+function notifUserLine(u) {
+  const h = socialHandles[u.firebase_uid];
+  return [h ? '@' + h : '', u.email || u.phone || ''].filter(Boolean).join(' · ') || 'No contact details';
+}
+
+function renderNotifUserResults() {
+  const box = document.getElementById('notif-user-results');
+  if (!notifUsers) return;
+  const q = (document.getElementById('notif-user-search').value || '').toLowerCase().trim().replace(/^@/, '');
+  const rows = notifUsers.filter(u => !q || [u.display_name, u.email, u.phone, socialHandles[u.firebase_uid]].some(v => (v || '').toLowerCase().includes(q))).slice(0, 20);
+  box.classList.toggle('open', !notifPicked || !!q);
+  if (!rows.length) { box.innerHTML = '<div class="empty-state" style="padding:14px"><p>No users match</p></div>'; return; }
+  box.innerHTML = (q ? '' : '<div class="cell-sub" style="padding:8px 12px 2px">Recently active, type to search</div>') + rows.map(u => {
+    const st = notifPushStatus(u);
+    return `<div class="nu-row" onclick="pickNotifUser('${escHtml(u.firebase_uid)}')">${avatarHtml(u.firebase_uid, u.display_name)}
+      <div class="nu-main"><div style="font-weight:600">${escHtml(u.display_name || '—')}${u.account_type === 'business' ? ' <span class="badge badge-purple">Business</span>' : ''}</div><div class="cell-sub">${escHtml(notifUserLine(u))}</div></div>
+      <span class="badge ${st[0]}" style="white-space:nowrap">${st[1]}</span></div>`;
+  }).join('');
+}
+
+function pickNotifUser(uid) {
+  notifPicked = (notifUsers || []).find(u => u.firebase_uid === uid) || null;
+  const box = document.getElementById('notif-user-picked');
+  if (!notifPicked) { box.innerHTML = ''; return; }
+  const st = notifPushStatus(notifPicked);
+  box.innerHTML = `<div class="nu-picked">${avatarHtml(notifPicked.firebase_uid, notifPicked.display_name)}
+    <div class="nu-main"><div style="font-weight:600">${escHtml(notifPicked.display_name || '—')}</div><div class="cell-sub">${escHtml(notifUserLine(notifPicked))}</div></div>
+    <span class="badge ${st[0]}" style="white-space:nowrap">${st[1]}</span>
+    <button class="action-btn" onclick="clearNotifUser()">Change</button></div>`;
+  document.getElementById('notif-user-search').value = '';
+  document.getElementById('notif-user-results').classList.remove('open');
+}
+
+function clearNotifUser() {
+  notifPicked = null;
+  document.getElementById('notif-user-picked').innerHTML = '';
+  renderNotifUserResults();
+  document.getElementById('notif-user-search').focus();
+}
 
 async function sendNotification() {
   const title = document.getElementById('notif-title').value.trim();
   const body = document.getElementById('notif-body').value.trim();
   const target = document.getElementById('notif-target').value;
   if (!title || !body) { showToast('Please fill title and message', 'error'); return; }
-  if (!confirm(`Send "${title}" to ${NOTIF_TARGETS[target]}?\n\nThis pushes to users' phones immediately and cannot be undone.`)) return;
+  const single = target === 'user';
+  if (single && !notifPicked) { showToast('Choose the user to send to', 'error'); return; }
+  const who = single ? (notifPicked.display_name || 'this user') : NOTIF_TARGETS[target];
+  if (!confirm(`Send "${title}" to ${who}?\n\nThis pushes to ${single ? 'their phone' : "users' phones"} immediately and cannot be undone.`)) return;
   const btn = document.getElementById('notif-send-btn');
   btn.disabled = true; btn.textContent = 'Sending…';
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/admin-broadcast-notification`, {
       method: 'POST',
       headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, body, target })
+      body: JSON.stringify(single ? { title, body, target, firebase_uid: notifPicked.firebase_uid } : { title, body, target })
     });
     const d = await res.json().catch(() => ({}));
     if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
-    if (!d.recipients) showToast('No users with the app installed match this target', 'error');
+    if (single) {
+      if (d.no_device) showToast(`${who} has no phone registered for push. Saved to their in-app inbox`, 'error');
+      else if (d.delivered) showToast(`Delivered to ${who}`, 'success');
+      else showToast(`Couldn't reach ${who}'s phone (push bounced). Saved to their in-app inbox`, 'error');
+      notifUsers = null; // refresh push status next time
+      clearNotifUser();
+      onNotifTargetChange();
+    } else if (!d.recipients) showToast('No users with the app installed match this target', 'error');
     else showToast(`Delivered to ${d.delivered} of ${d.recipients} users${d.failed ? ` (${d.failed} failed)` : ''}`, d.failed ? 'error' : 'success');
     document.getElementById('notif-title').value = '';
     document.getElementById('notif-body').value = '';
@@ -3674,7 +3766,9 @@ async function loadNotifications() {
   tbody.innerHTML = rows.map(n => `<tr>
     <td style="font-weight:600">${esc(n.title)}</td>
     <td style="font-size:12px;max-width:320px">${esc(n.body)}</td>
-    <td><span class="badge badge-blue">${NOTIF_TARGETS[n.target] || esc(n.target)}</span></td>
+    <td>${n.target === 'user'
+      ? `<span class="badge badge-purple">User</span><div class="cell-sub" style="margin-top:3px">${esc(n.target_name || (n.target_uid || '').slice(0, 10) || '—')}</div>`
+      : `<span class="badge badge-blue">${NOTIF_TARGETS[n.target] || esc(n.target)}</span>`}</td>
     <td><span class="badge ${n.failed ? 'badge-orange' : 'badge-green'}">${n.delivered} / ${n.recipients}</span></td>
     <td style="font-size:12px;white-space:nowrap">${formatDateTime(n.created_at)}</td>
   </tr>`).join('');
