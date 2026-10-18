@@ -181,7 +181,8 @@
   tbody tr:last-child { border-bottom:none; }
   td { padding:13px 20px; font-size:13px; vertical-align:middle; }
   .avatar-cell { display:flex; align-items:center; gap:11px; }
-  .av { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:white; flex-shrink:0; }
+  .av { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:white; flex-shrink:0; position:relative; overflow:hidden; }
+  .av img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 
   /* BADGES */
   .badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:600; white-space:nowrap; }
@@ -1734,6 +1735,7 @@ function timeAgo(ts) {
 const splitLine = (a, i) => `Android ${fmtNum(a)} · iOS ${fmtNum(i)}`;
 
 async function loadInstalls() {
+  await ensureAvatars();
   const { from, to } = getRange('apps');
   document.getElementById('apps-range-label').textContent = `Store downloads for ${rangeLabel(from, to)} · user activity as of now`;
   try {
@@ -1851,7 +1853,7 @@ function renderOnlineUsers() {
   const body = document.getElementById('ap-online-body');
   if (!rows.length) { body.innerHTML = `<tr><td colspan="5"><div class="empty-cta"><b>${q ? 'No matches' : 'Nobody has the app open right now'}</b>${q ? 'Try another search.' : 'This list updates every time you refresh.'}</div></td></tr>`; return; }
   body.innerHTML = rows.map(r => `<tr>
-    <td><div class="avatar-cell"><div class="av" style="background:${colorFor(r.firebase_uid)}">${initials(r.display_name)}</div><div><div style="font-weight:600">${escHtml(r.display_name || '—')}</div><div class="cell-sub">${r.handle ? '@' + escHtml(r.handle) : 'No social profile'}</div></div></div></td>
+    <td><div class="avatar-cell">${avatarHtml(r.firebase_uid, r.display_name)}<div><div style="font-weight:600">${escHtml(r.display_name || '—')}</div><div class="cell-sub">${r.handle ? '@' + escHtml(r.handle) : 'No social profile'}</div></div></div></td>
     <td>${r.platform ? badge(PLATFORM_BADGE, r.platform) : '<span class="badge badge-grey">Unknown</span>'}</td>
     <td style="font-size:12px">${escHtml(r.app_version || 'older build')}</td>
     <td>${r.account_type === 'business' ? '<span class="badge badge-purple">Business</span>' : '<span class="badge badge-grey">Individual</span>'}</td>
@@ -2357,6 +2359,7 @@ function setMetricsTab(tab) {
 }
 
 async function loadMetrics() {
+  await ensureAvatars();
   const { from, to } = getRange('metrics');
   document.getElementById('metrics-range-label').textContent = `${accountMode === 'business' ? 'Business accounts' : 'Individual accounts'} · ${rangeLabel(from, to)}`;
   document.querySelector('#page-metrics .dash-head h2').textContent = accountMode === 'business' ? 'Business reels & reach' : 'Reach metrics';
@@ -2418,7 +2421,7 @@ function renderMetricsUsers() {
   const body = document.getElementById('mu-body');
   if (!rows.length) { body.innerHTML = '<tr><td colspan="11"><div class="empty-state"><p>No creator activity in this period</p></div></td></tr>'; return; }
   body.innerHTML = rows.map(r => `<tr class="clickable" onclick="openMetricsDetail('user','${escHtml(r.social_uid)}')">
-    <td><div class="avatar-cell"><div class="av" style="background:${colorFor(r.social_uid)}">${initials(r.display_name || r.handle)}</div>
+    <td><div class="avatar-cell">${avatarHtml(r.social_uid, r.display_name || r.handle)}
       <div><div style="font-weight:600">${escHtml(r.display_name || '—')}</div><div style="font-size:11px;color:var(--grey)">@${escHtml(r.handle || '—')}</div></div></div></td>
     <td>${fmtNum(r.posts_uploaded)}</td>
     <td class="num-strong">${fmtNum(r.reach)}</td>
@@ -2511,7 +2514,7 @@ function renderMetricsCreators() {
   const id = s => escHtml(s).replace(/'/g, '&#39;');
   body.innerHTML = rows.map(c => `<tr>
     <td><input type="checkbox" ${mcSelected.has(c.social_uid) ? 'checked' : ''} onchange="toggleCreator('${id(c.social_uid)}', this.checked)"></td>
-    <td><div class="avatar-cell"><div class="av" style="background:${colorFor(c.social_uid)}">${initials(c.name || c.handle)}</div>
+    <td><div class="avatar-cell">${avatarHtml(c.social_uid, c.name || c.handle)}
       <div><div style="font-weight:600">${escHtml(c.name || '—')}</div><div style="font-size:11px;color:var(--grey)">${c.handle ? '@' + escHtml(c.handle) : 'No username'}</div></div></div></td>
     <td style="font-size:12px">${c.email ? escHtml(c.email) : '<span class="cell-sub">No email</span>'}</td>
     <td class="num-strong">${fmtNum(c.uploads)}</td>
@@ -2732,9 +2735,37 @@ function downloadMetricsCSV(kind) {
 // firebase_uid -> @username_handle from the user's social profile (if they created one)
 let socialHandles = {};
 async function loadSocialHandles() {
-  const rows = await query('social_accounts', 'select=firebase_uid,username_handle,username');
+  const [rows] = await Promise.all([query('social_accounts', 'select=firebase_uid,username_handle,username'), ensureAvatars(true)]);
   socialHandles = {};
   (rows || []).forEach(a => { const h = a.username_handle || a.username; if (a.firebase_uid && h) socialHandles[a.firebase_uid] = h; });
+}
+
+// Profile photos, keyed by firebase_uid and by social_uid. Order: the
+// social profile avatar, else the app profile picture; with neither,
+// avatarHtml() shows the initials as before.
+let avatarUrls = {}, avatarsAt = 0, avatarsLoading = null;
+function ensureAvatars(force) {
+  if (!force && Date.now() - avatarsAt < 60e3) return Promise.resolve();
+  if (avatarsLoading) return avatarsLoading;
+  avatarsLoading = Promise.all([
+    query('social_accounts', 'select=firebase_uid,social_uid,social_avatar_url'),
+    query('users', 'select=firebase_uid,avatar_url&avatar_url=not.is.null')
+  ]).then(([soc, usr]) => {
+    const ok = u => (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) ? u.trim() : null;
+    const m = {};
+    (usr || []).forEach(u => { const a = ok(u.avatar_url); if (a) m[u.firebase_uid] = a; });
+    (soc || []).forEach(s => { const a = ok(s.social_avatar_url); if (a && s.firebase_uid) m[s.firebase_uid] = a; });
+    (soc || []).forEach(s => { const a = ok(s.social_avatar_url) || m[s.firebase_uid]; if (a && s.social_uid) m[s.social_uid] = a; });
+    avatarUrls = m;
+    avatarsAt = Date.now();
+  }).catch(() => {}).finally(() => { avatarsLoading = null; });
+  return avatarsLoading;
+}
+// Initials stay underneath; the photo covers them and removes itself if it fails to load
+function avatarHtml(key, name) {
+  const url = avatarUrls[key];
+  const img = url ? `<img src="${escHtml(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
+  return `<div class="av" style="background:${colorFor(key)}">${initials(name)}${img}</div>`;
 }
 function socialHandleLine(uid) {
   const h = socialHandles[uid];
@@ -3068,7 +3099,7 @@ function renderDashUsers() {
   }
   recentBody.innerHTML = filtered.slice(0,20).map(u => `
     <tr>
-      <td><div class="avatar-cell"><div class="av" style="background:${colorFor(u.firebase_uid)}">${initials(u.display_name)}</div><div><div style="font-weight:600">${u.display_name||'—'}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
+      <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${u.display_name||'—'}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
       <td style="font-size:12px">${u.email||'—'}</td>
       <td style="font-size:12px;white-space:nowrap">${formatDateTime(u.created_at)}</td>
       <td>${u.referred_by ? '<span class="badge badge-green">Referred</span>' : '<span class="badge badge-grey">Direct</span>'}</td>
@@ -3154,7 +3185,7 @@ function renderUsers() {
       : `<span class="badge ${u._kyc.status==='verified'?'badge-green':u._kyc.status==='rejected'?'badge-red':'badge-orange'}">${prettyType(u._kyc.status)}</span>`;
     return `
     <tr>
-      <td><div class="avatar-cell"><div class="av" style="background:${colorFor(u.firebase_uid)}">${initials(u.display_name)}</div><div><div style="font-weight:600">${u.display_name||'—'}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
+      <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${u.display_name||'—'}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
       <td style="font-size:12px">${u.email||'—'}</td>
       <td style="font-size:12px;color:${g==='unspecified'?'var(--grey)':'inherit'}">${GENDER_META[g][0]}</td>
       <td style="font-weight:600;color:var(--green)">${u._wallet ? '₹' + (u._wallet.balance/100).toFixed(2) : '₹0.00'}</td>
@@ -3259,7 +3290,7 @@ function renderActivity() {
   const body = document.getElementById('act-body');
   if (!page.length) { body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
   body.innerHTML = page.map(u => `<tr>
-    <td><div class="avatar-cell"><div class="av" style="background:${colorFor(u.firebase_uid)}">${initials(u.display_name)}</div><div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
+    <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
     <td>${badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
     <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : '<span class="cell-sub">Not recorded</span>'}</td>
     <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}</td>
@@ -3564,6 +3595,7 @@ function txnPage(dir) {
 
 // ── REFERRALS ─────────────────────────────────────────
 async function loadReferrals() {
+  await ensureAvatars();
   document.getElementById('ref-body').innerHTML = '<tr><td colspan="4"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const [refs, users] = await Promise.all([
     query('referrals', 'select=*&order=created_at.desc'),
@@ -3585,8 +3617,8 @@ async function loadReferrals() {
     const referrer = usersMap[r.referrer_uid];
     const referred = usersMap[r.referred_uid];
     return `<tr>
-      <td><div class="avatar-cell"><div class="av" style="background:${colorFor(r.referrer_uid)}">${initials(referrer?.display_name)}</div>${referrer?.display_name||r.referrer_uid?.substring(0,12)+'...'}</div></td>
-      <td><div class="avatar-cell"><div class="av" style="background:${colorFor(r.referred_uid)}">${initials(referred?.display_name)}</div>${referred?.display_name||r.referred_uid?.substring(0,12)+'...'}</div></td>
+      <td><div class="avatar-cell">${avatarHtml(r.referrer_uid, referrer?.display_name)}${referrer?.display_name||r.referrer_uid?.substring(0,12)+'...'}</div></td>
+      <td><div class="avatar-cell">${avatarHtml(r.referred_uid, referred?.display_name)}${referred?.display_name||r.referred_uid?.substring(0,12)+'...'}</div></td>
       <td style="font-weight:700;color:var(--green)">₹${parseFloat(r.amount_earned||0).toFixed(2)}</td>
       <td style="font-size:12px">${formatDate(r.created_at)}</td>
     </tr>`;
@@ -3662,7 +3694,7 @@ setupRealtime();
 // ── NEW FUNCTIONS ─────────────────────────────────────────────────────────────
 var contentData=[],creatorData=[],selectedCreatorUid=null,allAccounts={};
 async function loadContent(){
-  await loadBusinessUids();
+  await Promise.all([loadBusinessUids(), ensureAvatars()]);
   document.getElementById('creator-list').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('content-body').innerHTML='<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
   var res=await Promise.all([query('posts','select=*&is_deleted=eq.false&order=created_at.desc'),query('social_accounts','select=social_uid,username_handle,username,social_avatar_url')]);
@@ -3694,7 +3726,7 @@ function renderCreatorList(list){
   var all='<div class="creator-row'+(selectedCreatorUid?'':' active')+'" onclick="selectCreator(null)"><div class="av" style="background:var(--red)">★</div><div style="flex:1;min-width:0"><div class="cr-name">All creators</div><div class="cr-sub">'+total+' post'+(total===1?'':'s')+'</div></div></div>';
   if(!list.length){document.getElementById('creator-list').innerHTML=all+'<div class="empty-state"><p>No creators posted in this period</p></div>';return;}
   document.getElementById('creator-list').innerHTML=all+list.map(function(c){
-    return '<div class="creator-row'+(selectedCreatorUid===c.uid?' active':'')+'" onclick="selectCreator(\''+c.uid+'\')"><div class="av" style="background:'+colorFor(c.uid)+'">'+initials(c.handle)+'</div><div style="flex:1;min-width:0"><div class="cr-name">@'+c.handle+'</div><div class="cr-sub">'+c.postCount+' post'+(c.postCount===1?'':'s')+'</div></div></div>';
+    return '<div class="creator-row'+(selectedCreatorUid===c.uid?' active':'')+'" onclick="selectCreator(\''+c.uid+'\')">'+avatarHtml(c.uid, c.handle)+'<div style="flex:1;min-width:0"><div class="cr-name">@'+c.handle+'</div><div class="cr-sub">'+c.postCount+' post'+(c.postCount===1?'':'s')+'</div></div></div>';
   }).join('');
 }
 function updateContentTitle(){
@@ -3818,6 +3850,7 @@ async function deletePost(id){
 }
 var _allPayoutData=[];
 async function loadPayouts(){
+  await ensureAvatars();
   document.getElementById('py-body').innerHTML='<tr><td colspan="4"><div class="loading"><div class="spinner"></div></div></td></tr>';
   document.getElementById('py-summary-body').innerHTML='';
   var sf=document.getElementById('py-cycle-filter').value,isPending=sf==='open';
@@ -3878,7 +3911,7 @@ function renderPayoutRows(list){
       btn='<span style="color:var(--green)">\u2713 No pending balance</span>';
     }
     var verifyBtn=(r.hasBankDetails&&!r.bankVerified)?' <button class="btn btn-red" style="padding:2px 8px;font-size:10px;margin-left:6px" onclick="verifyBankAccount(\''+uid+'\',\''+handle+'\')">Verify Bank</button>':'';
-    return'<tr><td><div class="avatar-cell"><div class="av" style="background:'+colorFor(r.uid)+'">'+initials(r.handle)+'</div>@'+r.handle+'</div></td><td style="font-weight:700;color:var(--green);font-size:15px">\u20b9'+amt+(r.paid>0?'<br><span style="color:#444;font-size:10px">Paid so far: \u20b9'+r.paid.toFixed(2)+'</span>':'')+'</td><td style="font-size:12px">'+r.bankInfo+'<br>'+bv+kv+verifyBtn+'</td><td>'+btn+'</td></tr>';
+    return'<tr><td><div class="avatar-cell">'+avatarHtml(r.uid, r.handle)+'@'+r.handle+'</div></td><td style="font-weight:700;color:var(--green);font-size:15px">\u20b9'+amt+(r.paid>0?'<br><span style="color:#444;font-size:10px">Paid so far: \u20b9'+r.paid.toFixed(2)+'</span>':'')+'</td><td style="font-size:12px">'+r.bankInfo+'<br>'+bv+kv+verifyBtn+'</td><td>'+btn+'</td></tr>';
   }).join('');
 }
 function renderPayoutSummary(all){
