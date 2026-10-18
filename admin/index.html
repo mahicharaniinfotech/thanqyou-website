@@ -2751,7 +2751,14 @@ function ensureAvatars(force) {
     query('social_accounts', 'select=firebase_uid,social_uid,social_avatar_url'),
     query('users', 'select=firebase_uid,avatar_url&avatar_url=not.is.null')
   ]).then(([soc, usr]) => {
-    const ok = u => (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) ? u.trim() : null;
+    // App versions before 44aa977 re-save a changed photo at the same URL, so
+    // unversioned URLs get a 10-minute version to get past cached old photos
+    const slot = Math.floor(Date.now() / 6e5);
+    const ok = u => {
+      if (typeof u !== 'string' || !/^https?:\/\//i.test(u.trim())) return null;
+      u = u.trim();
+      return u.includes('?') ? u : `${u}?v=${slot}`;
+    };
     const m = {};
     (usr || []).forEach(u => { const a = ok(u.avatar_url); if (a) m[u.firebase_uid] = a; });
     (soc || []).forEach(s => { const a = ok(s.social_avatar_url); if (a && s.firebase_uid) m[s.firebase_uid] = a; });
