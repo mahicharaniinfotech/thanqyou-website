@@ -804,6 +804,7 @@
         <div class="seg metrics-tabs" id="metrics-tabs" role="tablist" aria-label="Metrics view">
           <button class="active" data-tab="posts" onclick="setMetricsTab('posts')">Posts</button>
           <button data-tab="users" onclick="setMetricsTab('users')">Users</button>
+          <button data-tab="creators" onclick="setMetricsTab('creators')">Top creators</button>
         </div>
         <div class="mini-stats metrics-kpis">
           <div class="mini-stat"><div class="ms-val" id="mt-active">—</div><div class="ms-label">Posts with plays</div></div>
@@ -835,6 +836,32 @@
           </div>
           <table><thead><tr><th>Creator</th><th>Posts uploaded</th><th>Reach</th><th>Plays</th><th>Counted views</th><th>Watch time</th><th>Likes</th><th>Shares</th><th>Peak hour (IST)</th><th>Top post</th><th></th></tr></thead>
           <tbody id="mu-body"><tr><td colspan="11"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+        </div>
+        <div class="table-card" id="metrics-creators-card" style="display:none">
+          <div class="table-header">
+            <h3 id="mc-title">Top creators</h3>
+            <div class="th-tools">
+              <div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="mc-search" placeholder="Search name, @username, email..." oninput="renderMetricsCreators()"></div>
+              <select id="mc-segment" onchange="renderMetricsCreators()" class="tool-select">
+                <option value="top">Top performers (this period)</option>
+                <option value="active">Uploaded this period</option>
+                <option value="quiet">Gone quiet (no upload in 14+ days)</option>
+                <option value="all">All creators</option>
+              </select>
+              <select id="mc-sort" onchange="renderMetricsCreators()" class="tool-select">
+                <option value="reach">Sort: reach</option>
+                <option value="uploads">Sort: uploads</option>
+                <option value="likes">Sort: likes</option>
+                <option value="plays">Sort: plays</option>
+                <option value="last">Sort: last upload</option>
+              </select>
+              <button class="btn btn-ghost" onclick="copyCreatorEmails()" id="mc-copy">Copy emails</button>
+              <button class="btn btn-ghost" onclick="downloadMetricsCSV('creators')">Download CSV</button>
+            </div>
+          </div>
+          <table><thead><tr><th style="width:28px"><input type="checkbox" id="mc-all" onchange="toggleAllCreators(this.checked)" title="Select all shown"></th><th>Creator</th><th>Email</th><th>Uploads (period)</th><th>Total posts</th><th>Reach</th><th>Plays</th><th>Likes</th><th>Last upload</th><th>Last active</th></tr></thead>
+          <tbody id="mc-body"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+          <div class="pagination"><span id="mc-count">Loading...</span></div>
         </div>
         <p class="metrics-note"><b>Reach</b> = unique people who watched · <b>Plays</b> = every time the reel was started (repeat watches included) · <b>Counted views</b> = views that qualified for the public view counter · Hours are in IST.</p>
       </div>
@@ -2301,6 +2328,7 @@ function setMetricsTab(tab) {
   document.querySelectorAll('#metrics-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.getElementById('metrics-posts-card').style.display = tab === 'posts' ? '' : 'none';
   document.getElementById('metrics-users-card').style.display = tab === 'users' ? '' : 'none';
+  document.getElementById('metrics-creators-card').style.display = tab === 'creators' ? '' : 'none';
 }
 
 async function loadMetrics() {
@@ -2311,6 +2339,7 @@ async function loadMetrics() {
   const loading = '<tr><td colspan="11"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr>';
   document.getElementById('mp-body').innerHTML = loading;
   document.getElementById('mu-body').innerHTML = loading;
+  document.getElementById('mc-body').innerHTML = loading.replace('colspan="11"', 'colspan="10"');
   try {
     const args = rangeToTs('metrics');
     const typed = { ...args, p_account_type: accountMode };
@@ -2319,6 +2348,7 @@ async function loadMetrics() {
     const err = `<tr><td colspan="11"><div class="empty-state"><p>Couldn't load metrics: ${escHtml(e.message)}</p></div></td></tr>`;
     document.getElementById('mp-body').innerHTML = err;
     document.getElementById('mu-body').innerHTML = err;
+    document.getElementById('mc-body').innerHTML = err.replace('colspan="11"', 'colspan="10"');
     return;
   }
   const sum = k => metricsPosts.reduce((t, r) => t + Number(r[k] || 0), 0);
@@ -2330,6 +2360,7 @@ async function loadMetrics() {
   document.getElementById('mt-shares').textContent = fmtNum(sum('shares'));
   renderMetricsPosts();
   renderMetricsUsers();
+  loadMetricsCreators();
 }
 
 function renderMetricsPosts() {
@@ -2375,6 +2406,110 @@ function renderMetricsUsers() {
     <td style="font-size:12px;max-width:150px">${r.top_post_id ? `<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(r.top_post_caption || '(no caption)')}</div><div class="cell-sub">${fmtNum(r.top_post_plays)} plays</div>` : '—'}</td>
     <td><button class="action-btn" onclick="event.stopPropagation();openMetricsDetail('user','${escHtml(r.social_uid)}')">Report</button></td>
   </tr>`).join('');
+}
+
+// ── TOP CREATORS (who to encourage to post more) ──────
+// Period stats come from admin_creator_metrics (same range as the page);
+// all-time uploads, email and last activity are joined in from posts,
+// social_accounts and users so quiet creators show up too.
+let metricsCreators = [], mcSelected = new Set();
+const QUIET_DAYS = 14;
+
+async function loadMetricsCreators() {
+  document.getElementById('mc-title').textContent = accountMode === 'business' ? 'Top businesses' : 'Top creators';
+  try {
+    await loadBusinessUids();
+    const [posts, accounts, users] = await Promise.all([
+      query('posts', 'select=social_uid,firebase_uid,created_at&is_deleted=eq.false'),
+      query('social_accounts', 'select=social_uid,firebase_uid,username_handle,username'),
+      query('users', 'select=firebase_uid,display_name,email,phone,account_type,last_seen_at,last_seen,last_active_at')
+    ]);
+    const userBy = Object.fromEntries(usersForMode(users).map(u => [u.firebase_uid, u]));
+    const acctBy = Object.fromEntries((accounts || []).map(a => [a.social_uid, a]));
+    const statBy = Object.fromEntries(metricsUsers.map(r => [r.social_uid, r]));
+    const map = {};
+    const add = (sid, uid) => map[sid] || (userBy[uid] ? (map[sid] = { social_uid: sid, firebase_uid: uid, total: 0, last: null }) : null);
+    (posts || []).forEach(p => {
+      const c = p.social_uid && add(p.social_uid, p.firebase_uid || acctBy[p.social_uid]?.firebase_uid);
+      if (!c) return;
+      c.total++;
+      if (!c.last || p.created_at > c.last) c.last = p.created_at;
+    });
+    metricsUsers.forEach(r => add(r.social_uid, acctBy[r.social_uid]?.firebase_uid));
+    metricsCreators = Object.values(map).map(c => {
+      const u = userBy[c.firebase_uid] || {}, a = acctBy[c.social_uid] || {}, s = statBy[c.social_uid] || {};
+      return {
+        ...c, name: u.display_name || '', handle: a.username_handle || a.username || s.handle || '',
+        email: (u.email || '').trim(), phone: u.phone || '',
+        active: [u.last_seen_at, u.last_seen, u.last_active_at].filter(Boolean).sort().pop() || null,
+        uploads: Number(s.posts_uploaded || 0), reach: Number(s.reach || 0), plays: Number(s.plays || 0), likes: Number(s.likes || 0),
+      };
+    });
+    mcSelected = new Set();
+    renderMetricsCreators();
+  } catch (e) {
+    document.getElementById('mc-body').innerHTML = `<tr><td colspan="10"><div class="empty-state"><p>Couldn't load creators: ${escHtml(e.message)}</p></div></td></tr>`;
+  }
+}
+
+function getFilteredCreators() {
+  const q = (document.getElementById('mc-search').value || '').toLowerCase().replace(/^@/, '');
+  const seg = document.getElementById('mc-segment').value, sort = document.getElementById('mc-sort').value;
+  const quietBefore = Date.now() - QUIET_DAYS * 864e5;
+  const rows = metricsCreators.filter(c =>
+    (seg === 'all' || (seg === 'top' && (c.reach || c.plays || c.likes)) || (seg === 'active' && c.uploads) ||
+      (seg === 'quiet' && c.total && (!c.last || new Date(c.last) < quietBefore))) &&
+    (!q || [c.name, c.handle, c.email].some(v => v.toLowerCase().includes(q))));
+  const t = ts => ts ? new Date(ts).getTime() : 0;
+  const by = { reach: c => [c.reach, c.plays, c.uploads], uploads: c => [c.uploads, c.reach, c.total], likes: c => [c.likes, c.reach], plays: c => [c.plays, c.reach], last: c => [t(c.last)] }[sort];
+  return rows.sort((a, b) => { const x = by(a), y = by(b); for (let i = 0; i < x.length; i++) if (y[i] !== x[i]) return y[i] - x[i]; return 0; });
+}
+
+// Copy/CSV act on the ticked creators, or on everyone shown when none are ticked
+function creatorTargets() {
+  return mcSelected.size ? metricsCreators.filter(c => mcSelected.has(c.social_uid)) : getFilteredCreators();
+}
+
+function renderMetricsCreators() {
+  const rows = getFilteredCreators(), body = document.getElementById('mc-body');
+  const targets = creatorTargets(), withEmail = targets.filter(c => c.email).length;
+  document.getElementById('mc-copy').textContent = `Copy emails (${withEmail})`;
+  document.getElementById('mc-count').textContent = `${rows.length} shown · ${rows.filter(c => c.email).length} with email${mcSelected.size ? ` · ${mcSelected.size} selected` : ''}`;
+  document.getElementById('mc-all').checked = rows.length > 0 && rows.every(c => mcSelected.has(c.social_uid));
+  if (!rows.length) {
+    const seg = document.getElementById('mc-segment').value;
+    const msg = { top: 'No creator got views or likes in this period', active: 'Nobody uploaded in this period', quiet: `Every creator has uploaded in the last ${QUIET_DAYS} days`, all: 'No creators yet' }[seg];
+    body.innerHTML = `<tr><td colspan="10"><div class="empty-state"><p>${metricsCreators.length ? msg : 'No creators yet'}</p></div></td></tr>`;
+    return;
+  }
+  const id = s => escHtml(s).replace(/'/g, '&#39;');
+  body.innerHTML = rows.map(c => `<tr>
+    <td><input type="checkbox" ${mcSelected.has(c.social_uid) ? 'checked' : ''} onchange="toggleCreator('${id(c.social_uid)}', this.checked)"></td>
+    <td><div class="avatar-cell"><div class="av" style="background:${colorFor(c.social_uid)}">${initials(c.name || c.handle)}</div>
+      <div><div style="font-weight:600">${escHtml(c.name || '—')}</div><div style="font-size:11px;color:var(--grey)">${c.handle ? '@' + escHtml(c.handle) : 'No username'}</div></div></div></td>
+    <td style="font-size:12px">${c.email ? escHtml(c.email) : '<span class="cell-sub">No email</span>'}</td>
+    <td class="num-strong">${fmtNum(c.uploads)}</td>
+    <td>${fmtNum(c.total)}</td>
+    <td>${fmtNum(c.reach)}</td>
+    <td>${fmtNum(c.plays)}</td>
+    <td>${fmtNum(c.likes)}</td>
+    <td style="font-size:12px;white-space:nowrap">${c.last ? formatDate(c.last) + agoLine(c.last) : '—'}</td>
+    <td style="font-size:12px;white-space:nowrap">${c.active ? formatDate(c.active) + agoLine(c.active) : '—'}</td>
+  </tr>`).join('');
+}
+
+function toggleCreator(sid, on) { on ? mcSelected.add(sid) : mcSelected.delete(sid); renderMetricsCreators(); }
+function toggleAllCreators(on) { getFilteredCreators().forEach(c => on ? mcSelected.add(c.social_uid) : mcSelected.delete(c.social_uid)); renderMetricsCreators(); }
+
+async function copyCreatorEmails() {
+  const targets = creatorTargets();
+  const emails = [...new Set(targets.map(c => c.email).filter(Boolean))];
+  if (!emails.length) { showToast('None of these creators has an email address', 'error'); return; }
+  const text = emails.join(', ');
+  try { await navigator.clipboard.writeText(text); }
+  catch (_) { window.prompt('Copy these emails:', text); return; }
+  const missing = targets.length - targets.filter(c => c.email).length;
+  showToast(`Copied ${emails.length} email${emails.length === 1 ? '' : 's'}${missing ? ` · ${missing} without email skipped` : ''} — paste into BCC`, 'success');
 }
 
 async function openMetricsDetail(kind, id) {
@@ -2465,6 +2600,9 @@ function downloadMetricsCSV(kind) {
   } else if (kind === 'users') {
     head = ['Creator', 'Username', 'Posts uploaded', 'Reach', 'Plays', 'Counted views', 'Watch seconds', 'Likes', 'Shares', 'Feed impressions', 'Peak hour IST', 'Top post', 'Top post plays'];
     rows = metricsUsers.map(r => [r.display_name || '', '@' + (r.handle || ''), r.posts_uploaded, r.reach, r.plays, r.views, r.watch_seconds, r.likes, r.shares, r.impressions, fmtHourSlot(r.peak_hour), r.top_post_caption || '', r.top_post_plays || 0]);
+  } else if (kind === 'creators') {
+    head = ['Name', 'Username', 'Email', 'Phone', 'Uploads in period', 'Total posts', 'Reach', 'Plays', 'Likes', 'Last upload', 'Last active'];
+    rows = creatorTargets().map(c => [c.name, c.handle ? '@' + c.handle : '', c.email, c.phone, c.uploads, c.total, c.reach, c.plays, c.likes, c.last || '', c.active || '']);
   } else {
     if (!metricsDetail) return;
     head = ['Viewer', 'Username', 'Plays', 'Watch seconds', 'First watched', 'Last watched'];
