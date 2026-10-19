@@ -1183,8 +1183,8 @@
           </div>
           <div class="table-card" style="flex:1">
             <div class="table-header"><h3 id="content-panel-title">All uploads</h3><div class="search-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="content-search" placeholder="Search content..." oninput="filterContent()"></div></div>
-            <table><thead><tr><th>Type</th><th>Creator</th><th>Caption</th><th>Views</th><th>Likes</th><th>Posted</th><th>Actions</th></tr></thead>
-            <tbody id="content-body"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+            <table><thead><tr><th>Type</th><th>Creator</th><th>Caption</th><th>Length</th><th>Views</th><th>Likes</th><th>Posted</th><th>Actions</th></tr></thead>
+            <tbody id="content-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
           </div>
         </div>
       </div>
@@ -3842,7 +3842,7 @@ var contentData=[],creatorData=[],selectedCreatorUid=null,allAccounts={};
 async function loadContent(){
   await Promise.all([loadBusinessUids(), ensureAvatars()]);
   document.getElementById('creator-list').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  document.getElementById('content-body').innerHTML='<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('content-body').innerHTML='<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
   var res=await Promise.all([query('posts','select=*&is_deleted=eq.false&order=created_at.desc'),query('social_accounts','select=social_uid,username_handle,username,social_avatar_url')]);
   document.querySelector('#page-content .dash-head h2').textContent=accountMode==='business'?'Business uploads':'Uploads';
   contentData=postsForMode(res[0]);(res[1]||[]).forEach(function(a){allAccounts[a.social_uid]=a;});
@@ -3890,17 +3890,73 @@ function filterContent(){
   var creator=selectedCreatorUid&&creatorData.find(function(c){return c.uid===selectedCreatorUid;});
   var source=creator?creator.posts:(window._contentRangePosts||[]);
   var filtered=source.filter(function(p){return!search||plainLower(p.caption).includes(search);});
-  if(!filtered.length){document.getElementById('content-body').innerHTML='<tr><td colspan="7"><div class="empty-state"><p>No uploads in this period</p></div></td></tr>';return;}
+  if(!filtered.length){document.getElementById('content-body').innerHTML='<tr><td colspan="8"><div class="empty-state"><p>No uploads in this period</p></div></td></tr>';return;}
   document.getElementById('content-body').innerHTML=filtered.map(function(p){
     var isReel=(p.media_types||[]).includes('video');
+    var video=isReel?reelVideoUrl(p):'';
     return '<tr><td><span class="badge '+(isReel?'badge-red':'badge-blue')+'">'+(isReel?'Reel':'Post')+'</span></td>'
-      +'<td style="font-size:12px;font-weight:600;white-space:nowrap">@'+handleOf(p.social_uid)+'</td>'
-      +'<td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.caption||'—')+'</td>'
+      +'<td style="font-size:12px;font-weight:600;white-space:nowrap">@'+escHtml(handleOf(p.social_uid))+'</td>'
+      +'<td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(p.caption||'—')+'</td>'
+      +'<td style="font-size:12px;white-space:nowrap">'+(video?'<span class="reel-len" data-src="'+escHtml(video)+'">'+reelLengthLabel(video)+'</span>':'<span class="cell-sub">—</span>')+'</td>'
       +'<td>'+(p.view_count||0)+'</td>'
       +'<td style="color:var(--orange);font-weight:600">'+(p.like_count||0)+'</td>'
       +'<td style="font-size:12px;white-space:nowrap">'+formatDateTime(p.created_at)+'</td>'
       +'<td><button class="action-btn danger" onclick="deletePost(\''+p.id+'\')">Delete</button></td></tr>';
   }).join('');
+  fillReelLengths();
+}
+
+// ── Reel length ──
+// Not stored in the database, so it is read from each video file's header
+// (preload="metadata" fetches only a few KB, not the whole video), a few at
+// a time, and remembered for the session.
+var reelLengths = {}, reelLengthQueue = [], reelLengthActive = 0;
+function reelVideoUrl(p){
+  var i=(p.media_types||[]).indexOf('video');
+  return i>=0?((p.media_urls||[])[i]||''):'';
+}
+function fmtReelLength(sec){
+  sec=Math.round(sec);
+  if(sec<60)return sec+'s';
+  return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+}
+function reelLengthLabel(url){
+  var v=reelLengths[url];
+  if(v===undefined)return '<span class="cell-sub">…</span>';
+  if(v===null)return '<span class="cell-sub" title="Couldn\'t read this video">—</span>';
+  return '<span class="badge badge-grey" style="font-variant-numeric:tabular-nums">'+fmtReelLength(v)+'</span>';
+}
+function showReelLength(url){
+  document.querySelectorAll('#content-body .reel-len').forEach(function(el){ if(el.dataset.src===url) el.innerHTML=reelLengthLabel(url); });
+}
+function fillReelLengths(){
+  document.querySelectorAll('#content-body .reel-len').forEach(function(el){
+    var url=el.dataset.src;
+    if(reelLengths[url]===undefined && reelLengthQueue.indexOf(url)<0) reelLengthQueue.push(url);
+  });
+  pumpReelLengths();
+}
+function pumpReelLengths(){
+  while(reelLengthActive<4 && reelLengthQueue.length){
+    var url=reelLengthQueue.shift();
+    if(reelLengths[url]!==undefined) continue;
+    reelLengthActive++;
+    readReelLength(url);
+  }
+}
+function readReelLength(url){
+  var v=document.createElement('video'), done=false;
+  var finish=function(val){
+    if(done)return; done=true; clearTimeout(timer);
+    reelLengths[url]=(isFinite(val)&&val>0)?val:null;
+    v.removeAttribute('src'); v.load();
+    reelLengthActive--; showReelLength(url); pumpReelLengths();
+  };
+  var timer=setTimeout(function(){ finish(NaN); }, 20000);
+  v.preload='metadata'; v.muted=true;
+  v.onloadedmetadata=function(){ finish(v.duration); };
+  v.onerror=function(){ finish(NaN); };
+  v.src=url;
 }
 async function loadReports(){
   document.getElementById('reports-post-body').innerHTML='<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
