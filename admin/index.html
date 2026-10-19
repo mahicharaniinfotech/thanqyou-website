@@ -160,6 +160,8 @@
   .chart-card h3 { font-size:15px; font-weight:700; color:var(--white); }
   .chart-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
   .chart-head p { font-size:12px; color:var(--grey); margin-top:2px; }
+  .chart-range { margin:-4px 0 16px; }
+  .chart-range .seg, .chart-range .date-range { box-shadow:none; }
   .chart-legend { display:flex; gap:14px; flex-wrap:wrap; }
   .chart-legend span { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--grey2); font-weight:500; }
   .chart-legend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
@@ -799,6 +801,7 @@
               <div><h3>Signups &amp; posts</h3><p id="trend-sub">Daily</p></div>
               <div class="chart-legend"><span><i style="background:#b8475a"></i>Signups</span><span><i style="background:#2a78d6"></i>Posts</span></div>
             </div>
+            <div class="dash-filter chart-range" data-range="trend" data-default="14d" data-presets="trend"></div>
             <div class="chart-box"><canvas id="signupChart" role="img" aria-label="Daily signups and posts"></canvas></div>
           </div>
           <div class="chart-card">
@@ -2903,11 +2906,13 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 
 // ── DATE RANGE FILTER (shared by Dashboard, Users, Content) ──
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
-const RANGE_RENDER = { dash: () => renderDashStats(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls() };
+// The dashboard's Signups & posts chart has its own range (a trend needs several days)
+const PRESET_SETS = { trend: [['7d','7 days'],['14d','14 days'],['30d','30 days'],['90d','90 days'],['month','This month']] };
+const RANGE_RENDER = { trend: () => renderTrendChartRange(), dash: () => renderDashStats(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls() };
 
-function rangeControlsHTML(prefix, active) {
+function rangeControlsHTML(prefix, active, presets = RANGE_PRESETS) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
-    + RANGE_PRESETS.map(([k, l]) => `<button data-preset="${k}" class="${k === active ? 'active' : ''}" onclick="setRangePreset('${prefix}','${k}')">${l}</button>`).join('')
+    + presets.map(([k, l]) => `<button data-preset="${k}" class="${k === active ? 'active' : ''}" onclick="setRangePreset('${prefix}','${k}')">${l}</button>`).join('')
     + `</div><div class="date-range"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`
     + `<span class="dr-lbl">From</span><input type="date" id="${prefix}-from" aria-label="From date" onchange="setRangeCustom('${prefix}')">`
     + `<span class="dr-lbl">To</span><input type="date" id="${prefix}-to" aria-label="To date" onchange="setRangeCustom('${prefix}')"></div>`;
@@ -2918,7 +2923,7 @@ function applyRangePreset(prefix, preset) {
   let from = '', to = '';
   if (preset === 'today') { from = to = today; }
   else if (preset === 'yesterday') { from = to = addDays(today, -1); }
-  else if (preset === '7d') { from = addDays(today, -6); to = today; }
+  else if (/^\d+d$/.test(preset)) { from = addDays(today, 1 - parseInt(preset, 10)); to = today; }
   else if (preset === 'month') { from = today.substring(0, 8) + '01'; to = today; }
   document.getElementById(prefix + '-from').value = from;
   document.getElementById(prefix + '-to').value = to;
@@ -2946,7 +2951,7 @@ function rangeLabel(from, to) {
 
 function initRangeFilters() {
   document.querySelectorAll('[data-range]').forEach(el => {
-    el.innerHTML = rangeControlsHTML(el.dataset.range, el.dataset.default);
+    el.innerHTML = rangeControlsHTML(el.dataset.range, el.dataset.default, PRESET_SETS[el.dataset.presets]);
     applyRangePreset(el.dataset.range, el.dataset.default);
   });
 }
@@ -3061,9 +3066,8 @@ function renderDashStats() {
   $('kyc-mini').innerHTML = users.length ? Object.keys(kycCounts).filter(k => kycCounts[k])
     .map(k => `<span style="flex:${kycCounts[k]};background:${DASH_STATUS[k]}" title="${KYC_LABELS[k]}: ${kycCounts[k]}"></span>`).join('') : '';
 
-  $('trend-sub').textContent = `Daily · ${fmtDay(days[0])} – ${fmtDay(days[days.length-1])}`;
   $('earn-sub').textContent = label;
-  renderTrendChart(days, suSeries, poSeries);
+  renderTrendChartRange();
   renderEarningsChart(txns, d.txns);
   renderBreakdowns(kycCounts, reels, posts.length);
 
@@ -3087,6 +3091,26 @@ function drawSpark(id, values, color) {
 
 const CHART_FONT = { family: "'DM Sans', sans-serif", size: 11 };
 const CHART_TOOLTIP = { backgroundColor:'#1F1A19', padding:10, cornerRadius:8, titleFont:{...CHART_FONT, weight:'600', size:12}, bodyFont:{...CHART_FONT, size:12}, usePointStyle:true, boxPadding:4 };
+
+// Signups & posts chart over its own date range (presets or From/To),
+// independent of the page filter; data is already loaded, so no refetch
+function renderTrendChartRange() {
+  const d = window._dashStats;
+  if (!d) return;
+  const today = localDay(new Date());
+  let { from, to } = getRange('trend');
+  if (from && to && from > to) [from, to] = [to, from];
+  if (!to) to = today;
+  if (!from) from = addDays(to, -13);
+  const days = dayList(from, to); // capped at 400 days
+  const count = list => { const m = {}; list.forEach(x => { const k = localDay(x.created_at); m[k] = (m[k] || 0) + 1; }); return days.map(k => m[k] || 0); };
+  const signups = count(d.users), posts = count(d.posts);
+  const total = a => a.reduce((s, n) => s + n, 0);
+  document.getElementById('trend-sub').textContent =
+    `Daily · ${fmtDay(days[0])} – ${fmtDay(days[days.length - 1])} · ${fmtNum(total(signups))} signups, ${fmtNum(total(posts))} posts`
+    + (days.length === 400 && days[days.length - 1] !== to ? ' (first 400 days)' : '');
+  renderTrendChart(days, signups, posts);
+}
 
 function renderTrendChart(days, signups, posts) {
   const labels = days.map(s => new Date(s + 'T00:00:00').toLocaleDateString('en-IN', {day:'numeric', month:'short'}));
