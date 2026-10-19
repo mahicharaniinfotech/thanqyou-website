@@ -66,6 +66,15 @@
   .nav-item.active svg { color:var(--sec, var(--sb-accent)); }
   .nav-section { display:flex; align-items:center; gap:10px; padding:18px 12px 7px; font-size:10px; font-weight:800; color:var(--sec, #8F7D81); text-transform:uppercase; letter-spacing:1.6px; }
   .nav-section::after { content:''; flex:1; height:1px; background:linear-gradient(90deg, color-mix(in srgb, var(--sec, #fff) 35%, transparent), transparent); }
+  /* Each section is its own card (built by paintNavSections), like the dashboard's stat cards */
+  .nav-card { position:relative; overflow:hidden; margin:10px 0 0; padding:2px 6px 6px; border-radius:14px;
+    background:linear-gradient(160deg, color-mix(in srgb, var(--sec, #fff) 11%, rgba(255,255,255,0.03)) 0%, rgba(255,255,255,0.02) 70%);
+    border:1px solid color-mix(in srgb, var(--sec, #fff) 22%, rgba(255,255,255,0.04));
+    box-shadow:0 8px 20px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04); }
+  .nav-card::before { content:''; position:absolute; left:0; right:0; top:0; height:2px; background:linear-gradient(90deg, var(--sec, #fff), color-mix(in srgb, var(--sec, #fff) 15%, transparent)); }
+  .nav-card .nav-section { padding:11px 8px 5px; }
+  .nav-card .nav-item { padding:8px 10px; margin:1px 0; }
+  .nav-card .nav-item.active::before { left:-6px; }
   .sidebar-bottom { margin-top:auto; padding:14px 10px 4px; border-top:1px solid rgba(255,255,255,0.08); }
   .admin-badge { display:flex; align-items:center; gap:10px; }
   .admin-avatar { width:34px; height:34px; background:linear-gradient(135deg, #B8475A, #4A1C22); box-shadow:0 0 0 1px rgba(255,255,255,0.12); color:#fff; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
@@ -1732,7 +1741,7 @@ function showPage(name, el) {
 
 // Mobile: bottom tab bar routes through the matching sidebar item so both stay in sync
 function goPage(name) {
-  const nav = [...document.querySelectorAll(`.sidebar .nav-group[data-mode="${accountMode}"] .nav-item, .sidebar > .nav-item`)].find(n => n.getAttribute('onclick').includes(`'${name}'`));
+  const nav = [...document.querySelectorAll(`.sidebar .nav-group[data-mode="${accountMode}"] .nav-item, .sidebar > .nav-item, .sidebar > .nav-card > .nav-item`)].find(n => n.getAttribute('onclick').includes(`'${name}'`));
   if (nav) showPage(name, nav);
 }
 // Each sidebar section gets its own colour (--sec on the heading and the
@@ -1744,6 +1753,16 @@ function paintNavSections() {
   document.querySelectorAll('.sidebar .nav-section, .sidebar .nav-item').forEach(el => {
     if (el.classList.contains('nav-section')) color = SECTION_COLORS[el.textContent.trim().toLowerCase()] || null;
     if (color) el.style.setProperty('--sec', `var(${color})`);
+  });
+  // Wrap each heading and the items after it into a card
+  document.querySelectorAll('.sidebar .nav-section').forEach(sec => {
+    if (sec.parentElement.classList.contains('nav-card')) return;
+    const card = document.createElement('div');
+    card.className = 'nav-card';
+    card.style.cssText = sec.style.cssText; // carries --sec
+    sec.before(card);
+    let el = sec;
+    do { const next = el.nextElementSibling; card.appendChild(el); el = next; } while (el && el.classList.contains('nav-item'));
   });
 }
 paintNavSections();
