@@ -321,6 +321,7 @@
   .setting-input { background:var(--dark2); border:1px solid var(--dark4); border-radius:7px; padding:6px 10px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; width:100px; text-align:right; }
   .toggle { width:40px; height:22px; background:var(--dark4); border-radius:11px; cursor:pointer; position:relative; transition:background 0.2s; border:none; flex-shrink:0; }
   .toggle.on { background:var(--red); }
+  .not-wired { font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--dark3); color:var(--grey2); white-space:nowrap; }
   .toggle::after { content:''; position:absolute; width:16px; height:16px; background:white; border-radius:50%; top:3px; left:3px; transition:left 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.2); }
   .toggle.on::after { left:21px; }
 
@@ -1444,24 +1445,24 @@
           <div class="settings-card">
             <h3>🔒 Feature Flags</h3>
             <div class="setting-row">
-              <div class="setting-info"><p>New Signups</p><span>Allow new user registration</span></div>
-              <button class="toggle on" id="toggle-signup" onclick="toggleSetting('signups_enabled', this)"></button>
+              <div class="setting-info"><p>Payouts</p><span>Off: bank withdrawals and the monthly auto-payout pause. Balances stay; nothing is lost</span></div>
+              <button class="toggle on" id="toggle-payout" aria-label="Payouts" onclick="toggleSetting('payouts_enabled', this)"></button>
             </div>
             <div class="setting-row">
-              <div class="setting-info"><p>Payouts</p><span>Allow wallet withdrawals</span></div>
-              <button class="toggle on" id="toggle-payout" onclick="toggleSetting('payouts_enabled', this)"></button>
+              <div class="setting-info"><p>Content Upload</p><span>Off: nobody can publish new posts or reels (works on every app version)</span></div>
+              <button class="toggle on" id="toggle-upload" aria-label="Content upload" onclick="toggleSetting('content_upload_enabled', this)"></button>
             </div>
             <div class="setting-row">
-              <div class="setting-info"><p>Referral Program</p><span>Enable referral bonuses</span></div>
-              <button class="toggle on" id="toggle-referral" onclick="toggleSetting('referral_program_enabled', this)"></button>
+              <div class="setting-info"><p>Automatic KYC</p><span>Off: new KYC submissions skip the automatic check and wait in KYC for you to review</span></div>
+              <button class="toggle on" id="toggle-kyc" aria-label="Automatic KYC" onclick="toggleSetting('kyc_verification_enabled', this)"></button>
             </div>
             <div class="setting-row">
-              <div class="setting-info"><p>Content Upload</p><span>Allow post/reel uploads</span></div>
-              <button class="toggle on" id="toggle-upload" onclick="toggleSetting('content_upload_enabled', this)"></button>
+              <div class="setting-info"><p>New Signups</p><span>Blocking signups needs an app update - not connected yet</span></div>
+              <span class="not-wired">Not connected</span>
             </div>
             <div class="setting-row">
-              <div class="setting-info"><p>KYC Verification</p><span>Auto KYC processing</span></div>
-              <button class="toggle on" id="toggle-kyc" onclick="toggleSetting('kyc_verification_enabled', this)"></button>
+              <div class="setting-info"><p>Referral Program</p><span>Referral bonuses follow the early-bonus programme rules - not connected yet</span></div>
+              <span class="not-wired">Not connected</span>
             </div>
           </div>
           <div class="settings-card">
@@ -1471,12 +1472,12 @@
               <span style="font-size:11px;color:var(--grey);font-family:'DM Mono',monospace">nppmtxvlkm...</span>
             </div>
             <div class="setting-row">
-              <div class="setting-info"><p>App Version</p><span>Current build</span></div>
-              <span class="badge badge-blue">v1.0.0</span>
+              <div class="setting-info"><p>Latest app version</p><span>Newest build any user is on</span></div>
+              <span class="badge badge-blue" id="sys-app-version">—</span>
             </div>
             <div class="setting-row">
-              <div class="setting-info"><p>Admin Version</p><span>This panel</span></div>
-              <span class="badge badge-blue">v1.0.0</span>
+              <div class="setting-info"><p>Minimum app build</p><span>Older builds are asked to update</span></div>
+              <span class="badge badge-blue" id="sys-min-build">—</span>
             </div>
           </div>
         </div>
@@ -2148,7 +2149,7 @@ async function fetchBizList(ts) {
   bizList = await rpc('admin_business_list', ts) || [];
   // Wallet credits (e.g. the Rs.2 early-user signup bonus) for business accounts
   const uids = bizList.map(b => b.firebase_uid);
-  const txns = uids.length ? await query('wallet_transactions', `select=firebase_uid,rupees,source,created_at&firebase_uid=in.(${uids.map(encodeURIComponent).join(',')})`) : [];
+  const txns = uids.length ? await query('wallet_transactions', `select=firebase_uid,rupees,source,created_at&type=in.(${PAYOUT_TYPES})&firebase_uid=in.(${uids.map(encodeURIComponent).join(',')})`) : [];
   const from = new Date(ts.p_from), to = new Date(ts.p_to), today = localDay(new Date());
   bizList.forEach(b => { b.earn_total = 0; b.earn_range = 0; b.earn_today = 0; });
   const byUid = Object.fromEntries(bizList.map(b => [b.firebase_uid, b]));
@@ -3032,11 +3033,33 @@ async function renderLastSignup() {
     showToast(`New signup: ${name}`);
   }
   _lastSignupUid = u.firebase_uid;
+  _lastSignupAt = u.created_at;
+}
+let _lastSignupAt = null;
+function refreshSignupTime() {
+  const el = document.querySelector('#last-signup .ls-time[title]');
+  if (el && _lastSignupAt) el.textContent = `Signed up ${signupWhen(_lastSignupAt)} · ${timeAgo(_lastSignupAt)}`;
 }
 // Categorical order validated for colour-blind separation; slot 1 is the brand-adjacent rose
 const DASH_SERIES = ['#b8475a','#2a78d6','#eda100','#1baf7a','#4a3aa7','#e87ba4'];
 const DASH_OTHER = '#b9b2ad';
 const DASH_STATUS = { verified:'#0ca30c', pending:'#fab219', rejected:'#d03b3b', notStarted:'#d8d2cf' };
+
+// Money the company pays users. Top-ups, transfers between users, spending
+// and bank withdrawals (cashout) are not payouts - counting them would add
+// a withdrawal on top of the earning it came from.
+const PAYOUT_TYPES = 'earn,welcome,referral,credit';
+// What a payout was for, used as the "type" in the Payouts chart
+function payoutKind(t) {
+  const src = String(t.source || '');
+  if (src.startsWith('revenue_share')) return 'Revenue share';
+  if (src.startsWith('early_bonus_signup') || t.type === 'welcome') return 'Signup bonus';
+  if (src.startsWith('reel_')) return 'Reel bonus';
+  if (src.startsWith('referral') || t.type === 'referral') return 'Referral bonus';
+  if (src.startsWith('early_bonus')) return 'Engagement bonus';
+  if (t.type === 'credit') return 'Manual credit';
+  return prettyType(src || t.type);
+}
 
 async function loadDashboard() {
   await loadBusinessUids();
@@ -3045,7 +3068,7 @@ async function loadDashboard() {
   const [users, posts, allTxns, kyc, admob] = await Promise.all([
     query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&order=created_at.desc').then(onlyIndividualUsers),
     query('posts', 'select=id,firebase_uid,media_types,created_at&is_deleted=eq.false').then(onlyIndividualPosts),
-    query('wallet_transactions', 'select=firebase_uid,rupees,type,created_at'),
+    query('wallet_transactions', `select=firebase_uid,rupees,type,source,created_at&type=in.(${PAYOUT_TYPES})`).then(rows => rows.map(t => ({ ...t, type: payoutKind(t) }))),
     query('user_kyc', 'select=id,firebase_uid,status,submitted_at'),
     rpc('admin_admob_daily', {}).catch(e => { showToast(`Couldn't load AdMob earnings: ${e.message}`, 'error'); return null; })
   ]);
@@ -3056,6 +3079,8 @@ async function loadDashboard() {
   await loadSocialHandles();
   renderLastSignup();
   renderDashStats();
+  _dashFullAt = Date.now();
+  dashSignature().then(sig => { _dashSig = sig; });
   renderDashUsers();
 }
 
@@ -3405,7 +3430,7 @@ function renderEarningsChart(txns, allTxns) {
   document.getElementById('donut-total').textContent = fmtINR(sum);
   document.getElementById('earn-legend').innerHTML = entries.length
     ? entries.map(([k, v]) => `<div class="legend-row"><i style="background:${colOf(k)}"></i><span class="lr-name">${nameOf(k)}</span><span class="lr-val">${fmtINR(v)}</span><span class="lr-pct">${Math.round(v / sum * 100)}%</span></div>`).join('')
-    : '<div class="empty-state" style="padding:12px">No earnings in this period</div>';
+    : '<div class="empty-state" style="padding:12px">No payouts in this period</div>';
 
   if (window._chart2) window._chart2.destroy();
   window._chart2 = new Chart(document.getElementById('earningsChart'), {
@@ -3767,14 +3792,23 @@ async function loadAnalytics() {
 }
 
 // ── SETTINGS (Feature Flags) ─────────────────────
-const FLAG_TOGGLES = [['toggle-signup','signups_enabled'],['toggle-payout','payouts_enabled'],['toggle-referral','referral_program_enabled'],['toggle-upload','content_upload_enabled'],['toggle-kyc','kyc_verification_enabled']];
+const FLAG_TOGGLES = [['toggle-payout','payouts_enabled'],['toggle-upload','content_upload_enabled'],['toggle-kyc','kyc_verification_enabled']];
 async function loadSettings() {
   try {
     // app_settings is a key/value table (not one row per flag as
     // columns) - fetch all 5 flag rows and build a lookup map.
-    const rows = await query('app_settings', "select=key,value&key=in.(signups_enabled,payouts_enabled,referral_program_enabled,content_upload_enabled,kyc_verification_enabled)");
+    const [rows, versions] = await Promise.all([
+      query('app_settings', "select=key,value&key=in.(payouts_enabled,content_upload_enabled,kyc_verification_enabled,min_supported_build)"),
+      query('users', 'select=app_version&app_version=not.is.null')
+    ]);
+    // Highest build number among users, e.g. "2.1.0+66"
+    const builds = (versions || []).map(v => v.app_version).filter(Boolean);
+    const buildNo = v => parseInt(String(v).split('+')[1] || '0', 10);
+    const latest = builds.sort((a, b) => buildNo(b) - buildNo(a))[0];
+    document.getElementById('sys-app-version').textContent = latest || '—';
     const map = {};
     (rows||[]).forEach(function(r){ map[r.key] = r.value; });
+    document.getElementById('sys-min-build').textContent = map.min_supported_build ? 'Build ' + map.min_supported_build : '—';
     FLAG_TOGGLES.forEach(function(pair) {
       var elemId = pair[0], flagName = pair[1];
       var el = document.getElementById(elemId);
@@ -4171,18 +4205,24 @@ async function loadNotifications() {
   </tr>`).join('');
 }
 
-// ── SETTINGS ─────────────────────────────────────────
-function saveSetting(id) {
-  const val = document.getElementById(id).value;
-  showToast(`Setting saved: ₹${val}`, 'success');
-}
-
 // ── REALTIME ─────────────────────────────────────────
+// Every 30 s the open dashboard asks for the newest user, post and wallet
+// transaction (three one-row reads) and reloads everything only when one
+// of them changed - it used to re-download every table twice a minute.
+// A full reload still runs every 10 min (AdMob, "today" rolling over), and
+// nothing runs while the browser tab is hidden.
+let _dashSig = null, _dashFullAt = 0;
+async function dashSignature() {
+  const latest = t => query(t, 'select=created_at&order=created_at.desc&limit=1').then(r => (r[0] || {}).created_at || '');
+  return (await Promise.all(['users', 'posts', 'wallet_transactions'].map(latest))).join('|');
+}
 function setupRealtime() {
-  // Poll for updates every 30 seconds
-  setInterval(() => {
+  setInterval(async () => {
     const activePage = document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
-    if (activePage === 'dashboard') loadDashboard();
+    if (activePage !== 'dashboard' || document.hidden) return;
+    const sig = await dashSignature();
+    if (sig !== _dashSig || Date.now() - _dashFullAt > 10 * 60000) loadDashboard();
+    else refreshSignupTime();
   }, 30000);
 }
 
