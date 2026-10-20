@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#1E1418">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -551,7 +552,13 @@
       <div style="text-align:center;margin-top:14px"><span style="font-size:13px;color:#888;cursor:pointer" onclick="toggleForgot()">Forgot password?</span></div>
       <div id="forgot-section" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--dark3)">
         <input type="email" id="forgot-email" placeholder="Admin email" style="width:100%;background:var(--dark2);border:1px solid var(--dark3);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:8px;box-sizing:border-box">
-        <button onclick="doForgot()" style="width:100%;background:var(--red);color:#fff;border:1px solid var(--red);border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer">Email Me a New Password</button>
+        <button id="forgot-send-btn" onclick="doForgot()" style="width:100%;background:var(--red);color:#fff;border:1px solid var(--red);border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer">Email Me a Reset Code</button>
+        <div id="forgot-step2" style="display:none;margin-top:10px">
+          <input type="text" id="forgot-code" maxlength="6" inputmode="numeric" placeholder="6-digit code from the email" autocomplete="one-time-code" style="width:100%;background:var(--dark2);border:1px solid var(--dark3);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:8px;box-sizing:border-box;letter-spacing:2px">
+          <input type="password" id="forgot-new" placeholder="New password (10+ characters, letters and numbers)" autocomplete="new-password" style="width:100%;background:var(--dark2);border:1px solid var(--dark3);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:8px;box-sizing:border-box">
+          <input type="password" id="forgot-confirm" placeholder="Repeat new password" autocomplete="new-password" style="width:100%;background:var(--dark2);border:1px solid var(--dark3);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:8px;box-sizing:border-box">
+          <button id="forgot-set-btn" onclick="doForgotConfirm()" style="width:100%;background:var(--red);color:#fff;border:1px solid var(--red);border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer">Set New Password</button>
+        </div>
         <div id="forgot-result" style="margin-top:10px;font-size:13px;display:none"></div>
       </div>
     </div>
@@ -726,7 +733,7 @@
       <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">Change Password</h3>
       <p style="font-size:12px;color:var(--grey);margin-bottom:18px">You'll need the current 6-digit code from your email to confirm this change.</p>
       <label style="display:block;font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">New Password</label>
-      <input type="password" id="cp-new" placeholder="At least 8 characters" style="width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:12px;box-sizing:border-box">
+      <input type="password" id="cp-new" placeholder="At least 10 characters, letters and numbers" style="width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:12px;box-sizing:border-box">
       <label style="display:block;font-size:11px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Confirm Password</label>
       <input type="password" id="cp-confirm" placeholder="Repeat password" style="width:100%;background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:10px 14px;color:var(--white);font-size:14px;margin-bottom:16px;box-sizing:border-box">
       <div id="cp-otp-row" style="display:none">
@@ -1237,7 +1244,7 @@
               <option value="rejected">Rejected</option>
             </select>
           </div>
-          <table><thead><tr><th>User</th><th>ID Type</th><th>ID Number</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
+          <table><thead><tr><th>User</th><th>ID Type</th><th>ID</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody id="kyc-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
         </div>
       </div>
@@ -1539,10 +1546,42 @@ async function adminAuth(action, payload){
 async function doForgot(){
   var email=document.getElementById('forgot-email').value.trim().toLowerCase();
   var result=document.getElementById('forgot-result');
+  if(!email){ result.style.display='block'; result.style.color='#e74c3c'; result.textContent='Enter your admin email.'; return; }
   result.style.display='block'; result.style.color='#888'; result.textContent='Sending…';
   var r = await adminAuth('forgot', {email:email});
-  if(r.ok){ result.style.color='#27ae60'; result.textContent='If that email is a registered admin, a new password has been emailed to it.'; }
+  if(r.ok){
+    // Nothing has changed yet: the password only changes with the emailed code
+    result.style.color='#27ae60'; result.textContent='If that email is a registered admin, a reset code has been sent to it. Enter it below with your new password.';
+    document.getElementById('forgot-step2').style.display='block';
+    document.getElementById('forgot-send-btn').textContent='Resend Code';
+  }
   else { result.style.color='#e74c3c'; result.textContent=r.data.error||'Could not process request.'; }
+}
+
+// Same rule as admin-auth's passwordProblem()
+function adminPasswordProblem(p){
+  if(p.length<10) return 'Password must be at least 10 characters.';
+  if(!/[A-Za-z]/.test(p)||!/[0-9]/.test(p)) return 'Use both letters and numbers in the password.';
+  return null;
+}
+
+async function doForgotConfirm(){
+  var email=document.getElementById('forgot-email').value.trim().toLowerCase();
+  var code=document.getElementById('forgot-code').value.trim();
+  var np=document.getElementById('forgot-new').value, cf=document.getElementById('forgot-confirm').value;
+  var result=document.getElementById('forgot-result'); result.style.display='block';
+  var fail=function(t){ result.style.color='#e74c3c'; result.textContent=t; };
+  if(!/^\d{6}$/.test(code)) return fail('Enter the 6-digit code from the email.');
+  var weak=adminPasswordProblem(np); if(weak) return fail(weak);
+  if(np!==cf) return fail('Passwords do not match.');
+  var btn=document.getElementById('forgot-set-btn'); btn.disabled=true; btn.textContent='Saving…';
+  var r = await adminAuth('forgot-confirm', {email:email, code:code, newPassword:np});
+  btn.disabled=false; btn.textContent='Set New Password';
+  if(!r.ok) return fail(r.data.error||'Invalid or expired code.');
+  result.style.color='#27ae60'; result.textContent='Password changed. Sign in with your new password.';
+  document.getElementById('forgot-step2').style.display='none';
+  document.getElementById('forgot-code').value=''; document.getElementById('forgot-new').value=''; document.getElementById('forgot-confirm').value='';
+  document.getElementById('login-email').value=email; document.getElementById('login-password').focus();
 }
 
 async function doLoginStep1(){
@@ -1628,7 +1667,8 @@ async function submitChangePassword(){
   var cf=document.getElementById('cp-confirm').value;
   var btn=document.getElementById('cp-submit-btn');
   if(cpStage==='init'){
-    if(np.length<8){ cpMsg('Password must be at least 8 characters.', true); return; }
+    var weak=adminPasswordProblem(np);
+    if(weak){ cpMsg(weak, true); return; }
     if(np!==cf){ cpMsg('Passwords do not match.', true); return; }
     btn.disabled=true; btn.textContent='Sending\u2026';
     var r=await adminAuth('change-password-init',{token:sessionToken,newPassword:np});
@@ -1645,21 +1685,40 @@ async function submitChangePassword(){
     var r=await adminAuth('change-password-confirm',{token:sessionToken,code:code,newPassword:np});
     btn.disabled=false; btn.textContent='Confirm';
     if(!r.ok){ cpMsg(r.data.error||'Invalid or expired code.', true); return; }
-    cpMsg('Password updated.', false);
-    setTimeout(closeChangePassword, 1200);
+    // The server ends every session on a password change, including this one
+    cpMsg('Password updated. Please sign in again with your new password.', false);
+    setTimeout(function(){ closeChangePassword(); doLogout(); }, 1800);
   }
 }
 // ── SUPABASE QUERY ────────────────────────────────────
+// Reads a table through admin-proxy. Supabase returns at most 1000 rows per
+// request, so unless the caller set its own limit this pages through the
+// whole result (counts and totals would otherwise go silently wrong past
+// 1000 rows). Failures are shown, not swallowed into an empty list.
+const QUERY_PAGE = 1000;
+let _queryErrShown = {};
+function reportQueryError(table, msg) {
+  console.error('Query error ' + table, msg);
+  if (_queryErrShown[table] && Date.now() - _queryErrShown[table] < 10000) return;
+  _queryErrShown[table] = Date.now();
+  showToast(`Couldn't load ${table}: ${String(msg).slice(0, 120)}`, 'error');
+}
 async function query(table, params) {
   params = params || '';
+  const paged = !/(^|&)limit=/.test(params);
+  const out = [];
   try {
-    var r = await fetch(SUPABASE_URL+'/functions/v1/admin-proxy/rest/'+table+'?'+params, {
-      headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' }
-    });
-    var data = await r.json();
-    if (!Array.isArray(data)) { console.error('Query error '+table, data); return []; }
-    return data;
-  } catch(e) { console.error('Query fail '+table, e); return []; }
+    for (let offset = 0; ; offset += QUERY_PAGE) {
+      const page = paged ? `${params ? params + '&' : ''}limit=${QUERY_PAGE}&offset=${offset}` : params;
+      const r = await fetch(SUPABASE_URL + '/functions/v1/admin-proxy/rest/' + table + '?' + page, {
+        headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' }
+      });
+      const data = await r.json().catch(() => null);
+      if (!Array.isArray(data)) { reportQueryError(table, (data && (data.message || data.error)) || `HTTP ${r.status}`); return out; }
+      out.push(...data);
+      if (!paged || data.length < QUERY_PAGE) return out;
+    }
+  } catch (e) { reportQueryError(table, e.message); return out; }
 }
 
 async function queryCount(table, params = '') {
@@ -2008,7 +2067,7 @@ function bizLogo(b, lg) {
   const name = b.business_name || b.owner_name || '?';
   return b.logo_url
     ? `<div class="biz-logo${lg ? ' lg' : ''}" style="background-image:url('${escHtml(b.logo_url)}')"></div>`
-    : `<div class="biz-logo${lg ? ' lg' : ''}" style="background-color:${colorFor(b.firebase_uid)}">${initials(name)}</div>`;
+    : `<div class="biz-logo${lg ? ' lg' : ''}" style="background-color:${colorFor(b.firebase_uid)}">${escHtml(initials(name))}</div>`;
 }
 function bizNameCell(b) {
   return `<div class="avatar-cell" style="min-width:165px">${bizLogo(b)}<div><div style="font-weight:600">${escHtml(b.business_name || 'Profile not completed')}</div><div class="cell-sub">${escHtml(b.category || (b.handle ? '@' + b.handle : '—'))}</div></div></div>`;
@@ -2874,7 +2933,7 @@ function ensureAvatars(force) {
 function avatarHtml(key, name) {
   const url = avatarUrls[key];
   const img = url ? `<img src="${escHtml(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
-  return `<div class="av" style="background:${colorFor(key)}">${initials(name)}${img}</div>`;
+  return `<div class="av" style="background:${colorFor(key)}">${escHtml(initials(name))}${img}</div>`;
 }
 function socialHandleLine(uid) {
   const h = socialHandles[uid];
@@ -3229,8 +3288,8 @@ function renderDashUsers() {
   }
   recentBody.innerHTML = filtered.slice(0,20).map(u => `
     <tr>
-      <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${u.display_name||'—'}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
-      <td style="font-size:12px">${u.email||'—'}</td>
+      <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name||'—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
+      <td style="font-size:12px">${escHtml(u.email||'—')}</td>
       <td style="font-size:12px;white-space:nowrap">${formatDateTime(u.created_at)}</td>
       <td>${u.referred_by ? '<span class="badge badge-green">Referred</span>' : '<span class="badge badge-grey">Direct</span>'}</td>
     </tr>
@@ -3245,7 +3304,7 @@ async function loadUsers() {
   await loadBusinessUids();
   document.getElementById('users-body').innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const [data, wallets, kycData] = await Promise.all([
-    query('users', 'select=*&order=created_at.desc'),
+    query('users', 'select=id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason&order=created_at.desc'),
     query('coin_wallet', 'select=firebase_uid,balance,lifetime_earned,spendable_earned,locked_current'),
     query('user_kyc', 'select=firebase_uid,status')
   ]);
@@ -3315,8 +3374,8 @@ function renderUsers() {
       : `<span class="badge ${u._kyc.status==='verified'?'badge-green':u._kyc.status==='rejected'?'badge-red':'badge-orange'}">${prettyType(u._kyc.status)}</span>`;
     return `
     <tr>
-      <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${u.display_name||'—'}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
-      <td style="font-size:12px">${u.email||'—'}</td>
+      <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name||'—')}${suspendedBadge(u)}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
+      <td style="font-size:12px">${escHtml(u.email||'—')}</td>
       <td style="font-size:12px;color:${g==='unspecified'?'var(--grey)':'inherit'}">${GENDER_META[g][0]}</td>
       <td style="font-weight:600;color:var(--green)">${u._wallet ? '₹' + (u._wallet.balance/100).toFixed(2) : '₹0.00'}</td>
       <td>${kycBadge}</td>
@@ -3324,7 +3383,9 @@ function renderUsers() {
       <td>
         <div style="display:flex;gap:6px">
           <button class="action-btn" onclick="viewUser('${u.firebase_uid}')">View</button>
-          <button class="action-btn danger" onclick="banUser('${u.firebase_uid}','${(u.display_name||'').replace(/'/g,"\\'")}')">Ban</button>
+          ${u.banned_at
+            ? `<button class="action-btn success" onclick="banUser('${escHtml(u.firebase_uid)}', false)">Unban</button>`
+            : `<button class="action-btn danger" onclick="banUser('${escHtml(u.firebase_uid)}', true)">Ban</button>`}
         </div>
       </td>
     </tr>`;
@@ -3447,30 +3508,64 @@ async function viewUser(uid) {
   document.getElementById('modal-user-content').innerHTML = `
     <div class="detail-grid">
       <div class="detail-field"><div class="df-label">Firebase UID</div><div class="df-value" style="font-size:11px;font-family:'DM Mono',monospace">${uid}</div></div>
-      <div class="detail-field"><div class="df-label">Phone</div><div class="df-value">${user.phone||'—'}</div></div>
-      <div class="detail-field"><div class="df-label">Email</div><div class="df-value">${user.email||'—'}</div></div>
-      <div class="detail-field"><div class="df-label">Gender</div><div class="df-value">${user.gender||'—'}</div></div>
-      <div class="detail-field"><div class="df-label">Date of Birth</div><div class="df-value">${user.dob||'—'}</div></div>
-      <div class="detail-field"><div class="df-label">Referral Code</div><div class="df-value">${user.referral_code||'—'}</div></div>
+      <div class="detail-field"><div class="df-label">Phone</div><div class="df-value">${escHtml(user.phone||'—')}</div></div>
+      <div class="detail-field"><div class="df-label">Email</div><div class="df-value">${escHtml(user.email||'—')}</div></div>
+      <div class="detail-field"><div class="df-label">Gender</div><div class="df-value">${escHtml(user.gender||'—')}</div></div>
+      <div class="detail-field"><div class="df-label">Date of Birth</div><div class="df-value">${escHtml(user.dob||'—')}</div></div>
+      ${user.banned_at ? `<div class="detail-field" style="grid-column:1/-1"><div class="df-label">Suspended</div><div class="df-value" style="color:var(--red)">${formatDateTime(user.banned_at)} · ${escHtml(user.ban_reason||'')}</div></div>` : ''}
+      <div class="detail-field"><div class="df-label">Referral Code</div><div class="df-value">${escHtml(user.referral_code||'—')}</div></div>
       <div class="detail-field"><div class="df-label">Wallet Balance</div><div class="df-value" style="color:var(--red)">${formatRupees(w.balance)}</div></div>
       <div class="detail-field"><div class="df-label">Lifetime Earned</div><div class="df-value">${formatRupees(w.lifetime_earned)}</div></div>
       <div class="detail-field"><div class="df-label">Joined</div><div class="df-value">${formatDateTime(user.created_at)}</div></div>
-      <div class="detail-field"><div class="df-label">Referred By</div><div class="df-value" style="font-size:11px">${user.referred_by||'Direct signup'}</div></div>
+      <div class="detail-field"><div class="df-label">Referred By</div><div class="df-value" style="font-size:11px">${escHtml(user.referred_by||'Direct signup')}</div></div>
     </div>
     <div style="margin-top:16px"><h3 style="font-size:13px;font-weight:700;margin-bottom:10px">Recent Transactions</h3>
-    ${(txns||[]).map(t => `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--dark3);font-size:12px"><span style="color:var(--grey)">${t.type}</span><span>${t.description||'—'}</span><span style="color:var(--green);font-weight:600">+₹${parseFloat(t.rupees||0).toFixed(2)}</span></div>`).join('') || '<p style="color:var(--grey);font-size:12px">No transactions</p>'}
+    ${(txns||[]).map(t => `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--dark3);font-size:12px"><span style="color:var(--grey)">${escHtml(t.type)}</span><span>${escHtml(t.description||'—')}</span><span style="color:var(--green);font-weight:600">+₹${parseFloat(t.rupees||0).toFixed(2)}</span></div>`).join('') || '<p style="color:var(--grey);font-size:12px">No transactions</p>'}
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('user-modal')">Close</button>
-      <button class="btn btn-red" onclick="banUser('${uid}','${(user.display_name||'').replace(/'/g,"\\'")}');closeModal('user-modal')">Suspend Account</button>
+      ${user.banned_at
+        ? `<button class="btn btn-ghost" onclick="closeModal('user-modal');banUser('${escHtml(uid)}', false)">Restore Account</button>`
+        : `<button class="btn btn-red" onclick="closeModal('user-modal');banUser('${escHtml(uid)}', true)">Suspend Account</button>`}
     </div>
   `;
   openModal('user-modal');
 }
 
-async function banUser(uid, name) {
-  if (!confirm(`Suspend account for ${name}? This will prevent them from logging in.`)) return;
-  showToast(`Account suspended: ${name}`, 'success');
+function suspendedBadge(u) {
+  return u.banned_at ? ` <span class="badge badge-red" title="${escHtml(u.ban_reason || '')}">Suspended</span>` : '';
+}
+
+// Suspend / restore through admin-ban-user: sets users.banned_at, disables
+// the Firebase account (and revokes its sessions) and pushes a sign-out.
+async function banUser(uid, ban) {
+  const u = usersData.find(x => x.firebase_uid === uid);
+  const name = u?.display_name || socialHandles[uid] || uid;
+  let reason = null;
+  if (ban) {
+    reason = prompt(`Suspend "${name}"?
+They will be signed out and can't sign in again.
+
+Reason (the user will see this):`, '');
+    if (reason === null) return;
+    reason = reason.trim();
+    if (!reason) { showToast('A reason is required to suspend an account', 'error'); return; }
+  } else if (!confirm(`Restore "${name}"? They will be able to sign in again.`)) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/admin-ban-user`, {
+      method: 'POST',
+      headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firebase_uid: uid, ban: !!ban, reason })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.success) throw new Error(d.error || `HTTP ${r.status}`);
+    if (u) { u.banned_at = ban ? new Date().toISOString() : null; u.ban_reason = ban ? reason : null; }
+    renderUsers();
+    showToast(ban ? `Suspended: ${name}` : `Restored: ${name}`);
+    if (d.firebase && d.firebase !== 'ok') showToast(`Saved, but sign-in account: ${d.firebase}`, 'error');
+  } catch (e) {
+    showToast(`Couldn't ${ban ? 'suspend' : 'restore'}: ${e.message}`, 'error');
+  }
 }
 
 // Content: see new functions below
@@ -3552,7 +3647,7 @@ let kycData = [];
 
 async function loadKYC() {
   document.getElementById('kyc-body').innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
-  const data = await query('user_kyc', 'select=*&order=submitted_at.desc');
+  const data = await query('user_kyc', 'select=id,firebase_uid,id_type,id_name,aadhaar_last4,status,rejection_reason,submitted_at,verified_at,verified_name,verification_method&order=submitted_at.desc');
   kycData = data || [];
   document.getElementById('k-pending').textContent = kycData.filter(k=>k.status==='pending').length;
   document.getElementById('k-review').textContent = kycData.filter(k=>k.status==='pending_admin_review').length;
@@ -3572,40 +3667,70 @@ function renderKYC() {
   }
   document.getElementById('kyc-body').innerHTML = filtered.map(k => `
     <tr>
-      <td style="font-size:12px;font-family:'DM Mono',monospace">${k.firebase_uid?.substring(0,16)||'—'}...</td>
-      <td>${k.id_type||'—'}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${k.id_number||'—'}</td>
+      <td><div class="avatar-cell">${avatarHtml(k.firebase_uid, kycName(k))}<div><div style="font-weight:600">${escHtml(kycName(k))}</div><div class="cell-sub" style="font-family:'DM Mono',monospace">${escHtml((k.firebase_uid||'').substring(0,16))}…</div></div></div></td>
+      <td>${escHtml(prettyType(k.id_type||'—'))}${k.verification_method ? `<div class="cell-sub">${escHtml(k.verification_method)}</div>` : ''}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${k.aadhaar_last4 ? 'XXXX XXXX ' + escHtml(k.aadhaar_last4) : '—'}${k.id_name ? `<div class="cell-sub" style="font-family:inherit">${escHtml(k.id_name)}</div>` : ''}</td>
       <td style="font-size:12px">${formatDateTime(k.submitted_at)}</td>
       <td>
-        <span class="badge ${k.status==='verified'?'badge-green':k.status==='rejected'?'badge-red':k.status==='pending_admin_review'?'badge-orange':'badge-grey'}">${k.status||'pending'}</span>
-        ${k.status==='pending_admin_review'&&k.rejection_reason?`<div style="font-size:11px;color:var(--grey);margin-top:4px;max-width:220px">${k.rejection_reason}</div>`:''}
+        <span class="badge ${k.status==='verified'?'badge-green':k.status==='rejected'?'badge-red':k.status==='pending_admin_review'?'badge-orange':'badge-grey'}">${escHtml(k.status||'pending')}</span>
+        ${k.status==='pending_admin_review'&&k.rejection_reason?`<div style="font-size:11px;color:var(--grey);margin-top:4px;max-width:220px">${escHtml(k.rejection_reason)}</div>`:''}
       </td>
       <td><div style="display:flex;gap:6px">
         ${(k.status==='pending'||k.status==='pending_admin_review')?`
-          <button class="action-btn success" onclick="approveKYC('${k.id}','${k.firebase_uid}')">Approve</button>
-          <button class="action-btn danger" onclick="rejectKYC('${k.id}','${k.firebase_uid}')">Reject</button>
-        `:`<span style="font-size:12px;color:var(--grey)">${k.reviewed_at?formatDateTime(k.reviewed_at):'—'}</span>`}
+          <button class="action-btn success" onclick="approveKYC('${escHtml(k.id)}')">Approve</button>
+          <button class="action-btn danger" onclick="rejectKYC('${escHtml(k.id)}')">Reject</button>
+        `:`<span style="font-size:12px;color:var(--grey)">${k.status==='verified'&&k.verified_at?formatDateTime(k.verified_at):k.status==='rejected'&&k.rejection_reason?escHtml(k.rejection_reason):'—'}</span>`}
       </div></td>
     </tr>
   `).join('');
 }
 
-async function approveKYC(id, uid) {
-  const ok = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/user_kyc?id=eq.${id}`, {
-    method:'PATCH', headers:{'x-admin-session': sessionToken,'Content-Type':'application/json','Prefer':'return=minimal'},
-    body: JSON.stringify({status:'verified',verified_at:new Date().toISOString()})
-  });
-  if (ok.ok) { showToast('KYC Verified ✓'); loadKYC(); }
+function kycName(k) {
+  return k.verified_name || k.id_name || (usersData.find(u => u.firebase_uid === k.firebase_uid) || {}).display_name || socialHandles[k.firebase_uid] || 'User';
 }
 
-async function rejectKYC(id, uid) {
-  const reason = prompt('Rejection reason:');
-  if (!reason) return;
-  const ok = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/user_kyc?id=eq.${id}`, {
-    method:'PATCH', headers:{'x-admin-session': sessionToken,'Content-Type':'application/json','Prefer':'return=minimal'},
-    body: JSON.stringify({status:'rejected',rejection_reason:reason})
+// Manual review decision. Only rows still waiting are changed (status filter),
+// so a second click or a decision already made elsewhere can't overwrite it.
+async function setKycStatus(id, patch) {
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/user_kyc?id=eq.${encodeURIComponent(id)}&status=in.(pending,pending_admin_review)`, {
+    method: 'PATCH',
+    headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+    body: JSON.stringify(patch)
   });
-  if (ok.ok) { showToast('KYC Rejected'); loadKYC(); }
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw new Error((d && (d.message || d.error)) || `HTTP ${r.status}`);
+  if (!Array.isArray(d) || !d.length) throw new Error('This submission was already reviewed - refreshing');
+  return d[0];
+}
+
+async function approveKYC(id) {
+  const k = kycData.find(x => x.id === id);
+  if (!k || !confirm(`Approve KYC for "${kycName(k)}"?`)) return;
+  try {
+    await setKycStatus(id, {
+      status: 'verified', verified_at: new Date().toISOString(), rejection_reason: null,
+      verified_name: k.verified_name || k.id_name || null,
+      verification_method: k.verification_method || 'manual_admin'
+    });
+    notifyOwner(k.firebase_uid, 'KYC verified ✓', 'Your identity is verified. You can now receive payouts once your balance reaches the minimum.');
+    showToast('KYC verified ✓');
+  } catch (e) { showToast(e.message, 'error'); }
+  loadKYC();
+}
+
+async function rejectKYC(id) {
+  const k = kycData.find(x => x.id === id);
+  if (!k) return;
+  let reason = prompt(`Reason for rejecting KYC of "${kycName(k)}"? The user will see this.`, '');
+  if (reason === null) return;
+  reason = reason.trim();
+  if (!reason) { showToast('A reason is required', 'error'); return; }
+  try {
+    await setKycStatus(id, { status: 'rejected', rejection_reason: reason, verified_at: null });
+    notifyOwner(k.firebase_uid, 'KYC needs attention', `Your KYC could not be verified: ${reason} Please submit it again from the app.`);
+    showToast('KYC rejected');
+  } catch (e) { showToast(e.message, 'error'); }
+  loadKYC();
 }
 
 // ── WALLET ────────────────────────────────────────────
@@ -3689,17 +3814,17 @@ function renderTxns() {
     const sortedTxns = g.txns.slice().sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
     const nested = isOpen ? sortedTxns.map(t => `
       <tr class="sub-row">
-        <td style="padding-left:40px"><span class="badge ${typeColors[t.type]||'badge-grey'}">${t.type||'—'}</span></td>
+        <td style="padding-left:40px"><span class="badge ${typeColors[t.type]||'badge-grey'}">${escHtml(t.type||'—')}</span></td>
         <td style="font-weight:600;color:var(--green)">+₹${parseFloat(t.rupees||0).toFixed(2)}</td>
         <td colspan="2" style="font-size:12px">
-          <span style="max-width:220px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">${t.description||'—'}</span>
+          <span style="max-width:220px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">${escHtml(t.description||'—')}</span>
           <span class="badge ${t.status==='completed'?'badge-green':'badge-orange'}" style="margin-left:8px">${t.status||'—'}</span>
           <span style="color:var(--grey);margin-left:8px">${formatDate(t.created_at)}</span>
         </td>
       </tr>`).join('') : '';
     return `<tr onclick="toggleTxnUser('${g.uid}')" style="cursor:pointer">
       <td style="font-weight:600"><span style="display:inline-flex;align-items:center;gap:8px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="transform:rotate(${isOpen?90:0}deg);transition:transform .15s;display:block;flex-shrink:0">
-        <path d="M9 18l6-6-6-6"/></svg>${name}</span></td>
+        <path d="M9 18l6-6-6-6"/></svg>${escHtml(name)}</span></td>
       <td style="font-weight:700;color:var(--green)">₹${g.total.toFixed(2)}</td>
       <td style="font-size:12px;color:var(--grey)">${g.count} transaction${g.count===1?'':'s'}</td>
       <td style="font-size:12px">${formatDate(g.lastDate)}</td>
@@ -3747,8 +3872,8 @@ async function loadReferrals() {
     const referrer = usersMap[r.referrer_uid];
     const referred = usersMap[r.referred_uid];
     return `<tr>
-      <td><div class="avatar-cell">${avatarHtml(r.referrer_uid, referrer?.display_name)}${referrer?.display_name||r.referrer_uid?.substring(0,12)+'...'}</div></td>
-      <td><div class="avatar-cell">${avatarHtml(r.referred_uid, referred?.display_name)}${referred?.display_name||r.referred_uid?.substring(0,12)+'...'}</div></td>
+      <td><div class="avatar-cell">${avatarHtml(r.referrer_uid, referrer?.display_name)}${escHtml(referrer?.display_name||r.referrer_uid?.substring(0,12)+'...')}</div></td>
+      <td><div class="avatar-cell">${avatarHtml(r.referred_uid, referred?.display_name)}${escHtml(referred?.display_name||r.referred_uid?.substring(0,12)+'...')}</div></td>
       <td style="font-weight:700;color:var(--green)">₹${parseFloat(r.amount_earned||0).toFixed(2)}</td>
       <td style="font-size:12px">${formatDate(r.created_at)}</td>
     </tr>`;
@@ -3932,7 +4057,7 @@ function renderCreatorList(list){
   var all='<div class="creator-row'+(selectedCreatorUid?'':' active')+'" onclick="selectCreator(null)"><div class="av" style="background:var(--red)">★</div><div style="flex:1;min-width:0"><div class="cr-name">All creators</div><div class="cr-sub">'+total+' post'+(total===1?'':'s')+'</div></div></div>';
   if(!list.length){document.getElementById('creator-list').innerHTML=all+'<div class="empty-state"><p>No creators posted in this period</p></div>';return;}
   document.getElementById('creator-list').innerHTML=all+list.map(function(c){
-    return '<div class="creator-row'+(selectedCreatorUid===c.uid?' active':'')+'" onclick="selectCreator(\''+c.uid+'\')">'+avatarHtml(c.uid, c.handle)+'<div style="flex:1;min-width:0"><div class="cr-name">@'+c.handle+'</div><div class="cr-sub">'+c.postCount+' post'+(c.postCount===1?'':'s')+'</div></div></div>';
+    return '<div class="creator-row'+(selectedCreatorUid===c.uid?' active':'')+'" onclick="selectCreator(\''+c.uid+'\')">'+avatarHtml(c.uid, c.handle)+'<div style="flex:1;min-width:0"><div class="cr-name">@'+escHtml(c.handle)+'</div><div class="cr-sub">'+c.postCount+' post'+(c.postCount===1?'':'s')+'</div></div></div>';
   }).join('');
 }
 function updateContentTitle(){
@@ -4044,7 +4169,7 @@ async function loadReports(){
 }
 function nameFor(uid){
   var a=window._accts&&window._accts[uid];
-  return a?('@'+(a.username_handle||a.username||uid.substring(0,8))):(uid?uid.substring(0,8):'—');
+  return escHtml(a?('@'+(a.username_handle||a.username||uid.substring(0,8))):(uid?uid.substring(0,8):'—'));
 }
 function renderPostReports(reports,posts){
   var body=document.getElementById('reports-post-body');
@@ -4053,10 +4178,10 @@ function renderPostReports(reports,posts){
     var p=posts[r.post_id];
     var caption=p?(p.caption||'(no caption)'):'(post already removed)';
     return '<tr>'
-      +'<td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+caption+'</td>'
+      +'<td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(caption)+'</td>'
       +'<td>'+(p?nameFor(p.social_uid):'—')+'</td>'
       +'<td>'+nameFor(r.social_uid)+'</td>'
-      +'<td><span class="badge badge-red">'+r.reason+'</span></td>'
+      +'<td><span class="badge badge-red">'+escHtml(r.reason)+'</span></td>'
       +'<td style="font-size:12px">'+formatDate(r.created_at)+'</td>'
       +'<td>'
         +'<button class="action-btn" onclick="resolveReport(\'post_reports\',\''+r.id+'\')">Approve (clean)</button> '
@@ -4071,7 +4196,7 @@ function renderUserReports(reports){
     return '<tr>'
       +'<td>'+nameFor(r.reported_social_uid)+'</td>'
       +'<td>'+nameFor(r.reporter_social_uid)+'</td>'
-      +'<td><span class="badge badge-red">'+r.reason+'</span></td>'
+      +'<td><span class="badge badge-red">'+escHtml(r.reason)+'</span></td>'
       +'<td style="font-size:12px">'+formatDate(r.created_at)+'</td>'
       +'<td>'
         +'<button class="action-btn" onclick="resolveReport(\'user_reports\',\''+r.id+'\')">Approve (clean)</button> '
@@ -4085,8 +4210,8 @@ async function resolveReport(table,id){
   else showToast('Failed to update report','error');
 }
 async function removeReportedPost(reportId,postId){
-  if(!confirm('Remove this post? This cannot be undone.'))return;
-  var ok=await deleteRow('posts','id',postId);
+  if(!confirm('Remove this post? It will be hidden from everyone in the app.'))return;
+  var ok=await update('posts',postId,{is_deleted:true});
   if(ok){
     await update('post_reports',reportId,{status:'resolved'});
     showToast('Post removed');
@@ -4105,8 +4230,8 @@ async function blockReportedUser(reportId,socialUid){
   } else showToast('Failed to block user','error');
 }
 async function deletePost(id){
-  if(!confirm('Delete this post?'))return;
-  var ok=await deleteRow('posts','id',id);
+  if(!confirm('Delete this post? It will be hidden from everyone in the app.'))return;
+  var ok=await update('posts',id,{is_deleted:true});
   if(ok){showToast('Post deleted');contentData=contentData.filter(function(p){return p.id!==id;});renderContentRange();}
   else showToast('Delete failed','error');
 }
@@ -4119,10 +4244,10 @@ async function loadPayouts(){
   document.getElementById('py-table-title').textContent=isPending?'Pending Payouts':'All Payouts (History)';
   var res=await Promise.all([
     query('wallets','select=firebase_uid,pending_payout_rupees'),
-    query('user_kyc','select=firebase_uid,status,bank_verified,bank_account_plain,bank_ifsc_plain,bank_holder_name_plain'),
+    query('user_kyc','select=firebase_uid,status,bank_verified,bank_account_masked,bank_ifsc_plain,intl_bank_masked'),
     query('users','select=firebase_uid,display_name'),
     query('social_accounts','select=firebase_uid,username_handle,username'),
-    query('wallet_transactions','select=firebase_uid,rupees&type=eq.payout&order=created_at.desc')
+    query('wallet_transactions','select=firebase_uid,rupees&type=eq.cashout&status=neq.failed&order=created_at.desc')
   ]);
   var wallets=res[0]||[],kycRows=res[1]||[],userRows=res[2]||[],socialRows=res[3]||[],paidRows=res[4]||[];
   var kycByUid={};kycRows.forEach(function(k){kycByUid[k.firebase_uid]=k;});
@@ -4138,8 +4263,8 @@ async function loadPayouts(){
       paid:paidByUid[uid]||0,
       verified:kyc.status==='verified',
       bankVerified:!!kyc.bank_verified,
-      hasBankDetails:!!kyc.bank_account_plain,
-      bankInfo:kyc.bank_account_plain?(kyc.bank_account_plain+' '+(kyc.bank_ifsc_plain||'')):'No bank details',
+      hasBankDetails:!!(kyc.bank_account_masked||kyc.intl_bank_masked),
+      bankInfo:kyc.bank_account_masked?(kyc.bank_account_masked+' '+(kyc.bank_ifsc_plain||'')):(kyc.intl_bank_masked||'No bank details'),
       eligible:kyc.status==='verified'&&kyc.bank_verified&&parseFloat(w.pending_payout_rupees||0)>=500
     };
   });
@@ -4163,37 +4288,45 @@ function renderPayoutRows(list){
     var bv=r.bankVerified?'<span style="color:var(--green);font-size:10px">Bank Verified</span>':'<span style="color:var(--orange);font-size:10px">Bank Unverified</span>';
     var kv=r.verified?'<span style="color:var(--green);font-size:10px"> \u00b7 KYC Verified</span>':'<span style="color:var(--orange);font-size:10px"> \u00b7 KYC Not Verified</span>';
     var amt=r.pending.toFixed(2);
-    var uid=r.uid.replace(/'/g,"\'"),handle=r.handle.replace(/'/g,"\'");
+    var uid=escHtml(r.uid);
     var btn;
     if(r.pending>0){
       btn=r.eligible
-        ? '<button class="btn btn-red" style="padding:6px 12px" onclick="markCreatorPaid(\''+uid+'\',\''+handle+'\',\'\u20b9'+amt+'\')">Mark Paid</button>'
+        ? '<button class="btn btn-red" style="padding:6px 12px" onclick="markCreatorPaid(\''+uid+'\', this)">Mark Paid</button>'
         : '<span style="font-size:11px;color:var(--grey)">Not eligible yet</span>';
     } else {
       btn='<span style="color:var(--green)">\u2713 No pending balance</span>';
     }
-    var verifyBtn=(r.hasBankDetails&&!r.bankVerified)?' <button class="btn btn-red" style="padding:2px 8px;font-size:10px;margin-left:6px" onclick="verifyBankAccount(\''+uid+'\',\''+handle+'\')">Verify Bank</button>':'';
-    return'<tr><td><div class="avatar-cell">'+avatarHtml(r.uid, r.handle)+'@'+r.handle+'</div></td><td style="font-weight:700;color:var(--green);font-size:15px">\u20b9'+amt+(r.paid>0?'<br><span style="color:#444;font-size:10px">Paid so far: \u20b9'+r.paid.toFixed(2)+'</span>':'')+'</td><td style="font-size:12px">'+r.bankInfo+'<br>'+bv+kv+verifyBtn+'</td><td>'+btn+'</td></tr>';
+    var verifyBtn=(r.hasBankDetails&&!r.bankVerified)?' <button class="btn btn-red" style="padding:2px 8px;font-size:10px;margin-left:6px" onclick="verifyBankAccount(\''+uid+'\')">Verify Bank</button>':'';
+    return'<tr><td><div class="avatar-cell">'+avatarHtml(r.uid, r.handle)+'@'+escHtml(r.handle)+'</div></td><td style="font-weight:700;color:var(--green);font-size:15px">\u20b9'+amt+(r.paid>0?'<br><span style="color:#444;font-size:10px">Paid so far: \u20b9'+r.paid.toFixed(2)+'</span>':'')+'</td><td style="font-size:12px">'+escHtml(r.bankInfo)+'<br>'+bv+kv+verifyBtn+'</td><td>'+btn+'</td></tr>';
   }).join('');
 }
 function renderPayoutSummary(all){
-  document.getElementById('py-summary-body').innerHTML=all.map(function(r){return'<tr><td style="color:var(--red)">@'+r.handle+'</td><td>'+(r.verified?'Verified':'Not Verified')+'</td><td style="color:var(--orange)">'+(r.bankVerified?'Yes':'No')+'</td><td style="color:var(--orange);font-weight:700">\u20b9'+r.pending.toFixed(2)+'</td><td style="color:var(--green);font-weight:700">\u20b9'+r.paid.toFixed(2)+'</td></tr>';}).join('')||'<tr><td colspan="5"><div class="empty-state"><p>No data</p></div></td></tr>';
+  document.getElementById('py-summary-body').innerHTML=all.map(function(r){return'<tr><td style="color:var(--red)">@'+escHtml(r.handle)+'</td><td>'+(r.verified?'Verified':'Not Verified')+'</td><td style="color:var(--orange)">'+(r.bankVerified?'Yes':'No')+'</td><td style="color:var(--orange);font-weight:700">\u20b9'+r.pending.toFixed(2)+'</td><td style="color:var(--green);font-weight:700">\u20b9'+r.paid.toFixed(2)+'</td></tr>';}).join('')||'<tr><td colspan="5"><div class="empty-state"><p>No data</p></div></td></tr>';
 }
-async function markCreatorPaid(firebaseUid,handle,amount){
-  if(!confirm('Manually mark '+amount+' as PAID for @'+handle+'? This is only for edge cases - real payouts happen automatically via the monthly cron. Confirm the real bank transfer was already done first.'))return;
+// Records a payout done by hand (real payouts run from the monthly cron).
+// admin_mark_creator_paid locks the wallet, checks the pending amount still
+// matches what is shown, zeroes it and logs the cashout in one transaction,
+// so a double click or a stale page can't pay twice.
+async function markCreatorPaid(uid,btn){
+  var r=_allPayoutData.find(function(x){return x.uid===uid;});
+  if(!r)return;
+  if(!confirm('Mark \u20b9'+r.pending.toFixed(2)+' as PAID for @'+r.handle+'?\n\nOnly for edge cases - real payouts happen automatically via the monthly cron. Make sure the bank transfer is already done.'))return;
+  if(btn){btn.disabled=true;btn.textContent='Saving\u2026';}
   try{
-    var rpcRes=await fetch(SUPABASE_URL+'/functions/v1/admin-proxy/rest/rpc/decrement_wallet_payout_balance',{method:'POST',headers:{'x-admin-session': sessionToken,'Content-Type':'application/json'},body:JSON.stringify({p_firebase_uid:firebaseUid})});
-    if(!rpcRes.ok){alert('Error decrementing balance. Try again.');return;}
-    var logRes=await fetch(SUPABASE_URL+'/functions/v1/admin-proxy/rest/wallet_transactions',{method:'POST',headers:{'x-admin-session': sessionToken,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({firebase_uid:firebaseUid,type:'payout',rupees:parseFloat(amount.replace('\u20b9','')),description:'Manual admin payout',status:'completed',source:'manual_admin',created_at:new Date().toISOString()})});
-    if(logRes.ok){alert('Marked as paid for @'+handle);loadPayouts();}else alert('Balance decremented but logging failed - check wallet_transactions manually.');
-  }catch(e){alert('Network error: '+e.message);}
+    var paid=await rpc('admin_mark_creator_paid',{p_firebase_uid:uid,p_expected:r.pending});
+    showToast('Marked \u20b9'+Number(paid).toFixed(2)+' as paid for @'+r.handle);
+  }catch(e){showToast(e.message,'error');}
+  loadPayouts();
 }
-async function verifyBankAccount(firebaseUid,handle){
-  if(!confirm('Confirm you have manually checked and verified the bank account details for @'+handle+' are correct? This marks the account eligible for payout.'))return;
+async function verifyBankAccount(uid){
+  var r=_allPayoutData.find(function(x){return x.uid===uid;});
+  if(!r)return;
+  if(!confirm('Confirm you have checked the bank account of @'+r.handle+' ('+r.bankInfo+')? This makes the account eligible for payout.'))return;
   try{
-    var res=await fetch(SUPABASE_URL+'/functions/v1/admin-proxy/rest/user_kyc?firebase_uid=eq.'+firebaseUid,{method:'PATCH',headers:{'x-admin-session': sessionToken,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({bank_verified:true,bank_verified_at:new Date().toISOString()})});
-    if(res.ok){alert('Bank account verified for @'+handle);loadPayouts();}else alert('Error verifying bank account. Try again.');
-  }catch(e){alert('Network error: '+e.message);}
+    var res=await fetch(SUPABASE_URL+'/functions/v1/admin-proxy/rest/user_kyc?firebase_uid=eq.'+encodeURIComponent(uid),{method:'PATCH',headers:{'x-admin-session': sessionToken,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({bank_verified:true,bank_verified_at:new Date().toISOString(),bank_verification_ref:'manual_admin'})});
+    if(res.ok){showToast('Bank account verified for @'+r.handle);loadPayouts();}else showToast('Error verifying bank account (HTTP '+res.status+')','error');
+  }catch(e){showToast('Network error: '+e.message,'error');}
 }
 
 // Runs last: the range controls depend on constants declared throughout this script
