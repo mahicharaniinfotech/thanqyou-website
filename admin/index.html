@@ -3015,14 +3015,17 @@ function signupWhen(ts) {
 async function renderLastSignup() {
   const el = document.getElementById('last-signup');
   if (!el) return;
-  const [u] = await query('users', 'select=firebase_uid,display_name,account_type,created_at&order=created_at.desc&limit=1');
+  const [u] = await query('users', 'select=firebase_uid,display_name,account_type,platform,created_at&order=created_at.desc&limit=1');
   if (!u) { el.innerHTML = ''; return; }
   const name = u.display_name || (socialHandles[u.firebase_uid] ? '@' + socialHandles[u.firebase_uid] : 'New user');
   const handle = socialHandles[u.firebase_uid] && u.display_name ? ` <span class="ls-time">@${escHtml(socialHandles[u.firebase_uid])}</span>` : '';
   const biz = u.account_type === 'business' ? '<span class="ls-tag">Business</span>' : '';
+  const os = String(u.platform || '').toLowerCase();
+  const device = os === 'android' ? '<span class="ls-tag">Android</span>' : os === 'ios' ? '<span class="ls-tag">iOS</span>'
+    : os ? `<span class="ls-tag">${escHtml(u.platform)}</span>` : '';
   el.innerHTML = `${avatarHtml(u.firebase_uid, name)}<div class="ls-text">`
     + `<div class="ls-k">Last signup</div>`
-    + `<div class="ls-name">${escHtml(name)}${handle}${biz}</div>`
+    + `<div class="ls-name">${escHtml(name)}${handle}${device}${biz}</div>`
     + `<div class="ls-time" title="${escHtml(formatDateTime(u.created_at))}">Signed up ${signupWhen(u.created_at)} · ${timeAgo(u.created_at)}</div></div>`;
   if (_lastSignupUid && _lastSignupUid !== u.firebase_uid) {
     el.classList.remove('fresh'); void el.offsetWidth; el.classList.add('fresh');
