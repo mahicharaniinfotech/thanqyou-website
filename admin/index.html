@@ -112,6 +112,7 @@
   .stat-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg); }
   .stat-card:has(.kpi-icon.wine) { --acc:#B8475A; } .stat-card:has(.kpi-icon.blue) { --acc:#2A78D6; }
   .stat-card:has(.kpi-icon.green) { --acc:#1E8E4E; } .stat-card:has(.kpi-icon.amber) { --acc:#D08A16; }
+  .stat-card:has(.kpi-icon.violet) { --acc:#6E3FA3; } .stat-card:has(.kpi-icon.teal) { --acc:#0F8A8A; }
   .stat-card .stat-label { font-size:13px; font-weight:600; color:var(--grey2); margin-bottom:10px; }
   .stat-card .stat-value { font-size:32px; font-weight:800; letter-spacing:-1px; margin-bottom:8px; line-height:1.1; }
   .stat-card .stat-change { font-size:12px; color:var(--grey); }
@@ -145,6 +146,14 @@
   .kpi-icon.blue { background:#EAF2FB; color:#2468B0; }
   .kpi-icon.green { background:#E8F5EE; color:#1E8E4E; }
   .kpi-icon.amber { background:#FDF3E3; color:#B26A0C; }
+  .kpi-icon.violet { background:#F1EAF9; color:#6E3FA3; }
+  .kpi-icon.teal { background:#E3F4F4; color:#0F7A7A; }
+  /* Dashboard: 3 + 3 cards (people row, money row) */
+  #dash-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .stat-value.pos { color:var(--green); } .stat-value.neg { color:#A5362B; }
+  .kpi-sub { font-size:11.5px; color:var(--grey2); margin-top:2px; }
+  .be-bar { position:relative; height:6px; border-radius:4px; background:var(--dark3); margin-top:14px; overflow:hidden; }
+  .be-bar span { position:absolute; inset:0 auto 0 0; border-radius:4px; background:#0F8A8A; }
   .kpi-foot { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:22px; }
   .chip { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap; }
   .chip.up { background:#E8F5EE; color:#1E7A44; }
@@ -407,7 +416,7 @@
   /* Wide tables scroll inside their card instead of clipping the last columns */
   .table-card { overflow-x:auto; }
   @media (max-width:1440px) { thead th, td { padding-left:14px; padding-right:14px; } }
-  @media (max-width:1280px) { .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:1280px) { .stats-grid, #dash-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width:1100px) { .charts-grid, .dash-bottom { grid-template-columns:minmax(0,1fr); } }
 
   /* Phones & small tablets: app-style shell (drawer menu + bottom tab bar) */
@@ -803,19 +812,35 @@
           </div>
           <div class="stat-card">
             <div class="kpi-top">
-              <div><div class="stat-label">Earnings</div><div class="stat-value" id="s-earn">—</div></div>
-              <div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12"/><path d="M6 8h12"/><path d="M6 13l8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></div>
-            </div>
-            <div class="kpi-foot"><span id="s-earn-d"></span><span class="stat-change" id="s-earn-c">Loading...</span></div>
-            <svg class="spark" id="spark-earn" preserveAspectRatio="none"></svg>
-          </div>
-          <div class="stat-card">
-            <div class="kpi-top">
               <div><div class="stat-label">KYC completed</div><div class="stat-value" id="s-kyc">—</div></div>
               <div class="kpi-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
             </div>
             <div class="kpi-foot"><span id="s-kyc-d"></span><span class="stat-change" id="s-kyc-c">Loading...</span></div>
             <div class="kyc-mini" id="kyc-mini" title="KYC status split"></div>
+          </div>
+          <div class="stat-card" title="Money credited to users' wallets (bonuses, revenue share, rewards)">
+            <div class="kpi-top">
+              <div><div class="stat-label">Payouts to users</div><div class="stat-value" id="s-earn">—</div></div>
+              <div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12"/><path d="M6 8h12"/><path d="M6 13l8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></div>
+            </div>
+            <div class="kpi-foot"><span id="s-earn-d"></span><span class="stat-change" id="s-earn-c">Loading...</span></div>
+            <svg class="spark" id="spark-earn" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="stat-card" title="Google AdMob estimated earnings (AdMob reports lag about a day)">
+            <div class="kpi-top">
+              <div><div class="stat-label">AdMob earnings</div><div class="stat-value" id="s-admob">—</div><div class="kpi-sub" id="s-admob-usd"></div></div>
+              <div class="kpi-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M7 14l2.5-6 2.5 6M7.8 12h3.4"/><path d="M15 8v6h1.5a3 3 0 0 0 0-6z"/><path d="M8 21h8"/></svg></div>
+            </div>
+            <div class="kpi-foot"><span id="s-admob-d"></span><span class="stat-change" id="s-admob-c">Loading...</span></div>
+            <svg class="spark" id="spark-admob" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="stat-card" title="AdMob earnings minus payouts to all users (individual and business)">
+            <div class="kpi-top">
+              <div><div class="stat-label">Break-even</div><div class="stat-value" id="s-be">—</div><div class="kpi-sub" id="s-be-sub"></div></div>
+              <div class="kpi-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></svg></div>
+            </div>
+            <div class="kpi-foot"><span id="s-be-d"></span><span class="stat-change" id="s-be-c">Loading...</span></div>
+            <div class="be-bar" id="be-bar" title="Share of payouts covered by AdMob"><span id="be-fill" style="width:0"></span></div>
           </div>
         </div>
 
@@ -829,9 +854,9 @@
             <div class="chart-box"><canvas id="signupChart" role="img" aria-label="Daily signups and posts"></canvas></div>
           </div>
           <div class="chart-card">
-            <div class="chart-head"><div><h3>Earnings by type</h3><p id="earn-sub">All time</p></div></div>
+            <div class="chart-head"><div><h3>Payouts by type</h3><p id="earn-sub">All time</p></div></div>
             <div class="donut-box">
-              <canvas id="earningsChart" role="img" aria-label="Earnings split by transaction type"></canvas>
+              <canvas id="earningsChart" role="img" aria-label="Payouts split by source"></canvas>
               <div class="donut-center"><b id="donut-total">₹0</b><small>total</small></div>
             </div>
             <div class="legend-list" id="earn-legend"></div>
@@ -2952,14 +2977,16 @@ async function loadDashboard() {
   await loadBusinessUids();
   document.getElementById('topbar-date').textContent =
     new Date().toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-  const [users, posts, txns, kyc] = await Promise.all([
+  const [users, posts, allTxns, kyc, admob] = await Promise.all([
     query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&order=created_at.desc').then(onlyIndividualUsers),
     query('posts', 'select=id,firebase_uid,media_types,created_at&is_deleted=eq.false').then(onlyIndividualPosts),
-    query('wallet_transactions', 'select=firebase_uid,rupees,type,created_at').then(onlyIndividualPosts),
-    query('user_kyc', 'select=id,firebase_uid,status,submitted_at')
+    query('wallet_transactions', 'select=firebase_uid,rupees,type,created_at'),
+    query('user_kyc', 'select=id,firebase_uid,status,submitted_at'),
+    rpc('admin_admob_daily', {}).catch(e => { showToast(`Couldn't load AdMob earnings: ${e.message}`, 'error'); return null; })
   ]);
+  const txns = onlyIndividualPosts(allTxns);
 
-  window._dashStats = { users: users||[], posts: posts||[], txns: txns||[], kyc: kyc||[] };
+  window._dashStats = { users: users||[], posts: posts||[], txns: txns||[], allTxns: allTxns||[], kyc: kyc||[], admob: admob };
   window._dashUsers = users || [];
   await loadSocialHandles();
   renderDashStats();
@@ -3139,6 +3166,8 @@ function renderDashStats() {
   drawSpark('spark-posts', poSeries, DASH_SERIES[1]);
   drawSpark('spark-earn', erSeries, DASH_SERIES[3]);
 
+  renderMoneyCards(d, from, to, days);
+
   $('kyc-mini').innerHTML = users.length ? Object.keys(kycCounts).filter(k => kycCounts[k])
     .map(k => `<span style="flex:${kycCounts[k]};background:${DASH_STATUS[k]}" title="${KYC_LABELS[k]}: ${kycCounts[k]}"></span>`).join('') : '';
 
@@ -3152,6 +3181,55 @@ function renderDashStats() {
     + (gc.other + gc.unspecified ? `<span><i style="background:${GENDER_META.unspecified[1]}"></i>Other <b>${gc.other + gc.unspecified}</b></span>` : '');
   $('gender-breakdown').innerHTML = Object.keys(GENDER_META).filter(k => k === 'male' || k === 'female' || gc[k])
     .map(k => breakdownRow(GENDER_META[k][0], gc[k], users.length, GENDER_META[k][1])).join('');
+}
+
+// AdMob earnings and break-even for the selected range. AdMob comes as
+// daily amounts (admin_admob_daily); break-even = AdMob - payouts credited
+// to all users (business included), i.e. what the ads have to cover.
+function renderMoneyCards(d, from, to, days) {
+  const $ = id => document.getElementById(id);
+  const inRange = (day, f, t) => !!day && (!f || day >= f) && (!t || day <= t);
+  const sumRupees = list => list.reduce((s, t) => s + parseFloat(t.rupees || 0), 0);
+  if (!d.admob) {
+    $('s-admob').textContent = $('s-be').textContent = '—';
+    $('s-admob-c').textContent = $('s-be-c').textContent = 'AdMob data unavailable';
+    $('s-admob-d').innerHTML = $('s-be-d').innerHTML = '';
+    $('s-admob-usd').textContent = $('s-be-sub').textContent = '';
+    return;
+  }
+  const ad = d.admob.map(r => ({ day: String(r.day).substring(0, 10), inr: +r.inr || 0, usd: +r.usd || 0 }));
+  const adIn = (f, t) => ad.filter(r => inRange(r.day, f, t));
+  const adInr = (f, t) => adIn(f, t).reduce((s, r) => s + r.inr, 0);
+  const adUsd = (f, t) => adIn(f, t).reduce((s, r) => s + r.usd, 0);
+  const paid = (f, t) => sumRupees(d.allTxns.filter(x => inRange(localDay(x.created_at), f, t)));
+
+  const admob = adInr(from, to), payouts = paid(from, to), be = admob - payouts;
+  const lastDay = ad.length ? ad[ad.length - 1].day : '';
+
+  $('s-admob').textContent = fmtINR(admob);
+  $('s-admob-usd').textContent = `$${adUsd(from, to).toFixed(2)} USD`;
+  $('s-be').textContent = (be < 0 ? '−' : '+') + fmtINR(Math.abs(be));
+  $('s-be').className = 'stat-value ' + (be < 0 ? 'neg' : 'pos');
+  $('s-be-sub').textContent = `${fmtINR(admob)} AdMob − ${fmtINR(payouts)} payouts`;
+
+  const covered = payouts > 0 ? admob / payouts * 100 : (admob > 0 ? 100 : 0);
+  $('be-fill').style.width = Math.min(100, covered) + '%';
+  $('s-be-d').innerHTML = be >= 0
+    ? `<span class="chip up">${payouts ? 'Profit' : 'No payouts yet'}</span>`
+    : `<span class="chip down">Short by ${fmtINR(-be)}</span>`;
+  $('s-be-c').textContent = payouts ? `AdMob covers ${covered < 10 ? covered.toFixed(1) : Math.round(covered)}% of payouts` : '';
+
+  if (from && to) {
+    const len = dayList(from, to).length, pFrom = addDays(from, -len), pTo = addDays(from, -1);
+    $('s-admob-d').innerHTML = deltaChip(admob, adInr(pFrom, pTo));
+    $('s-admob-c').textContent = 'vs previous period';
+  } else {
+    $('s-admob-d').innerHTML = '';
+    $('s-admob-c').textContent = lastDay ? `Reported up to ${fmtDay(lastDay)}` : 'No AdMob data yet';
+  }
+  const byDay = {};
+  ad.forEach(r => { byDay[r.day] = (byDay[r.day] || 0) + r.inr; });
+  drawSpark('spark-admob', days.map(k => byDay[k] || 0), '#6E3FA3');
 }
 
 function drawSpark(id, values, color) {
