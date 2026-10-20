@@ -129,6 +129,18 @@
   .dash-hero h2 { font-size:30px; font-weight:800; letter-spacing:-0.8px; color:#fff; margin-top:6px; line-height:1.1; }
   .dash-hero p { font-size:13px; color:rgba(255,255,255,0.78); margin-top:6px; }
   @media (max-width:768px) { .dash-hero { padding:20px 18px; border-radius:16px; } .dash-hero h2 { font-size:24px; } }
+  /* Latest signup, in the dashboard banner */
+  .last-signup { display:inline-flex; align-items:center; gap:10px; margin-top:14px; padding:7px 14px 7px 7px; max-width:100%;
+    border-radius:999px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.18); font-size:12.5px; color:#fff; }
+  .last-signup:empty { display:none; }
+  .last-signup .av { width:30px; height:30px; font-size:11px; flex:none; }
+  .last-signup .ls-text { min-width:0; line-height:1.3; }
+  .last-signup .ls-k { font-size:10.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,0.7); }
+  .last-signup .ls-name { font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .last-signup .ls-time { color:rgba(255,255,255,0.8); white-space:nowrap; }
+  .last-signup .ls-tag { font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:rgba(255,255,255,0.2); margin-left:4px; }
+  .last-signup.fresh { animation:lsPulse 1.6s ease-out 3; background:rgba(255,255,255,0.22); }
+  @keyframes lsPulse { 0% { box-shadow:0 0 0 0 rgba(255,255,255,0.45); } 100% { box-shadow:0 0 0 14px rgba(255,255,255,0); } }
   .dash-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
   .dash-head h2 { font-size:22px; font-weight:800; letter-spacing:-0.5px; }
   .dash-head p { font-size:13px; color:var(--grey); margin-top:3px; }
@@ -796,6 +808,7 @@
             <div class="dh-eyebrow" id="dash-greet">Welcome back</div>
             <h2>ThanqYou at a glance</h2>
             <p id="dash-range-label">All time</p>
+            <div class="last-signup" id="last-signup" aria-live="polite"></div>
           </div>
           <div class="dash-filter" data-range="dash" data-default="all"></div>
         </div>
@@ -2988,6 +3001,35 @@ function socialHandleLine(uid) {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────
+// "Last signup" in the banner: newest account of any type. The dashboard
+// reloads every 30 s, so a new signup replaces it (with a short pulse).
+let _lastSignupUid = null;
+function signupWhen(ts) {
+  const t = new Date(ts);
+  const time = t.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const day = localDay(t), today = localDay(new Date());
+  if (day === today) return `today at ${time}`;
+  if (day === addDays(today, -1)) return `yesterday at ${time}`;
+  return `${t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${time}`;
+}
+async function renderLastSignup() {
+  const el = document.getElementById('last-signup');
+  if (!el) return;
+  const [u] = await query('users', 'select=firebase_uid,display_name,account_type,created_at&order=created_at.desc&limit=1');
+  if (!u) { el.innerHTML = ''; return; }
+  const name = u.display_name || (socialHandles[u.firebase_uid] ? '@' + socialHandles[u.firebase_uid] : 'New user');
+  const handle = socialHandles[u.firebase_uid] && u.display_name ? ` <span class="ls-time">@${escHtml(socialHandles[u.firebase_uid])}</span>` : '';
+  const biz = u.account_type === 'business' ? '<span class="ls-tag">Business</span>' : '';
+  el.innerHTML = `${avatarHtml(u.firebase_uid, name)}<div class="ls-text">`
+    + `<div class="ls-k">Last signup</div>`
+    + `<div class="ls-name">${escHtml(name)}${handle}${biz}</div>`
+    + `<div class="ls-time" title="${escHtml(formatDateTime(u.created_at))}">Signed up ${signupWhen(u.created_at)} · ${timeAgo(u.created_at)}</div></div>`;
+  if (_lastSignupUid && _lastSignupUid !== u.firebase_uid) {
+    el.classList.remove('fresh'); void el.offsetWidth; el.classList.add('fresh');
+    showToast(`New signup: ${name}`);
+  }
+  _lastSignupUid = u.firebase_uid;
+}
 // Categorical order validated for colour-blind separation; slot 1 is the brand-adjacent rose
 const DASH_SERIES = ['#b8475a','#2a78d6','#eda100','#1baf7a','#4a3aa7','#e87ba4'];
 const DASH_OTHER = '#b9b2ad';
@@ -3009,6 +3051,7 @@ async function loadDashboard() {
   window._dashStats = { users: users||[], posts: posts||[], txns: txns||[], allTxns: allTxns||[], kyc: kyc||[], admob: admob };
   window._dashUsers = users || [];
   await loadSocialHandles();
+  renderLastSignup();
   renderDashStats();
   renderDashUsers();
 }
