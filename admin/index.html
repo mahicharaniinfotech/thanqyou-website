@@ -195,6 +195,14 @@
   .bd-bar div { height:100%; border-radius:4px; transition:width 0.4s ease; }
   .side-title { font-size:12px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:1px; margin:22px 0 12px; }
   .side-title:first-of-type { margin-top:4px; }
+  /* Posts card: Reels and Photos side by side */
+  .post-split { display:grid; grid-template-columns:1fr 1fr; margin-top:6px; }
+  .post-split .ps { min-width:0; }
+  .post-split .ps + .ps { border-left:1px solid var(--dark3); padding-left:14px; }
+  .ps-h { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--grey2); }
+  .ps-h i { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .post-split .stat-value { font-size:28px; margin:2px 0 6px; }
+  .lbl-total { font-weight:500; color:var(--grey2); }
   .kpi-gender { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--grey2); margin-top:8px; }
   .kpi-gender span { display:inline-flex; align-items:center; gap:5px; }
   .kpi-gender i { width:8px; height:8px; border-radius:50%; display:inline-block; }
@@ -804,10 +812,22 @@
           </div>
           <div class="stat-card">
             <div class="kpi-top">
-              <div><div class="stat-label">Posts uploaded</div><div class="stat-value" id="s-posts">—</div></div>
+              <div><div class="stat-label">Posts uploaded <span class="lbl-total" id="s-posts">—</span></div></div>
               <div class="kpi-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
             </div>
-            <div class="kpi-foot"><span id="s-posts-d"></span><span class="stat-change" id="s-posts-c">Loading...</span></div>
+            <div class="post-split">
+              <div class="ps" title="Posts with a video">
+                <div class="ps-h"><i style="background:#2a78d6"></i>Reels</div>
+                <div class="stat-value" id="s-reels">—</div>
+                <div class="kpi-foot"><span id="s-reels-d"></span></div>
+              </div>
+              <div class="ps" title="Photo and text posts">
+                <div class="ps-h"><i style="background:#e87ba4"></i>Photos</div>
+                <div class="stat-value" id="s-photos">—</div>
+                <div class="kpi-foot"><span id="s-photos-d"></span></div>
+              </div>
+            </div>
+            <div class="kpi-foot"><span class="stat-change" id="s-posts-c">Loading...</span></div>
             <svg class="spark" id="spark-posts" preserveAspectRatio="none"></svg>
           </div>
           <div class="stat-card">
@@ -3114,7 +3134,10 @@ function renderDashStats() {
   $('dash-range-label').textContent = filtered ? `Showing ${label}` : 'All time · everything since launch';
 
   $('s-users').textContent = users.length.toLocaleString('en-IN');
-  $('s-posts').textContent = posts.length.toLocaleString('en-IN');
+  const isReel = p => (p.media_types||[]).includes('video');
+  $('s-posts').textContent = `· ${posts.length.toLocaleString('en-IN')} total`;
+  $('s-reels').textContent = reels.toLocaleString('en-IN');
+  $('s-photos').textContent = (posts.length - reels).toLocaleString('en-IN');
   $('s-earn').textContent = fmtINR(earn);
   $('s-kyc').textContent = `${kycCounts.verified} / ${users.length}`;
 
@@ -3123,25 +3146,30 @@ function renderDashStats() {
     const len = dayList(from, to).length;
     const pFrom = addDays(from, -len), pTo = addDays(from, -1);
     $('s-users-d').innerHTML = deltaChip(users.length, d.users.filter(u => inRange(u.created_at, pFrom, pTo)).length);
-    $('s-posts-d').innerHTML = deltaChip(posts.length, d.posts.filter(p => inRange(p.created_at, pFrom, pTo)).length);
+    const prevPosts = d.posts.filter(p => inRange(p.created_at, pFrom, pTo));
+    const prevReels = prevPosts.filter(isReel).length;
+    $('s-reels-d').innerHTML = deltaChip(reels, prevReels);
+    $('s-photos-d').innerHTML = deltaChip(posts.length - reels, prevPosts.length - prevReels);
     $('s-earn-d').innerHTML = deltaChip(earn, sumRupees(d.txns.filter(t => inRange(t.created_at, pFrom, pTo))));
     $('s-users-c').textContent = 'vs previous period';
-    $('s-posts-c').textContent = `${reels} reels`;
+    $('s-posts-c').textContent = 'vs previous period';
     $('s-earn-c').textContent = 'vs previous period';
   } else if (filtered) {
-    $('s-users-d').innerHTML = $('s-posts-d').innerHTML = $('s-earn-d').innerHTML = '';
+    $('s-users-d').innerHTML = $('s-reels-d').innerHTML = $('s-photos-d').innerHTML = $('s-earn-d').innerHTML = '';
     $('s-users-c').textContent = label;
-    $('s-posts-c').textContent = `${reels} reels · ${label}`;
+    $('s-posts-c').textContent = label;
     $('s-earn-c').textContent = label;
   } else {
     const uToday = d.users.filter(u => localDay(u.created_at) === today).length;
-    const pToday = d.posts.filter(p => localDay(p.created_at) === today).length;
     const eToday = sumRupees(d.txns.filter(t => localDay(t.created_at) === today));
     $('s-users-d').innerHTML = `<span class="chip ${uToday ? 'up' : 'flat'}">+${uToday} today</span>`;
-    $('s-posts-d').innerHTML = `<span class="chip ${pToday ? 'up' : 'flat'}">+${pToday} today</span>`;
+    const todayPosts = d.posts.filter(p => localDay(p.created_at) === today);
+    const rToday = todayPosts.filter(isReel).length, phToday = todayPosts.length - rToday;
+    $('s-reels-d').innerHTML = `<span class="chip ${rToday ? 'up' : 'flat'}">+${rToday} today</span>`;
+    $('s-photos-d').innerHTML = `<span class="chip ${phToday ? 'up' : 'flat'}">+${phToday} today</span>`;
     $('s-earn-d').innerHTML = `<span class="chip ${eToday ? 'up' : 'flat'}">+${fmtINR(eToday)} today</span>`;
     $('s-users-c').textContent = '';
-    $('s-posts-c').textContent = `${reels} reels`;
+    $('s-posts-c').textContent = '';
     $('s-earn-c').textContent = '';
   }
   $('s-kyc-d').innerHTML = kycCounts.pending ? `<span class="chip warn">⚠ ${kycCounts.pending} awaiting review</span>`
@@ -3159,11 +3187,12 @@ function renderDashStats() {
     return days.map(k => m[k] || 0);
   };
   const suSeries = bucket(d.users, 'created_at');
-  const poSeries = bucket(d.posts, 'created_at');
+  const reelSeries = bucket(d.posts.filter(p => (p.media_types||[]).includes('video')), 'created_at');
+  const photoSeries = bucket(d.posts.filter(p => !(p.media_types||[]).includes('video')), 'created_at');
   const erSeries = bucket(d.txns, 'created_at', t => parseFloat(t.rupees||0));
 
   drawSpark('spark-users', suSeries, DASH_SERIES[0]);
-  drawSpark('spark-posts', poSeries, DASH_SERIES[1]);
+  drawSparks('spark-posts', [[reelSeries, '#2a78d6'], [photoSeries, '#e87ba4']]);
   drawSpark('spark-earn', erSeries, DASH_SERIES[3]);
 
   renderMoneyCards(d, from, to, days);
@@ -3230,6 +3259,20 @@ function renderMoneyCards(d, from, to, days) {
   const byDay = {};
   ad.forEach(r => { byDay[r.day] = (byDay[r.day] || 0) + r.inr; });
   drawSpark('spark-admob', days.map(k => byDay[k] || 0), '#6E3FA3');
+}
+
+// Several lines on one shared scale (e.g. reels vs photos)
+function drawSparks(id, series) {
+  const svg = document.getElementById(id);
+  if (!svg) return;
+  const max = Math.max(1, ...series.flatMap(([v]) => v));
+  svg.setAttribute('viewBox', '0 0 100 38');
+  svg.innerHTML = series.map(([values, color], k) => {
+    const n = values.length;
+    const line = values.map((v, i) => (i ? 'L' : 'M') + (n > 1 ? i / (n - 1) * 100 : 50).toFixed(2) + ' ' + (36 - v / max * 32).toFixed(2)).join(' ');
+    return (k ? '' : `<path d="${line} L100 38 L0 38 Z" fill="${color}" opacity="0.1"/>`)
+      + `<path d="${line}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }).join('');
 }
 
 function drawSpark(id, values, color) {
