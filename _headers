@@ -1,0 +1,29 @@
+# Response headers for thanqyou.com (Cloudflare Workers static assets).
+# Every page is static HTML with inline scripts/styles; the only outside
+# sources are Google Fonts, cdnjs (Chart.js in the admin panel) and Supabase.
+
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://nppmtxvlkmwoqnvlngya.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+
+# Admin panel: never framed, never indexed, always revalidated so a deploy
+# shows up right away. Replaces the site-wide CSP rather than adding to it.
+/admin
+  ! Content-Security-Policy
+  ! X-Frame-Options
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-cache
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://nppmtxvlkmwoqnvlngya.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+/admin/*
+  ! Content-Security-Policy
+  ! X-Frame-Options
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-cache
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://nppmtxvlkmwoqnvlngya.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
