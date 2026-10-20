@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Joining your ThanQYou call…</title>
-<link rel="icon" type="image/png" href="/images/app_icon.png">
+<link rel="icon" type="image/png" href="/images/icon-192.png">
 <style>
   body {
     margin: 0;
@@ -20,6 +20,9 @@
     box-sizing: border-box;
   }
   .card { max-width: 360px; }
+  .get-app { margin-top: 28px; font-size: 13px; }
+  .get-app a { color: #722F37; font-weight: 600; }
+  .get-app.nudge { font-size: 15px; }
   h1 { font-size: 20px; margin-bottom: 8px; }
   p { color: #555; font-size: 14px; line-height: 1.5; }
   a.button {
@@ -40,6 +43,8 @@
     <h1>Opening ThanQYou…</h1>
     <p>If nothing happens, make sure ThanQYou is installed, then tap the button below.</p>
     <a id="openLink" class="button" href="#">Open ThanQYou</a>
+    <p id="getApp" class="get-app">Don't have the app yet?<br>
+      <a href="https://play.google.com/store/apps/details?id=com.thanqyou">Get ThanQYou on Google Play</a></p>
   </div>
 
 <script>
@@ -56,17 +61,16 @@
   // it immediately redirects to the real deep link, which works
   // exactly as before for anyone who already has the app installed.
   //
-  // NOTE: this does not yet handle the case where the app ISN'T
-  // installed (no app store fallback, no smart App/Universal Links
-  // domain verification) - that's a separate, larger infrastructure
-  // task. For now, someone without the app just sees this page with a
-  // manual "Open ThanQYou" button that will silently fail if the app
-  // isn't installed - acceptable for launch, since call links are
-  // shared between existing app users in practice.
+  // Without the app installed the deep link does nothing, so the page
+  // always offers the Play Store link, and makes it more prominent if
+  // the page is still showing a couple of seconds later.
   const params = window.location.search; // includes the leading '?'
   const deepLink = 'thanqyou://' + '/join-call' + params;
   document.getElementById('openLink').href = deepLink;
   window.location.href = deepLink;
+  setTimeout(function () {
+    if (!document.hidden) document.getElementById('getApp').classList.add('nudge');
+  }, 2000);
 </script>
 </body>
 </html>

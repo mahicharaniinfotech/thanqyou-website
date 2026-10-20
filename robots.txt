@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /kyc-callback/
+Disallow: /join-call/
+
+Sitemap: https://thanqyou.com/sitemap.xml

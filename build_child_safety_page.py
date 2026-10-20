@@ -98,6 +98,15 @@ BODY = '''<h1>Child Safety Standards</h1>
 '''
 
 
+PAGE_DESCRIPTIONS = {
+    'Privacy Policy': 'How ThanQYou collects, uses, stores and protects your personal data, and the choices and rights you have.',
+    'Terms of Service': "The terms that govern your use of ThanQYou's social, messaging, wallet and payout features.",
+    'Delete Your Account': 'How to permanently delete your ThanQYou account, and what data is removed or kept.',
+    'Child Safety Standards': "ThanQYou's standards against child sexual abuse and exploitation (CSAE), and how to report a concern.",
+    'Community Guidelines': "What is and isn't allowed on ThanQYou, and how we keep the community safe.",
+}
+
+
 def page(title, body):
     return f'''<!DOCTYPE html>
 <html lang="en">
@@ -105,7 +114,8 @@ def page(title, body):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title} - ThanQYou</title>
-<link rel="icon" type="image/png" href="/images/app_icon.png">
+<meta name="description" content="{PAGE_DESCRIPTIONS.get(title, '')}">
+<link rel="icon" type="image/png" href="/images/icon-192.png">
 {STYLE_BLOCK}
 </head>
 <body>

@@ -5,7 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ThanQYou — Create. View. Earn.</title>
 <meta name="description" content="ThanQYou — India's social, messenger, and wallet app in one. Watch and create reels, chat end-to-end encrypted, and earn real money for the time you already spend.">
-<link rel="icon" type="image/png" href="images/app_icon.png">
+<link rel="icon" type="image/png" href="images/icon-192.png">
+<link rel="canonical" href="https://thanqyou.com/">
+<link rel="apple-touch-icon" href="/images/icon-192.png">
+<meta name="theme-color" content="#111110">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ThanQYou">
+<meta property="og:url" content="https://thanqyou.com/">
+<meta property="og:title" content="ThanQYou — Create. View. Earn.">
+<meta property="og:description" content="Reels, end-to-end encrypted chat and a wallet that pays you back, in one app. Built in India for the world.">
+<meta property="og:image" content="https://thanqyou.com/images/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ThanQYou — Create. View. Earn.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ThanQYou — Create. View. Earn.">
+<meta name="twitter:description" content="Reels, end-to-end encrypted chat and a wallet that pays you back, in one app.">
+<meta name="twitter:image" content="https://thanqyou.com/images/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Urbanist:wght@300;400;500;600;700;800;900&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -210,6 +226,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding-top:env(safe-area-in
 .why-item p{font-size:16px;color:var(--fg2);max-width:460px;}
 
 /* CTA */
+.play-btn{display:inline-flex;align-items:center;gap:12px;background:var(--gold);color:var(--on-gold);text-decoration:none;padding:12px 24px 12px 18px;border-radius:14px;font-family:var(--display);transition:transform .2s,box-shadow .2s;box-shadow:0 10px 30px -10px rgba(233,188,83,.55);}
+.play-btn:hover{transform:translateY(-2px);box-shadow:0 14px 36px -10px rgba(233,188,83,.7);}
+.play-btn svg{width:26px;height:26px;flex:none;fill:currentColor;}
+.play-btn small{display:block;font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.75;line-height:1.2;}
+.play-btn b{display:block;font-size:19px;font-weight:800;line-height:1.15;}
+.play-btn.sm{padding:9px 18px 9px 14px;border-radius:12px;}.play-btn.sm b{font-size:16px;}.play-btn.sm svg{width:22px;height:22px;}
+.hero-play{margin-top:26px;}.cta .play-btn{position:relative;margin:0 auto 26px;}.foot-play{margin-top:18px;}
 .cta{position:relative;overflow:hidden;text-align:center;padding-block:130px;border-top:1px solid var(--line);}
 .cta .glow{width:700px;height:700px;left:50%;top:50%;transform:translate(-50%,-50%);}
 .cta h2{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:clamp(2.4rem,7vw,5.6rem);line-height:1;position:relative;}
@@ -345,7 +368,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
 
 <nav>
   <div class="wrap nav-in">
-    <a href="#top" class="brand"><img src="images/app_icon.png" alt="ThanQYou"><span class="brand-name">ThanQ<span>You</span></span></a>
+    <a href="#top" class="brand"><img src="images/icon-192.png" alt="ThanQYou"><span class="brand-name">ThanQ<span>You</span></span></a>
     <ul class="nav-links">
       <li><a href="#top">Home</a></li>
       <li><a href="#about">About</a></li>
@@ -392,6 +415,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
             <span class="chip"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>Wallet &amp; Payouts</span>
             <span class="chip"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg>Business Profiles</span>
           </div>
+          <div class="hero-play"><a href="https://play.google.com/store/apps/details?id=com.thanqyou" class="play-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.1 2.3a1.5 1.5 0 0 0-.6 1.2v17a1.5 1.5 0 0 0 .6 1.2l9.6-9.7zM15.2 13.4l2.6 2.6-11.4 6.5zM17.8 8l-2.6 2.6L6.4 1.5zM19.2 8.8l2.4 1.4a2 2 0 0 1 0 3.6l-2.4 1.4-2.9-2.9 2.9-3.5z"/></svg><span><small>Get it on</small><b>Google Play</b></span></a></div>
         </div>
       </div>
     </div>
@@ -529,7 +553,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
       </div>
     </div>
     <div class="biz-card" aria-hidden="true">
-      <div class="bc-top"><img src="images/app_icon.png" alt=""><div><strong>Your Business</strong><small><span class="vdot"></span>KYB verified</small></div><span class="bc-tag">Business</span></div>
+      <div class="bc-top"><img src="images/icon-192.png" alt=""><div><strong>Your Business</strong><small><span class="vdot"></span>KYB verified</small></div><span class="bc-tag">Business</span></div>
       <div class="bc-label">Promoted post · this week</div>
       <div class="bc-bars">
         <div><span>Reach</span><i style="--w:88%"></i></div>
@@ -547,7 +571,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   <div class="glow" style="width:640px;height:640px;left:-240px;top:10%"></div>
   <div class="wrap why-grid">
     <div class="why-art">
-      <div class="ph"><img src="images/app_icon.png" alt="ThanQYou app icon"></div>
+      <div class="ph"><img src="images/icon-192.png" alt="ThanQYou app icon"></div>
       <div class="gcard"><span class="c"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><p><b>Social, Chat</b> and Wallet <b>in one</b> app</p></div>
     </div>
     <div>
@@ -568,6 +592,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   <div class="wrap">
     <h2>Create. View.<span class="o">Earn.</span><span class="script">ThanQYou</span></h2>
     <p>A social, messenger, and wallet app built to give something back for the time you spend on it. Made in India, for the globe.</p>
+    <div><a href="https://play.google.com/store/apps/details?id=com.thanqyou" class="play-btn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.1 2.3a1.5 1.5 0 0 0-.6 1.2v17a1.5 1.5 0 0 0 .6 1.2l9.6-9.7zM15.2 13.4l2.6 2.6-11.4 6.5zM17.8 8l-2.6 2.6L6.4 1.5zM19.2 8.8l2.4 1.4a2 2 0 0 1 0 3.6l-2.4 1.4-2.9-2.9 2.9-3.5z"/></svg><span><small>Get it on</small><b>Google Play</b></span></a></div>
     <a href="https://app.thanqyou.com/#/link-device" class="explore"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Link<br>Device</a>
   </div>
 </section>
@@ -576,8 +601,9 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   <div class="wrap">
     <div class="foot-top">
       <div class="foot-brand">
-        <a href="#top" class="brand"><img src="images/app_icon.png" alt="ThanQYou"><span class="brand-name">ThanQ<span>You</span></span></a>
+        <a href="#top" class="brand"><img src="images/icon-192.png" alt="ThanQYou"><span class="brand-name">ThanQ<span>You</span></span></a>
         <p>India's social, messenger and wallet app in one.</p>
+        <div class="foot-play"><a href="https://play.google.com/store/apps/details?id=com.thanqyou" class="play-btn sm" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.1 2.3a1.5 1.5 0 0 0-.6 1.2v17a1.5 1.5 0 0 0 .6 1.2l9.6-9.7zM15.2 13.4l2.6 2.6-11.4 6.5zM17.8 8l-2.6 2.6L6.4 1.5zM19.2 8.8l2.4 1.4a2 2 0 0 1 0 3.6l-2.4 1.4-2.9-2.9 2.9-3.5z"/></svg><span><small>Get it on</small><b>Google Play</b></span></a></div>
       </div>
       <div class="foot-emails">
         <div class="foot-email-item"><span class="foot-email-label">General</span><a href="mailto:contact@thanqyou.com">contact@thanqyou.com</a></div>
