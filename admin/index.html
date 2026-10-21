@@ -215,6 +215,13 @@
   .ps-h i { width:8px; height:8px; border-radius:50%; display:inline-block; }
   .post-split .stat-value { font-size:28px; margin:2px 0 6px; }
   .lbl-total { font-weight:500; color:var(--grey2); }
+  /* Posts card: share of users who have posted */
+  .creator-rate { margin-top:14px; padding-top:12px; border-top:1px solid var(--dark3); }
+  .cr-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:12.5px; color:var(--grey2); font-weight:600; }
+  .cr-top b { font-size:20px; font-weight:800; color:var(--white); letter-spacing:-0.4px; }
+  .cr-bar { height:6px; border-radius:4px; background:var(--dark3); margin:8px 0 6px; overflow:hidden; }
+  .cr-bar span { display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,#2a78d6,#e87ba4); }
+  .cr-sub { font-size:11.5px; color:var(--grey2); }
   .kpi-gender { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; color:var(--grey2); margin-top:8px; }
   .kpi-gender span { display:inline-flex; align-items:center; gap:5px; }
   .kpi-gender i { width:8px; height:8px; border-radius:50%; display:inline-block; }
@@ -842,7 +849,11 @@
               </div>
             </div>
             <div class="kpi-foot"><span class="stat-change" id="s-posts-c">Loading...</span></div>
-            <svg class="spark" id="spark-posts" preserveAspectRatio="none"></svg>
+            <div class="creator-rate" title="Users who have published at least one post or reel">
+              <div class="cr-top"><span>Users who posted</span><b id="s-creator-pct">—</b></div>
+              <div class="cr-bar"><span id="s-creator-bar" style="width:0"></span></div>
+              <div class="cr-sub" id="s-creator-sub"></div>
+            </div>
           </div>
           <div class="stat-card">
             <div class="kpi-top">
@@ -3256,12 +3267,19 @@ function renderDashStats() {
     return days.map(k => m[k] || 0);
   };
   const suSeries = bucket(d.users, 'created_at');
-  const reelSeries = bucket(d.posts.filter(p => (p.media_types||[]).includes('video')), 'created_at');
-  const photoSeries = bucket(d.posts.filter(p => !(p.media_types||[]).includes('video')), 'created_at');
   const erSeries = bucket(d.txns, 'created_at', t => parseFloat(t.rupees||0));
 
   drawSpark('spark-users', suSeries, DASH_SERIES[0]);
-  drawSparks('spark-posts', [[reelSeries, '#2a78d6'], [photoSeries, '#e87ba4']]);
+  // Share of users who have posted: people with at least one post in the
+  // range, out of everyone signed up by the end of the range
+  const userBase = d.users.filter(u => !to || localDay(u.created_at) <= to);
+  const baseIds = new Set(userBase.map(u => u.firebase_uid));
+  const posters = new Set(posts.map(p => p.firebase_uid).filter(uid => baseIds.has(uid)));
+  const pct = userBase.length ? posters.size / userBase.length * 100 : 0;
+  $('s-creator-pct').textContent = userBase.length ? `${pct.toFixed(1)}%` : '—';
+  $('s-creator-bar').style.width = Math.min(100, pct) + '%';
+  $('s-creator-sub').textContent = `${posters.size.toLocaleString('en-IN')} of ${userBase.length.toLocaleString('en-IN')} users`
+    + (filtered ? ' posted in this period' : ' have posted');
   drawSpark('spark-earn', erSeries, DASH_SERIES[3]);
 
   renderMoneyCards(d, from, to, days);
@@ -3320,20 +3338,6 @@ function renderMoneyCards(d, from, to, days) {
   const byDay = {};
   ad.forEach(r => { byDay[r.day] = (byDay[r.day] || 0) + r.inr; });
   drawSpark('spark-admob', days.map(k => byDay[k] || 0), '#6E3FA3');
-}
-
-// Several lines on one shared scale (e.g. reels vs photos)
-function drawSparks(id, series) {
-  const svg = document.getElementById(id);
-  if (!svg) return;
-  const max = Math.max(1, ...series.flatMap(([v]) => v));
-  svg.setAttribute('viewBox', '0 0 100 38');
-  svg.innerHTML = series.map(([values, color], k) => {
-    const n = values.length;
-    const line = values.map((v, i) => (i ? 'L' : 'M') + (n > 1 ? i / (n - 1) * 100 : 50).toFixed(2) + ' ' + (36 - v / max * 32).toFixed(2)).join(' ');
-    return (k ? '' : `<path d="${line} L100 38 L0 38 Z" fill="${color}" opacity="0.1"/>`)
-      + `<path d="${line}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>`;
-  }).join('');
 }
 
 function drawSpark(id, values, color) {
