@@ -73,6 +73,8 @@
     border:1px solid color-mix(in srgb, var(--sec, #fff) 22%, rgba(255,255,255,0.04));
     box-shadow:0 8px 20px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04); }
   .nav-card::before { content:''; position:absolute; left:0; right:0; top:0; height:2px; background:linear-gradient(90deg, var(--sec, #fff), color-mix(in srgb, var(--sec, #fff) 15%, transparent)); }
+  /* Never squash a section card when the window is short - the sidebar scrolls instead */
+  .sidebar > *, .sidebar .nav-group > * { flex-shrink:0; }
   .nav-card .nav-section { padding:11px 8px 5px; }
   .nav-card .nav-item { padding:8px 10px; margin:1px 0; }
   .nav-card .nav-item.active::before { left:-6px; }
