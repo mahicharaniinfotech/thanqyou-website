@@ -1296,7 +1296,7 @@
       <!-- KYC -->
       <div class="page" id="page-kyc">
         <div class="mini-stats">
-          <div class="mini-stat"><div class="ms-val" id="k-pending">—</div><div class="ms-label">Pending Review</div></div>
+          <div class="mini-stat"><div class="ms-val" id="k-pending">—</div><div class="ms-label">In Progress (user)</div></div>
           <div class="mini-stat"><div class="ms-val" id="k-review">—</div><div class="ms-label">Needs Manual Review</div></div>
           <div class="mini-stat"><div class="ms-val" id="k-approved">—</div><div class="ms-label">Verified</div></div>
           <div class="mini-stat"><div class="ms-val" id="k-rejected">—</div><div class="ms-label">Rejected</div></div>
@@ -1306,7 +1306,7 @@
             <h3>KYC Submissions</h3>
             <select id="kyc-filter" onchange="filterKYC()" style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
               <option value="">All</option>
-              <option value="pending">Pending</option>
+              <option value="pending">In progress (user)</option>
               <option value="pending_admin_review">Needs Manual Review</option>
               <option value="verified">Verified</option>
               <option value="rejected">Rejected</option>
@@ -3863,18 +3863,19 @@ function renderKYC() {
   document.getElementById('kyc-body').innerHTML = filtered.map(k => `
     <tr>
       <td><div class="avatar-cell">${avatarHtml(k.firebase_uid, kycName(k))}<div><div style="font-weight:600">${escHtml(kycName(k))}</div><div class="cell-sub" style="font-family:'DM Mono',monospace">${escHtml((k.firebase_uid||'').substring(0,16))}…</div></div></div></td>
-      <td>${escHtml(prettyType(k.id_type||'—'))}${k.verification_method ? `<div class="cell-sub">${escHtml(k.verification_method)}</div>` : ''}</td>
+      <td>${escHtml(prettyType(k.id_type||'—'))}${k.verification_method ? `<div class="cell-sub">${escHtml(KYC_METHODS[k.verification_method] || k.verification_method)}</div>` : ''}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${k.aadhaar_last4 ? 'XXXX XXXX ' + escHtml(k.aadhaar_last4) : '—'}${k.id_name ? `<div class="cell-sub" style="font-family:inherit">${escHtml(k.id_name)}</div>` : ''}</td>
       <td style="font-size:12px">${formatDateTime(k.submitted_at)}</td>
       <td>
-        <span class="badge ${k.status==='verified'?'badge-green':k.status==='rejected'?'badge-red':k.status==='pending_admin_review'?'badge-orange':'badge-grey'}">${escHtml(k.status||'pending')}</span>
+        <span class="badge ${k.status==='verified'?'badge-green':k.status==='rejected'?'badge-red':k.status==='pending_admin_review'?'badge-orange':'badge-grey'}">${escHtml(KYC_STATUS[k.status||'pending'] || k.status)}</span>
         ${k.status==='pending_admin_review'&&k.rejection_reason?`<div style="font-size:11px;color:var(--grey);margin-top:4px;max-width:220px">${escHtml(k.rejection_reason)}</div>`:''}
       </td>
       <td><div style="display:flex;gap:6px">
-        ${(k.status==='pending'||k.status==='pending_admin_review')?`
+        ${k.status==='pending_admin_review'?`
           <button class="action-btn success" onclick="approveKYC('${escHtml(k.id)}')">Approve</button>
           <button class="action-btn danger" onclick="rejectKYC('${escHtml(k.id)}')">Reject</button>
-        `:`<span style="font-size:12px;color:var(--grey)">${k.status==='verified'&&k.verified_at?formatDateTime(k.verified_at):k.status==='rejected'&&k.rejection_reason?escHtml(k.rejection_reason):'—'}</span>`}
+        `:k.status==='pending'?`<span style="font-size:12px;color:var(--grey)" title="The user verifies themselves in the app (DigiLocker / document check). Nothing to approve until it needs a manual review.">Waiting for user to finish · started ${timeAgo(k.submitted_at)}</span>`
+        :`<span style="font-size:12px;color:var(--grey)">${k.status==='verified'&&k.verified_at?formatDateTime(k.verified_at):k.status==='rejected'&&k.rejection_reason?escHtml(k.rejection_reason):'—'}</span>`}
       </div></td>
     </tr>
   `).join('');
@@ -3884,10 +3885,13 @@ function kycName(k) {
   return k.verified_name || k.id_name || (usersData.find(u => u.firebase_uid === k.firebase_uid) || {}).display_name || socialHandles[k.firebase_uid] || 'User';
 }
 
-// Manual review decision. Only rows still waiting are changed (status filter),
-// so a second click or a decision already made elsewhere can't overwrite it.
+// Manual review decision, only for submissions in "Needs manual review"
+// (status filter). In-progress ones belong to the user's own DigiLocker /
+// document check, and a decision made elsewhere can't be overwritten.
+const KYC_STATUS = { pending: 'In progress', pending_admin_review: 'Needs manual review', verified: 'Verified', rejected: 'Rejected' };
+const KYC_METHODS = { surepass_digilocker: 'DigiLocker (SurePass)', ocr: 'Document check', manual_admin: 'Approved by admin' };
 async function setKycStatus(id, patch) {
-  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/user_kyc?id=eq.${encodeURIComponent(id)}&status=in.(pending,pending_admin_review)`, {
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/user_kyc?id=eq.${encodeURIComponent(id)}&status=eq.pending_admin_review`, {
     method: 'PATCH',
     headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
     body: JSON.stringify(patch)
