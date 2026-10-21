@@ -164,8 +164,6 @@
   #dash-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .stat-value.pos { color:var(--green); } .stat-value.neg { color:#A5362B; }
   .kpi-sub { font-size:11.5px; color:var(--grey2); margin-top:2px; }
-  .be-bar { position:relative; height:6px; border-radius:4px; background:var(--dark3); margin-top:14px; overflow:hidden; }
-  .be-bar span { position:absolute; inset:0 auto 0 0; border-radius:4px; background:#0F8A8A; }
   .kpi-foot { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:22px; }
   .chip { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap; }
   .chip.up { background:#E8F5EE; color:#1E7A44; }
@@ -870,11 +868,9 @@
           </div>
           <div class="stat-card" title="AdMob earnings minus payouts to all users (individual and business)">
             <div class="kpi-top">
-              <div><div class="stat-label">Break-even</div><div class="stat-value" id="s-be">—</div><div class="kpi-sub" id="s-be-sub"></div></div>
+              <div><div class="stat-label">Break-even</div><div class="stat-value" id="s-be">—</div></div>
               <div class="kpi-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></svg></div>
             </div>
-            <div class="kpi-foot"><span id="s-be-d"></span><span class="stat-change" id="s-be-c">Loading...</span></div>
-            <div class="be-bar" id="be-bar" title="Share of payouts covered by AdMob"><span id="be-fill" style="width:0"></span></div>
           </div>
         </div>
 
@@ -3292,9 +3288,9 @@ function renderMoneyCards(d, from, to, days) {
   const sumRupees = list => list.reduce((s, t) => s + parseFloat(t.rupees || 0), 0);
   if (!d.admob) {
     $('s-admob').textContent = $('s-be').textContent = '—';
-    $('s-admob-c').textContent = $('s-be-c').textContent = 'AdMob data unavailable';
-    $('s-admob-d').innerHTML = $('s-be-d').innerHTML = '';
-    $('s-admob-usd').textContent = $('s-be-sub').textContent = '';
+    $('s-admob-c').textContent = 'AdMob data unavailable';
+    $('s-admob-d').innerHTML = '';
+    $('s-admob-usd').textContent = '';
     return;
   }
   const ad = d.admob.map(r => ({ day: String(r.day).substring(0, 10), inr: +r.inr || 0, usd: +r.usd || 0 }));
@@ -3310,14 +3306,6 @@ function renderMoneyCards(d, from, to, days) {
   $('s-admob-usd').textContent = `$${adUsd(from, to).toFixed(2)} USD`;
   $('s-be').textContent = (be < 0 ? '−' : '+') + fmtINR(Math.abs(be));
   $('s-be').className = 'stat-value ' + (be < 0 ? 'neg' : 'pos');
-  $('s-be-sub').textContent = `${fmtINR(admob)} AdMob − ${fmtINR(payouts)} payouts`;
-
-  const covered = payouts > 0 ? admob / payouts * 100 : (admob > 0 ? 100 : 0);
-  $('be-fill').style.width = Math.min(100, covered) + '%';
-  $('s-be-d').innerHTML = be >= 0
-    ? `<span class="chip up">${payouts ? 'Profit' : 'No payouts yet'}</span>`
-    : `<span class="chip down">Short by ${fmtINR(-be)}</span>`;
-  $('s-be-c').textContent = payouts ? `AdMob covers ${covered < 10 ? covered.toFixed(1) : Math.round(covered)}% of payouts` : '';
 
   if (from && to) {
     const len = dayList(from, to).length, pFrom = addDays(from, -len), pTo = addDays(from, -1);
