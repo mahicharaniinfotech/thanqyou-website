@@ -221,6 +221,17 @@
   .ps-h i { width:8px; height:8px; border-radius:50%; display:inline-block; }
   .post-split .stat-value { font-size:28px; margin:2px 0 6px; }
   .lbl-total { font-weight:500; color:var(--grey2); }
+  /* User popup: profile photos + full-size viewer */
+  .um-photos { display:flex; gap:16px; align-items:flex-end; margin:-4px 0 18px; flex-wrap:wrap; }
+  .um-photo { display:flex; flex-direction:column; align-items:center; gap:6px; background:none; border:none; padding:0; cursor:zoom-in; font:inherit; }
+  .um-photo img, .um-photo .um-ph { width:84px; height:84px; border-radius:50%; object-fit:cover; border:3px solid #fff; box-shadow:0 4px 14px rgba(0,0,0,0.15); background:var(--dark3); }
+  .um-photo .um-ph { display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; color:#fff; cursor:default; }
+  .um-photo span { font-size:11px; font-weight:600; color:var(--grey2); text-transform:uppercase; letter-spacing:0.6px; }
+  .um-photo.none { cursor:default; }
+  .photo-view { position:fixed; inset:0; z-index:1000; background:rgba(10,8,8,0.88); display:none; align-items:center; justify-content:center; padding:24px; cursor:zoom-out; }
+  .photo-view.open { display:flex; }
+  .photo-view img { max-width:min(92vw,720px); max-height:86vh; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,0.5); background:#222; }
+  .photo-view a { position:absolute; top:18px; right:22px; color:#fff; font-size:13px; font-weight:600; text-decoration:none; padding:8px 14px; border:1px solid rgba(255,255,255,0.35); border-radius:999px; }
   /* Posts card: share of users who have posted */
   .creator-rate { margin-top:14px; padding-top:12px; border-top:1px solid var(--dark3); }
   .cr-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:12.5px; color:var(--grey2); font-weight:600; }
@@ -1541,6 +1552,10 @@
   </div>
 </div>
 
+<div class="photo-view" id="photo-view" onclick="closePhoto(event)" role="dialog" aria-label="Profile photo">
+  <img id="photo-view-img" alt="Profile photo" referrerpolicy="no-referrer">
+  <a id="photo-view-open" href="#" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Open original ↗</a>
+</div>
 <div class="modal-overlay" id="user-modal">
   <div class="modal">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -3763,16 +3778,44 @@ function activityPage(dir) {
   renderActivity();
 }
 
+// Profile photos at the top of the user popup: the Social profile photo and
+// the app (Chats) photo, each tap-to-enlarge. Only http(s) URLs are used.
+function safePhotoUrl(u) {
+  return typeof u === 'string' && /^https:\/\//i.test(u.trim()) ? u.trim() : null;
+}
+function userPhotosHtml(user, socialUrl) {
+  const social = safePhotoUrl(socialUrl), app = safePhotoUrl(user.avatar_url);
+  const tile = (url, label) => `<button type="button" class="um-photo" data-url="${escHtml(url)}" onclick="openPhoto(this.dataset.url)" title="View full size">`
+    + `<img src="${escHtml(url)}" alt="${escHtml(label)}" referrerpolicy="no-referrer" onerror="this.closest('.um-photo').remove()"><span>${label}</span></button>`;
+  const tiles = [social && tile(social, 'Social photo'), app && app !== social && tile(app, 'App photo')].filter(Boolean);
+  if (!tiles.length) {
+    return `<div class="um-photos"><div class="um-photo none"><div class="um-ph" style="background:${colorFor(user.firebase_uid)}">${escHtml(initials(user.display_name))}</div><span>No profile photo</span></div></div>`;
+  }
+  return `<div class="um-photos">${tiles.join('')}</div>`;
+}
+function openPhoto(url) {
+  if (!safePhotoUrl(url)) return;
+  document.getElementById('photo-view-img').src = url;
+  document.getElementById('photo-view-open').href = url;
+  document.getElementById('photo-view').classList.add('open');
+}
+function closePhoto() {
+  document.getElementById('photo-view').classList.remove('open');
+  document.getElementById('photo-view-img').removeAttribute('src');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePhoto(); });
+
 async function viewUser(uid) {
   const user = usersData.find(u => u.firebase_uid === uid);
   if (!user) return;
-  const [wallet, txns] = await Promise.all([
+  const [wallet, txns, social] = await Promise.all([
     query('coin_wallet', `select=*&firebase_uid=eq.${uid}`),
-    query('wallet_transactions', `select=*&firebase_uid=eq.${uid}&order=created_at.desc&limit=5`)
+    query('wallet_transactions', `select=*&firebase_uid=eq.${uid}&order=created_at.desc&limit=5`),
+    query('social_accounts', `select=social_avatar_url&firebase_uid=eq.${encodeURIComponent(uid)}&limit=1`)
   ]);
   const w = wallet?.[0] || {};
   document.getElementById('modal-user-name').textContent = user.display_name || 'User Detail';
-  document.getElementById('modal-user-content').innerHTML = `
+  document.getElementById('modal-user-content').innerHTML = userPhotosHtml(user, social?.[0]?.social_avatar_url) + `
     <div class="detail-grid">
       <div class="detail-field"><div class="df-label">Firebase UID</div><div class="df-value" style="font-size:11px;font-family:'DM Mono',monospace">${uid}</div></div>
       <div class="detail-field"><div class="df-label">Phone</div><div class="df-value">${escHtml(user.phone||'—')}</div></div>
