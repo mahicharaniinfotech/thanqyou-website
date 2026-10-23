@@ -1521,8 +1521,8 @@
         </div>
         <div class="table-card">
           <div class="table-header"><h3>Notification History</h3></div>
-          <table><thead><tr><th>Title</th><th>Message</th><th>Target</th><th>Delivered</th><th>Sent At</th></tr></thead>
-          <tbody id="notif-body-table"><tr><td colspan="5"><div class="empty-state"><p>No notifications sent yet</p></div></td></tr></tbody></table>
+          <table><thead><tr><th>Title</th><th>Message</th><th>Target</th><th>Delivered</th><th>Result</th><th>Sent At</th></tr></thead>
+          <tbody id="notif-body-table"><tr><td colspan="6"><div class="empty-state"><p>No notifications sent yet</p></div></td></tr></tbody></table>
         </div>
       </div>
 
@@ -4463,11 +4463,24 @@ async function sendNotification() {
   }
 }
 
+// Result column: success, or why each failed push was not delivered
+// (failure_reasons, recorded by admin-broadcast-notification since 23 Oct 2026)
+function notifResult(n) {
+  if (!n.recipients) return '<span style="color:var(--grey)">No one matched this audience</span>';
+  if (!n.failed) return `<span style="color:var(--green);font-weight:600">✓ Delivered${n.recipients > 1 ? ' to all' : ''}</span>`;
+  const reasons = Object.entries(n.failure_reasons || {}).sort((a, b) => b[1] - a[1]);
+  const head = n.delivered ? `<span style="color:var(--orange);font-weight:600">Partly failed</span>` : `<span style="color:#A5362B;font-weight:600">✗ Failed</span>`;
+  const list = reasons.length
+    ? reasons.map(([why, c]) => `<div class="cell-sub" style="color:inherit">${escHtml(why)}${n.failed > 1 || c > 1 ? ` <b>× ${c}</b>` : ''}</div>`).join('')
+    : '<div class="cell-sub">Reason not recorded (sent before reasons were tracked)</div>';
+  return head + list;
+}
+
 async function loadNotifications() {
   const tbody = document.getElementById('notif-body-table');
   const rows = await query('admin_notifications', 'select=*&order=created_at.desc&limit=50');
   if (!rows || !rows.length) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>No notifications sent yet</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No notifications sent yet</p></div></td></tr>';
     return;
   }
   const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -4478,6 +4491,7 @@ async function loadNotifications() {
       ? `<span class="badge badge-purple">User</span><div class="cell-sub" style="margin-top:3px">${esc(n.target_name || (n.target_uid || '').slice(0, 10) || '—')}</div>`
       : `<span class="badge badge-blue">${NOTIF_TARGETS[n.target] || esc(n.target)}</span>`}</td>
     <td><span class="badge ${n.failed ? 'badge-orange' : 'badge-green'}">${n.delivered} / ${n.recipients}</span></td>
+    <td style="font-size:12px;max-width:260px">${notifResult(n)}</td>
     <td style="font-size:12px;white-space:nowrap">${formatDateTime(n.created_at)}</td>
   </tr>`).join('');
 }
