@@ -1176,8 +1176,8 @@
               <option value="kyc_verified">KYC verified</option>
             </select>
           </div>
-          <table><thead><tr><th>User</th><th>Email</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
-          <tbody id="users-body"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+          <table><thead><tr><th>User</th><th>Email</th><th>Device</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="users-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
           <div class="pagination"><span id="users-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="usersPage(-1)">← Prev</button><button class="pag-btn active" id="users-page-num">1</button><button class="pag-btn" onclick="usersPage(1)">Next →</button></div></div>
         </div>
       </div>
@@ -3542,11 +3542,23 @@ function renderDashUsers() {
 let usersData = [];
 let usersCurrentPage = 0;
 
+// Phone shown in Users: model reported by the app (from the build that
+// adds it), else just Android / iOS. Android reports model codes, e.g.
+// Samsung "SM-A235F" is the Galaxy A23.
+const PLATFORM_NAMES = { android: 'Android', ios: 'iOS' };
+function deviceCell(u) {
+  if (u.device_model) return `<div style="font-weight:600;white-space:nowrap">${escHtml(u.device_model)}</div>`
+    + (u.os_version ? `<div class="cell-sub">${escHtml(u.os_version)}</div>` : '');
+  return PLATFORM_NAMES[u.platform]
+    ? `${PLATFORM_NAMES[u.platform]}<div class="cell-sub">model after app update</div>`
+    : '<span style="color:var(--grey)">—</span>';
+}
+
 async function loadUsers() {
   await loadBusinessUids();
-  document.getElementById('users-body').innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('users-body').innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const [data, wallets, kycData] = await Promise.all([
-    query('users', 'select=id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason&order=created_at.desc'),
+    query('users', 'select=id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc'),
     query('coin_wallet', 'select=firebase_uid,balance,lifetime_earned,spendable_earned,locked_current'),
     query('user_kyc', 'select=firebase_uid,status')
   ]);
@@ -3607,7 +3619,7 @@ function renderUsers() {
   document.getElementById('users-count').textContent = total ? `${start+1}–${Math.min(start+PAGE_SIZE,total)} of ${total}` : '0 users';
   document.getElementById('users-page-num').textContent = usersCurrentPage + 1;
   if (!page.length) {
-    document.getElementById('users-body').innerHTML = `<tr><td colspan="7"><div class="empty-state"><p>No users signed up ${from || to ? 'in this period' : 'yet'}</p></div></td></tr>`;
+    document.getElementById('users-body').innerHTML = `<tr><td colspan="8"><div class="empty-state"><p>No users signed up ${from || to ? 'in this period' : 'yet'}</p></div></td></tr>`;
     return;
   }
   document.getElementById('users-body').innerHTML = page.map(u => {
@@ -3618,6 +3630,7 @@ function renderUsers() {
     <tr>
       <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name||'—')}${suspendedBadge(u)}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
       <td style="font-size:12px">${escHtml(u.email||'—')}</td>
+      <td style="font-size:12px">${deviceCell(u)}</td>
       <td style="font-size:12px;color:${g==='unspecified'?'var(--grey)':'inherit'}">${GENDER_META[g][0]}</td>
       <td style="font-weight:600;color:var(--green)">${u._wallet ? '₹' + (u._wallet.balance/100).toFixed(2) : '₹0.00'}</td>
       <td>${kycBadge}</td>
@@ -3754,6 +3767,7 @@ async function viewUser(uid) {
       <div class="detail-field"><div class="df-label">Email</div><div class="df-value">${escHtml(user.email||'—')}</div></div>
       <div class="detail-field"><div class="df-label">Gender</div><div class="df-value">${escHtml(user.gender||'—')}</div></div>
       <div class="detail-field"><div class="df-label">Date of Birth</div><div class="df-value">${escHtml(user.dob||'—')}</div></div>
+      <div class="detail-field"><div class="df-label">Device</div><div class="df-value">${escHtml(user.device_model || PLATFORM_NAMES[user.platform] || '—')}${user.os_version ? `<div class="cell-sub">${escHtml(user.os_version)}${user.app_version ? ' · app ' + escHtml(user.app_version) : ''}</div>` : ''}</div></div>
       ${user.banned_at ? `<div class="detail-field" style="grid-column:1/-1"><div class="df-label">Suspended</div><div class="df-value" style="color:var(--red)">${formatDateTime(user.banned_at)} · ${escHtml(user.ban_reason||'')}</div></div>` : ''}
       <div class="detail-field"><div class="df-label">Referral Code</div><div class="df-value">${escHtml(user.referral_code||'—')}</div></div>
       <div class="detail-field"><div class="df-label">Wallet Balance</div><div class="df-value" style="color:var(--red)">${formatRupees(w.balance)}</div></div>
