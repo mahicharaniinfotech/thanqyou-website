@@ -318,6 +318,11 @@
 
   /* KPI MINI */
   .mini-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:20px; }
+  .ms-sub { font-size:11.5px; color:var(--grey2); margin-top:4px; }
+  #page-chats .mini-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  @media (max-width:900px) { #page-chats .mini-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .num-cell { font-weight:700; font-variant-numeric:tabular-nums; }
+  .chat-note { font-size:12px; color:var(--grey2); margin:-6px 0 16px; }
   .mini-stat { background:var(--dark2); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; position:relative; overflow:hidden; }
   .mini-stat::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--red); opacity:0.7; }
   .mini-stat .ms-val { font-size:24px; font-weight:800; letter-spacing:-0.5px; }
@@ -653,6 +658,10 @@
     <div class="nav-item" onclick="showPage('metrics',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Metrics
+    </div>
+    <div class="nav-item" onclick="showPage('chats',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.2a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5h.5a8.5 8.5 0 0 1 8 8z"/></svg>
+      Chats
     </div>
     <div class="nav-section">Management</div>
     <div class="nav-item" onclick="showPage('users',this)">
@@ -1196,6 +1205,43 @@
       </div>
 
       <!-- LAST LOGIN & ACTIVITY -->
+      <div class="page" id="page-chats">
+        <div class="dash-head page-head">
+          <div><h2>Chats, calls &amp; groups</h2><p id="chats-range-label">Last 7 days</p></div>
+          <div class="dash-filter" data-range="chats" data-default="7d"></div>
+        </div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="ms-val" id="ch-users">—</div><div class="ms-label">Users chatting</div><div class="ms-sub" id="ch-users-sub"></div></div>
+          <div class="mini-stat"><div class="ms-val" id="ch-msgs">—</div><div class="ms-label">Messages sent</div><div class="ms-sub" id="ch-msgs-sub"></div></div>
+          <div class="mini-stat"><div class="ms-val" id="ch-convs">—</div><div class="ms-label">Active 1:1 chats</div><div class="ms-sub" id="ch-convs-sub"></div></div>
+          <div class="mini-stat"><div class="ms-val" id="ch-groups">—</div><div class="ms-label">Groups</div><div class="ms-sub" id="ch-groups-sub"></div></div>
+          <div class="mini-stat"><div class="ms-val" id="ch-calls">—</div><div class="ms-label">Calls</div><div class="ms-sub" id="ch-calls-sub"></div></div>
+          <div class="mini-stat"><div class="ms-val" id="ch-online">—</div><div class="ms-label">Online now</div><div class="ms-sub" id="ch-online-sub"></div></div>
+        </div>
+        <p class="chat-note">Counts and times only - message content is never read here (chats are end-to-end encrypted). Social DMs are not included.</p>
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Chat users</h3>
+            <div class="search-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input id="ch-search" placeholder="Search name, @username, phone..." oninput="renderChats()">
+            </div>
+            <select id="ch-filter" class="tool-select" onchange="renderChats()">
+              <option value="used">Used chat or calls</option>
+              <option value="range">Active in this period</option>
+              <option value="all">Everyone</option>
+            </select>
+            <select id="ch-sort" class="tool-select" onchange="renderChats()">
+              <option value="recent">Most recent activity</option>
+              <option value="msgs">Most messages</option>
+              <option value="calls">Most calls</option>
+            </select>
+          </div>
+          <table><thead><tr><th>User</th><th>Messages</th><th>Chats</th><th>Groups</th><th>Calls</th><th>Last message</th><th>Status &amp; last seen</th></tr></thead>
+          <tbody id="ch-body"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+        </div>
+      </div>
+
       <div class="page" id="page-activity">
         <div class="dash-head page-head">
           <div><h2 id="act-title">Last login &amp; activity</h2><p>Status as of now · refresh to update</p></div>
@@ -1901,7 +1947,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
-  dashboard:'Dashboard', metrics:'Metrics', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', activity:'Last Login', content:'Content', reports:'Reports', kyc:'KYC Verification',
+  dashboard:'Dashboard', metrics:'Metrics', chats:'Chats', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', activity:'Last Login', content:'Content', reports:'Reports', kyc:'KYC Verification',
   wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', bank:'Bank', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
@@ -1915,7 +1961,7 @@ function showPage(name, el) {
   closeDrawer();
   window.scrollTo(0, 0);
   const loaders = {
-    dashboard: loadDashboard, metrics: loadMetrics, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, installs: loadInstalls, users: loadUsers, activity: loadActivity, content: loadContent, reports: loadReports,
+    dashboard: loadDashboard, metrics: loadMetrics, chats: loadChats, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, installs: loadInstalls, users: loadUsers, activity: loadActivity, content: loadContent, reports: loadReports,
     kyc: loadKYC, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts, bank: loadBank,
     analytics: loadAnalytics, notifications: loadNotifications, settings: loadSettings
   };
@@ -3144,7 +3190,7 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
 // The dashboard's Signups & posts chart has its own range (a trend needs several days)
 const PRESET_SETS = { trend: [['7d','7 days'],['14d','14 days'],['30d','30 days'],['90d','90 days'],['month','This month']] };
-const RANGE_RENDER = { trend: () => renderTrendChartRange(), dash: () => renderDashStats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls() };
+const RANGE_RENDER = { trend: () => renderTrendChartRange(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls() };
 
 function rangeControlsHTML(prefix, active, presets = RANGE_PRESETS) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
@@ -3705,6 +3751,114 @@ function agoLine(ts) {
   if (!ts) return '';
   const d = Math.floor((Date.now() - new Date(ts)) / 864e5);
   return `<div class="cell-sub">${d < 1 ? timeAgo(ts) : d === 1 ? 'yesterday' : d + ' days ago'}</div>`;
+}
+
+// ── CHATS (Chats tab: 1:1 chats, groups, calls) ─────────
+// Reads only who/when columns - never message content. Social DMs live in
+// separate tables and are not counted. Online / last seen use the same rule
+// as Last Login (activityStatus).
+let chatData = null;
+async function loadChats() {
+  document.getElementById('ch-body').innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  await Promise.all([loadBusinessUids(), ensureAvatars(), loadSocialHandles()]);
+  const [users, msgs, convs, members, calls, sessions] = await Promise.all([
+    query('users', 'select=id,firebase_uid,display_name,phone,account_type,is_online,last_seen_at,last_seen,last_active_at'),
+    query('messages', 'select=sender_uid,conversation_id,message_type,created_at&order=created_at.desc'),
+    query('conversations', 'select=id,type,is_group,created_at'),
+    query('conversation_members', 'select=conversation_id,user_id'),
+    query('call_logs', 'select=caller_uid,receiver_uid,call_type,status,is_group,started_at&is_social=not.is.true&order=started_at.desc'),
+    query('active_mobile_sessions', 'select=firebase_uid,logged_in_at')
+  ]);
+  chatData = { users: usersForMode(users), msgs, convs, members, calls, sessions };
+  renderChats();
+}
+
+function renderChats() {
+  if (!chatData) return;
+  const $ = id => document.getElementById(id);
+  const { from, to } = getRange('chats');
+  const inR = ts => inDayRange(ts, from, to);
+  $('chats-range-label').textContent = (from || to) ? `Showing ${rangeLabel(from, to)}` : 'All time';
+  const d = chatData, now = Date.now();
+  const fbById = {}; d.users.forEach(u => { fbById[u.id] = u.firebase_uid; });
+  const userSet = new Set(d.users.map(u => u.firebase_uid));
+  const isGroup = {}; d.convs.forEach(c => { isGroup[c.id] = c.is_group || c.type === 'group'; });
+
+  // Per user: chats / groups they're in, messages, calls
+  const st = {};
+  const S = uid => (st[uid] ||= { msgs: 0, msgsAll: 0, lastMsg: null, chats: 0, groups: 0, calls: 0, callsAll: 0, lastCall: null });
+  d.members.forEach(m => { const uid = fbById[m.user_id]; if (uid) isGroup[m.conversation_id] ? S(uid).groups++ : S(uid).chats++; });
+  const activeDirect = new Set(), activeGroups = new Set();
+  let msgsR = 0, media = 0;
+  d.msgs.forEach(m => {
+    const u = S(m.sender_uid);
+    u.msgsAll++;
+    if (!u.lastMsg || m.created_at > u.lastMsg) u.lastMsg = m.created_at;
+    if (inR(m.created_at)) {
+      u.msgs++; msgsR++;
+      if (m.message_type && m.message_type !== 'text') media++;
+      (isGroup[m.conversation_id] ? activeGroups : activeDirect).add(m.conversation_id);
+    }
+  });
+  let callsR = 0, video = 0, missed = 0; const callers = new Set();
+  d.calls.forEach(c => {
+    [c.caller_uid, c.receiver_uid].filter(Boolean).forEach(uid => {
+      const u = S(uid); u.callsAll++;
+      if (!u.lastCall || c.started_at > u.lastCall) u.lastCall = c.started_at;
+      if (inR(c.started_at)) u.calls++;
+    });
+    if (inR(c.started_at)) {
+      callsR++; if (c.call_type === 'video') video++;
+      if (c.status === 'missed') missed++;
+      if (c.caller_uid) callers.add(c.caller_uid);
+    }
+  });
+
+  const senders = new Set(d.msgs.filter(m => inR(m.created_at)).map(m => m.sender_uid).filter(uid => userSet.has(uid)));
+  const pct = d.users.length ? senders.size / d.users.length * 100 : 0;
+  const totalDirect = d.convs.filter(c => !isGroup[c.id]).length, totalGroups = d.convs.length - totalDirect;
+  $('ch-users').textContent = senders.size;
+  $('ch-users-sub').textContent = `${pct.toFixed(1)}% of ${d.users.length} users sent a message`;
+  $('ch-msgs').textContent = msgsR.toLocaleString('en-IN');
+  $('ch-msgs-sub').textContent = `${msgsR - media} text · ${media} photo/media`;
+  $('ch-convs').textContent = activeDirect.size;
+  $('ch-convs-sub').textContent = `of ${totalDirect} chats started`;
+  $('ch-groups').textContent = totalGroups;
+  $('ch-groups-sub').textContent = totalGroups ? `${activeGroups.size} active in this period` : 'No groups created yet';
+  $('ch-calls').textContent = callsR;
+  $('ch-calls-sub').textContent = `${callsR - video} voice · ${video} video · ${missed} missed · ${callers.size} callers`;
+
+  // Status / last seen: same rule as Last Login
+  const loggedIn = new Set(d.sessions.map(x => x.firebase_uid));
+  const rows = d.users.map(u => {
+    const stamps = [u.last_seen_at, u.last_seen, u.last_active_at].filter(Boolean).sort();
+    const r = { ...u, ...(st[u.firebase_uid] || S(u.firebase_uid)), _active: stamps.pop() || null };
+    r._status = activityStatus(r, now);
+    return r;
+  });
+  $('ch-online').textContent = rows.filter(r => r._status === 'online').length;
+  $('ch-online-sub').textContent = `${[...loggedIn].filter(uid => userSet.has(uid)).length} phones signed in`;
+
+  const f = $('ch-filter').value, q = plainLower($('ch-search').value).replace(/^@/, ''), sort = $('ch-sort').value;
+  const t = ts => ts ? new Date(ts).getTime() : 0;
+  let list = rows.filter(r =>
+    (f === 'all' || (f === 'range' ? (r.msgs || r.calls) : (r.msgsAll || r.callsAll || r.chats || r.groups))) &&
+    (!q || [r.display_name, r.phone, socialHandles[r.firebase_uid]].some(v => plainLower(v).includes(q))));
+  if (sort === 'msgs') list.sort((a, b) => b.msgs - a.msgs || b.msgsAll - a.msgsAll);
+  else if (sort === 'calls') list.sort((a, b) => b.calls - a.calls || b.callsAll - a.callsAll);
+  else list.sort((a, b) => Math.max(t(b.lastMsg), t(b.lastCall), t(b._active)) - Math.max(t(a.lastMsg), t(a.lastCall), t(a._active)));
+
+  const shown = list.slice(0, 200);
+  $('ch-body').innerHTML = shown.length ? shown.map(r => `<tr>
+      <td><div class="avatar-cell">${avatarHtml(r.firebase_uid, r.display_name)}<div><div style="font-weight:600">${escHtml(r.display_name || '—')}</div>${socialHandleLine(r.firebase_uid)}</div></div></td>
+      <td><span class="num-cell">${r.msgs}</span>${r.msgsAll !== r.msgs ? `<div class="cell-sub">${r.msgsAll} all time</div>` : ''}</td>
+      <td class="num-cell">${r.chats}</td>
+      <td class="num-cell">${r.groups}</td>
+      <td><span class="num-cell">${r.calls}</span>${r.callsAll !== r.calls ? `<div class="cell-sub">${r.callsAll} all time</div>` : ''}</td>
+      <td style="font-size:12px;white-space:nowrap">${r.lastMsg ? formatDateTime(r.lastMsg) + agoLine(r.lastMsg) : '<span style="color:var(--grey)">Never</span>'}</td>
+      <td>${badge(ACT_STATUS, r._status)}<div class="cell-sub">${r._active ? 'Last seen ' + timeAgo(r._active) : 'Never seen'}${loggedIn.has(r.firebase_uid) ? ' · signed in on a phone' : ''}</div></td>
+    </tr>`).join('') + (list.length > shown.length ? `<tr><td colspan="7" class="cell-sub" style="text-align:center">Showing 200 of ${list.length} - use search to narrow</td></tr>` : '')
+    : '<tr><td colspan="7"><div class="empty-state"><p>No chat activity for this filter</p></div></td></tr>';
 }
 
 async function loadActivity() {
