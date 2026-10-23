@@ -3999,7 +3999,7 @@ async function loadWallet() {
   document.getElementById('txn-body').innerHTML = '<tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr>';
   await loadBusinessUids();
   const [data, users] = await Promise.all([
-    query('wallet_transactions', 'select=*&order=created_at.desc'),
+    query('wallet_transactions', 'select=*&type=neq.reversed&order=created_at.desc'),
     query('users', 'select=firebase_uid,display_name'),
   ]);
   // Individual panel: wallet figures exclude business accounts (same rule as Dashboard)
