@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThanQYou profile</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/images/icon-192.png">
+<style>
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #ffffff;
+    color: #722F37;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  .card { max-width: 360px; }
+  .get-app { margin-top: 28px; font-size: 13px; }
+  .get-app a { color: #722F37; font-weight: 600; }
+  .get-app.nudge { font-size: 15px; }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  p { color: #555; font-size: 14px; line-height: 1.5; }
+  .id {
+    display: inline-block;
+    margin: 8px 0 4px;
+    padding: 8px 16px;
+    border: 1px solid #e6d5d7;
+    border-radius: 10px;
+    font-family: ui-monospace, 'Roboto Mono', Menlo, monospace;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #722F37;
+  }
+  a.button {
+    display: inline-block;
+    margin-top: 16px;
+    background: #722F37;
+    color: white;
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="title">Opening this profile on ThanQYou…</h1>
+    <div id="idBox" class="id" hidden></div>
+    <p id="help">If nothing happens, make sure ThanQYou is installed, then tap the button below.</p>
+    <a id="openLink" class="button" href="#">Open in ThanQYou</a>
+    <p id="getApp" class="get-app">Don't have the app yet?<br>
+      <a href="https://play.google.com/store/apps/details?id=com.thanqyou">Get ThanQYou on Google Play</a><br>
+      then search the ID above to find this profile.</p>
+  </div>
+
+<script>
+  // Opened by scanning a profile QR or tapping a shared link:
+  //   https://thanqyou.com/u/?id=TYKA51811009
+  // Hands the ThanqYou ID to the app (thanqyou://u?id=...), which opens
+  // that member's profile (home_shell.dart _openThanqYouIdLink). Shared
+  // links must be https:// - messaging apps don't make thanqyou:// links
+  // tappable. On Android an intent:// link is used so that, without the
+  // app, the browser goes straight to the Play Store.
+  var raw = new URLSearchParams(window.location.search).get('id') || '';
+  var id = raw.toUpperCase().replace(/\s/g, '');
+  var valid = /^TY[A-Z]{2}\d{8}(\d{2})?$/.test(id);
+  var openLink = document.getElementById('openLink');
+
+  if (!valid) {
+    document.getElementById('title').textContent = 'This ThanQYou link is incomplete';
+    document.getElementById('help').textContent =
+      'Ask the person for their ThanqYou ID and search it in the ThanQYou app.';
+    openLink.hidden = true;
+  } else {
+    var box = document.getElementById('idBox');
+    box.textContent = id;
+    box.hidden = false;
+    var deepLink = 'thanqyou://u?id=' + encodeURIComponent(id);
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    var target = isAndroid
+      ? 'intent://u?id=' + encodeURIComponent(id) +
+        '#Intent;scheme=thanqyou;package=com.thanqyou;S.browser_fallback_url=' +
+        encodeURIComponent('https://play.google.com/store/apps/details?id=com.thanqyou') + ';end'
+      : deepLink;
+    openLink.href = target;
+    window.location.href = target;
+    setTimeout(function () {
+      if (!document.hidden) document.getElementById('getApp').classList.add('nudge');
+    }, 2000);
+  }
+</script>
+</body>
+</html>
