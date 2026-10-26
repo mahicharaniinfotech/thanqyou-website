@@ -70,8 +70,13 @@
   // links must be https:// - messaging apps don't make thanqyou:// links
   // tappable. On Android an intent:// link is used so that, without the
   // app, the browser goes straight to the Play Store.
-  var raw = new URLSearchParams(window.location.search).get('id') || '';
+  var params = new URLSearchParams(window.location.search);
+  var raw = params.get('id') || '';
   var id = raw.toUpperCase().replace(/\s/g, '');
+  // The sharer's referral code. Passed to the app, and through the Play
+  // Store install (referrer=...), so it's pre-filled at signup and the
+  // sharer earns the referral (referral_capture.dart in the app).
+  var ref = (params.get('ref') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   var valid = /^TY[A-Z]{2}\d{8}(\d{2})?$/.test(id);
   var openLink = document.getElementById('openLink');
 
@@ -84,12 +89,16 @@
     var box = document.getElementById('idBox');
     box.textContent = id;
     box.hidden = false;
-    var deepLink = 'thanqyou://u?id=' + encodeURIComponent(id);
+    var query = 'id=' + encodeURIComponent(id) + (ref ? '&ref=' + ref : '');
+    var deepLink = 'thanqyou://u?' + query;
+    var store = 'https://play.google.com/store/apps/details?id=com.thanqyou' +
+      '&referrer=' + encodeURIComponent(query);
+    document.querySelector('#getApp a').href = store;
     var isAndroid = /Android/i.test(navigator.userAgent);
     var target = isAndroid
-      ? 'intent://u?id=' + encodeURIComponent(id) +
+      ? 'intent://u?' + query +
         '#Intent;scheme=thanqyou;package=com.thanqyou;S.browser_fallback_url=' +
-        encodeURIComponent('https://play.google.com/store/apps/details?id=com.thanqyou') + ';end'
+        encodeURIComponent(store) + ';end'
       : deepLink;
     openLink.href = target;
     window.location.href = target;
