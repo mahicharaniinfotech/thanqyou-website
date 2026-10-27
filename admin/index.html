@@ -3770,15 +3770,20 @@ function usersPage(dir) {
 // the app writes on open/resume. Online uses the same rule as App Installs.
 let activityData = [], activityPage_ = 0;
 const ACT_STATUS = {
-  online: ['badge-green', 'Online'], today: ['badge-blue', 'Active today'], week: ['badge-blue', 'Active this week'],
+  online: ['badge-green', 'Online'], today: ['badge-blue', 'Active in last 24 h'], week: ['badge-blue', 'Active in last 7 days'],
   idle: ['badge-orange', 'Inactive 7–30 days'], dormant: ['badge-grey', 'Inactive 30+ days'],
 };
 
 // Status is activity only; a bounced push (_gone) is shown beside it, since
-// tokens also bounce for people who are still using the app
+// tokens also bounce for people who are still using the app.
+// is_online is set when the app opens and cleared when it goes to the
+// background, but that second write is lost when the app is killed,
+// uninstalled or offline - and there's no heartbeat - so only trust it for
+// 30 minutes, and never after a push has bounced since.
 function activityStatus(u, now) {
   const age = u._active ? now - new Date(u._active) : Infinity;
-  if (u.is_online && u.last_seen_at && now - new Date(u.last_seen_at) < 12 * 3600e3) return 'online';
+  const bouncedSince = u.fcm_token_invalid_at && u.last_seen_at && new Date(u.fcm_token_invalid_at) > new Date(u.last_seen_at);
+  if (u.is_online && u.last_seen_at && now - new Date(u.last_seen_at) < 30 * 60e3 && !bouncedSince) return 'online';
   if (age < 864e5) return 'today';
   if (age < 7 * 864e5) return 'week';
   if (age < 30 * 864e5) return 'idle';
@@ -3957,7 +3962,7 @@ function renderActivity() {
   body.innerHTML = page.map(u => `<tr>
     <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
     <td>${badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
-    <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : '<span class="cell-sub">Not recorded</span>'}</td>
+    <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : '<span class="cell-sub" title="Recorded when the phone signs in or reopens the app">Not recorded yet</span>'}</td>
     <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}</td>
     <td>${u.platform ? badge(PLATFORM_BADGE, u.platform) : '<span class="badge badge-grey">Unknown</span>'}<div class="cell-sub">${escHtml(u.app_version || 'older build')}</div></td>
     <td style="font-size:12px;white-space:nowrap">${dateTimeCell(u.created_at)}</td>
