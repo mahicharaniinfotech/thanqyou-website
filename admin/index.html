@@ -3053,9 +3053,12 @@ function downloadMetricsCSV(kind) {
 // firebase_uid -> @username_handle from the user's social profile (if they created one)
 let socialHandles = {};
 async function loadSocialHandles() {
-  const [rows] = await Promise.all([query('social_accounts', 'select=firebase_uid,username_handle,username'), ensureAvatars(true)]);
-  socialHandles = {};
-  (rows || []).forEach(a => { const h = a.username_handle || a.username; if (a.firebase_uid && h) socialHandles[a.firebase_uid] = h; });
+  const [rows] = await Promise.all([query('social_accounts', 'select=firebase_uid,username_handle,username,location'), ensureAvatars(true)]);
+  socialHandles = {}; socialLocations = {};
+  (rows || []).forEach(a => {
+    const h = a.username_handle || a.username; if (a.firebase_uid && h) socialHandles[a.firebase_uid] = h;
+    const loc = (a.location || '').trim(); if (a.firebase_uid && loc) socialLocations[a.firebase_uid] = loc;
+  });
 }
 
 // Profile photos, keyed by firebase_uid and by social_uid. Order: the
@@ -3657,11 +3660,16 @@ function deviceCell(u) {
 }
 
 // State / City: chosen at signup, or estimated from the network (IP) for
-// accounts created before signup asked - marked "estimated".
+// accounts created before signup asked - marked "estimated". Mobile IPs
+// often place people in the wrong city, so the free-text Location the user
+// typed on their Social profile is shown under it when they've set one.
+let socialLocations = {};
 function regionCell(u) {
-  if (!u.state && !u.city) return '<span style="color:var(--grey)">—</span>';
-  const est = u.region_source === 'ip_estimate' ? '<div class="cell-sub">estimated</div>' : '';
-  return `${escHtml(u.state||'—')}<div class="cell-sub">${escHtml(u.city||'—')}</div>${est}`;
+  const loc = socialLocations[u.firebase_uid];
+  const prof = loc ? `<div class="cell-sub" title="Typed by the user on their Social profile">Profile: ${escHtml(loc)}</div>` : '';
+  if (!u.state && !u.city) return loc ? `<span style="color:var(--grey)">—</span>${prof}` : '<span style="color:var(--grey)">—</span>';
+  const est = u.region_source === 'ip_estimate' ? '<div class="cell-sub">estimated from network</div>' : '';
+  return `${escHtml(u.state||'—')}<div class="cell-sub">${escHtml(u.city||'—')}</div>${est}${prof}`;
 }
 
 async function loadUsers() {
@@ -4022,7 +4030,7 @@ async function viewUser(uid) {
       <div class="detail-field"><div class="df-label">Device</div><div class="df-value">${escHtml(user.device_model || PLATFORM_NAMES[user.platform] || '—')}${user.os_version ? `<div class="cell-sub">${escHtml(user.os_version)}${user.app_version ? ' · app ' + escHtml(user.app_version) : ''}</div>` : ''}</div></div>
       ${user.banned_at ? `<div class="detail-field" style="grid-column:1/-1"><div class="df-label">Suspended</div><div class="df-value" style="color:var(--red)">${formatDateTime(user.banned_at)} · ${escHtml(user.ban_reason||'')}</div></div>` : ''}
       <div class="detail-field"><div class="df-label">State</div><div class="df-value">${escHtml(user.state||'—')}</div></div>
-      <div class="detail-field"><div class="df-label">City</div><div class="df-value">${escHtml(user.city||'—')}${user.region_source === 'ip_estimate' ? '<div class="cell-sub">estimated from network</div>' : ''}</div></div>
+      <div class="detail-field"><div class="df-label">City</div><div class="df-value">${escHtml(user.city||'—')}${user.region_source === 'ip_estimate' ? '<div class="cell-sub">estimated from network</div>' : ''}${socialLocations[user.firebase_uid] ? `<div class="cell-sub">Profile location: ${escHtml(socialLocations[user.firebase_uid])}</div>` : ''}</div></div>
       <div class="detail-field"><div class="df-label">ThanqYou ID</div><div class="df-value" style="font-family:'DM Mono',monospace;letter-spacing:.5px">${escHtml(user.ty_id||'—')}</div></div>
       <div class="detail-field"><div class="df-label">Referral Code</div><div class="df-value">${escHtml(user.referral_code||'—')}</div></div>
       <div class="detail-field"><div class="df-label">Wallet Balance</div><div class="df-value" style="color:var(--red)">${formatRupees(w.balance)}</div></div>
