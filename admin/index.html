@@ -166,6 +166,12 @@
   #dash-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
   .stat-value.pos { color:var(--green); } .stat-value.neg { color:#A5362B; }
   .be-pct { font-size:15px; font-weight:700; margin-top:4px; } .be-pct.pos { color:var(--green); } .be-pct.neg { color:#A5362B; }
+  /* Bank > Payouts card: what the money was paid for, and to whom */
+  .pay-why { margin-top:12px; padding-top:10px; border-top:1px solid var(--dark3); display:flex; flex-direction:column; gap:8px; }
+  .pay-why:empty { display:none; }
+  .pay-why .pw-h { font-size:10.5px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--grey2); }
+  .pay-why .pw-row { display:flex; justify-content:space-between; gap:10px; font-size:13px; font-weight:600; }
+  .pay-why .pw-who { font-size:11.5px; color:var(--grey2); margin-top:1px; }
   .be-pct small { font-size:12px; font-weight:500; color:var(--grey2); margin-left:4px; }
   .kpi-sub { font-size:11.5px; color:var(--grey2); margin-top:2px; }
   .kpi-foot { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:22px; }
@@ -1431,6 +1437,7 @@
               <div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12"/><path d="M6 8h12"/><path d="M6 13l8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></div>
             </div>
             <div class="kpi-foot"><span id="s-earn-d"></span><span class="stat-change" id="s-earn-c">Loading...</span></div>
+            <div class="pay-why" id="s-earn-why"></div>
             <svg class="spark" id="spark-earn" preserveAspectRatio="none"></svg>
           </div>
           <div class="stat-card" title="Google AdMob estimated earnings (AdMob reports lag about a day)">
@@ -3368,12 +3375,16 @@ function renderDashStats() {
 // Payouts count every account (individual and business): it's the money
 // AdMob has to cover.
 async function loadBank() {
-  const [txns, admob] = await Promise.all([
+  const [txns, admob, users] = await Promise.all([
     query('wallet_transactions', `select=firebase_uid,rupees,type,source,created_at&type=in.(${PAYOUT_TYPES})`)
       .then(rows => rows.map(t => ({ ...t, type: payoutKind(t) }))),
-    rpc('admin_admob_daily', {}).catch(e => { showToast(`Couldn't load AdMob earnings: ${e.message}`, 'error'); return null; })
+    rpc('admin_admob_daily', {}).catch(e => { showToast(`Couldn't load AdMob earnings: ${e.message}`, 'error'); return null; }),
+    query('users', 'select=firebase_uid,display_name'),
+    loadSocialHandles()
   ]);
-  window._bankData = { allTxns: txns || [], admob };
+  const names = {};
+  (users || []).forEach(u => { names[u.firebase_uid] = u.display_name; });
+  window._bankData = { allTxns: txns || [], admob, names };
   renderBank();
 }
 
@@ -3404,6 +3415,24 @@ function renderBank() {
     $('s-earn-d').innerHTML = `<span class="chip ${eToday ? 'up' : 'flat'}">+${fmtINR(eToday)} today</span>`;
     $('s-earn-c').textContent = '';
   }
+
+  // Why the money was paid: today (All time) or the chosen period, by reason
+  const whyList = filtered ? txns : d.allTxns.filter(t => localDay(t.created_at) === today);
+  const groups = {};
+  whyList.forEach(t => {
+    const g = groups[t.type] ||= { amount: 0, count: 0, uids: new Set() };
+    g.amount += parseFloat(t.rupees || 0); g.count++; g.uids.add(t.firebase_uid);
+  });
+  const nameOf = uid => d.names[uid] || (socialHandles[uid] ? '@' + socialHandles[uid] : 'User');
+  const rowsHtml = Object.entries(groups).sort((a, b) => b[1].amount - a[1].amount).map(([kind, g]) => {
+    const who = [...g.uids].map(nameOf);
+    const shown = who.slice(0, 3).map(escHtml).join(', ') + (who.length > 3 ? ` +${who.length - 3} more` : '');
+    return `<div><div class="pw-row"><span>${escHtml(kind)}</span><span>${fmtINR(g.amount)}</span></div>`
+      + `<div class="pw-who" title="${escHtml(who.join(', '))}">${g.count} payment${g.count === 1 ? '' : 's'} · ${who.length} user${who.length === 1 ? '' : 's'}: ${shown}</div></div>`;
+  }).join('');
+  $('s-earn-why').innerHTML = whyList.length
+    ? `<div class="pw-h">${filtered ? 'Paid for · ' + escHtml(label) : 'Paid today for'}</div>` + rowsHtml
+    : (filtered ? '' : '<div class="pw-h">Nothing paid today</div>');
 
   let days;
   if (from && to && from !== to) days = dayList(from, to);
