@@ -1362,23 +1362,31 @@
 
       <!-- ANALYTICS -->
       <div class="page" id="page-analytics">
-        <div class="table-card" style="margin-bottom:16px">
-          <div class="table-header">
-            <h3>Daily Analytics</h3>
-            <input type="date" id="analytics-date" onchange="loadAnalytics()" style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
+        <div class="dash-head page-head">
+          <div><h2>Analytics</h2><p id="analytics-range-label">Today</p></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <div class="dash-filter" data-range="analytics" data-default="today"></div>
+            <div class="date-range" title="Show a whole month"><span class="dr-lbl">Month</span><input type="month" id="analytics-month" aria-label="Month" onchange="setAnalyticsMonth(this.value)"></div>
           </div>
         </div>
         <div class="mini-stats" style="grid-template-columns:repeat(4,1fr)">
-          <div class="mini-stat"><div class="ms-val" id="an-dau">—</div><div class="ms-label">Daily Active Users</div></div>
-          <div class="mini-stat"><div class="ms-val" id="an-watchtime">—</div><div class="ms-label">Avg Watch Time / User</div></div>
-          <div class="mini-stat"><div class="ms-val" id="an-reelsperuser">—</div><div class="ms-label">Reels Watched / User</div></div>
-          <div class="mini-stat"><div class="ms-val" id="an-impressions">—</div><div class="ms-label">Ad Impressions</div></div>
+          <div class="mini-stat"><div class="ms-val" id="an-dau">—</div><div class="ms-label">Active users</div><div class="ms-sub" id="an-dau-sub"></div></div>
+          <div class="mini-stat"><div class="ms-val" id="an-watchtime">—</div><div class="ms-label">Avg watch time / user / day</div></div>
+          <div class="mini-stat"><div class="ms-val" id="an-reelsperuser">—</div><div class="ms-label">Reels watched / user / day</div></div>
+          <div class="mini-stat"><div class="ms-val" id="an-impressions">—</div><div class="ms-label">Ad impressions</div></div>
         </div>
         <div class="mini-stats" style="grid-template-columns:repeat(4,1fr);margin-top:12px">
-          <div class="mini-stat"><div class="ms-val" id="an-fillrate">—</div><div class="ms-label">Fill Rate</div></div>
+          <div class="mini-stat"><div class="ms-val" id="an-fillrate">—</div><div class="ms-label">Fill rate</div></div>
           <div class="mini-stat"><div class="ms-val" id="an-ecpm">—</div><div class="ms-label">Effective eCPM</div></div>
-          <div class="mini-stat"><div class="ms-val" id="an-adrevenue">—</div><div class="ms-label">Ad Revenue</div></div>
-          <div class="mini-stat"><div class="ms-val" id="an-payouts">—</div><div class="ms-label">Reward Payouts</div></div>
+          <div class="mini-stat"><div class="ms-val" id="an-adrevenue">—</div><div class="ms-label">Ad revenue</div></div>
+          <div class="mini-stat"><div class="ms-val" id="an-payouts">—</div><div class="ms-label">Payouts to users</div></div>
+        </div>
+        <div class="table-card" style="margin-top:16px">
+          <div class="table-header"><h3>Day by day</h3><span class="cell-sub" id="an-note"></span></div>
+          <div style="overflow-x:auto">
+          <table><thead><tr><th>Day</th><th>Active users</th><th>Watch time / user</th><th>Reels / user</th><th>Ad impressions</th><th>Fill rate</th><th>eCPM</th><th>Ad revenue</th><th>Payouts</th></tr></thead>
+          <tbody id="an-days"><tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+          </div>
         </div>
       </div>
 
@@ -3200,7 +3208,7 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
 // The dashboard's Signups & posts chart has its own range (a trend needs several days)
 const PRESET_SETS = { trend: [['7d','7 days'],['14d','14 days'],['30d','30 days'],['90d','90 days'],['month','This month']] };
-const RANGE_RENDER = { trend: () => renderTrendChartRange(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls() };
+const RANGE_RENDER = { trend: () => renderTrendChartRange(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls(), analytics: () => loadAnalytics() };
 
 function rangeControlsHTML(prefix, active, presets = RANGE_PRESETS) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
@@ -4090,31 +4098,83 @@ Reason (the user will see this):`, '');
 // Content: see new functions below
 
 // ── ANALYTICS ────────────────────────────────────
+// ── ANALYTICS ────────────────────────────────────────
+// Any day, month or range (shared presets + From/To, plus a Month picker).
+// Totals on top, one row per day below. Days are the admin's calendar days
+// (IST); AdMob's ad figures use AdMob's own day boundaries.
+let _anReq = 0;
+function fmtWatch(sec) { const m = Math.floor(sec / 60), s = sec % 60; return m ? `${m}m ${s}s` : `${s}s`; }
+
+function setAnalyticsMonth(v) {
+  if (!/^\d{4}-\d{2}$/.test(v || '')) return;
+  const [y, m] = v.split('-').map(Number);
+  const today = localDay(new Date());
+  let to = `${v}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+  if (to > today) to = today;
+  document.getElementById('analytics-from').value = `${v}-01`;
+  document.getElementById('analytics-to').value = to;
+  document.querySelectorAll('#analytics-seg button').forEach(b => b.classList.remove('active'));
+  loadAnalytics();
+}
+
 async function loadAnalytics() {
-  const dateInput = document.getElementById('analytics-date');
-  if (!dateInput.value) dateInput.value = new Date().toISOString().substring(0,10);
+  const $ = id => document.getElementById(id);
+  const today = localDay(new Date());
+  const { from, to } = getRange('analytics');
+  $('analytics-range-label').textContent = `Showing ${rangeLabel(from, to)}`;
+  // The Month box shows the month when the range is exactly one month
+  const mo = from && from.endsWith('-01') && to && to.substring(0, 7) === from.substring(0, 7) ? from.substring(0, 7) : '';
+  const lastDay = mo ? `${mo}-${String(new Date(+mo.slice(0, 4), +mo.slice(5), 0).getDate()).padStart(2, '0')}` : '';
+  $('analytics-month').value = mo && (to === lastDay || to === today) ? mo : '';
+
   const ids = ['an-dau','an-watchtime','an-reelsperuser','an-impressions','an-fillrate','an-ecpm','an-adrevenue','an-payouts'];
-  ids.forEach(id => document.getElementById(id).textContent = '…');
+  ids.forEach(id => $(id).textContent = '…');
+  $('an-dau-sub').textContent = '';
+  $('an-note').textContent = '';
+  $('an-days').innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  const req = ++_anReq;
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/admin-analytics-summary`, {
       method: 'POST',
       headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: dateInput.value })
+      body: JSON.stringify({ from: from || undefined, to: to || today })
     });
     const d = await res.json();
+    if (req !== _anReq) return; // a newer range was picked meanwhile
     if (d.error) throw new Error(d.error);
-    document.getElementById('an-dau').textContent = d.dau;
-    const mins = Math.floor(d.avg_watch_time_seconds / 60), secs = d.avg_watch_time_seconds % 60;
-    document.getElementById('an-watchtime').textContent = `${mins}m ${secs}s`;
-    document.getElementById('an-reelsperuser').textContent = d.avg_reels_per_user;
-    document.getElementById('an-impressions').textContent = d.ad_impressions.toLocaleString();
-    document.getElementById('an-fillrate').textContent = d.fill_rate_pct + '%';
-    document.getElementById('an-ecpm').textContent = d.ecpm_currency + ' ' + d.effective_ecpm;
-    document.getElementById('an-adrevenue').textContent = '₹' + d.ad_revenue_inr.toLocaleString();
-    document.getElementById('an-payouts').textContent = '₹' + d.reward_payouts_inr.toLocaleString();
+    const cur = d.ecpm_currency || 'USD', t = d.totals;
+    $('an-dau').textContent = t.active_users.toLocaleString('en-IN');
+    $('an-watchtime').textContent = fmtWatch(t.avg_watch_time_seconds);
+    $('an-reelsperuser').textContent = t.avg_reels_per_user;
+    $('an-impressions').textContent = t.ad_impressions.toLocaleString('en-IN');
+    $('an-fillrate').textContent = t.fill_rate_pct + '%';
+    $('an-ecpm').textContent = cur + ' ' + t.effective_ecpm;
+    $('an-adrevenue').textContent = fmtINR(t.ad_revenue_inr);
+    $('an-payouts').textContent = fmtINR(t.reward_payouts_inr);
+    if (d.from !== d.to) $('an-dau-sub').textContent = `different people over ${d.days.length} days`;
+
+    // Newest first; long ranges skip days with nothing at all
+    let days = d.days.slice().reverse(), hidden = 0;
+    const empty = x => !x.active_users && !x.ad_impressions && !x.reward_payouts_inr;
+    if (days.length > 31) { const kept = days.filter(x => !empty(x)); hidden = days.length - kept.length; days = kept; }
+    $('an-note').textContent = [d.admob_error, hidden ? `${hidden} days with no activity hidden` : ''].filter(Boolean).join(' · ');
+    $('an-days').innerHTML = days.length ? days.map(x => `<tr>
+        <td style="white-space:nowrap;font-weight:600">${fmtDay(x.day)}</td>
+        <td class="num-cell">${x.active_users}</td>
+        <td>${fmtWatch(x.avg_watch_time_seconds)}</td>
+        <td>${x.avg_reels_per_user}</td>
+        <td class="num-cell">${x.ad_impressions.toLocaleString('en-IN')}</td>
+        <td>${x.fill_rate_pct}%</td>
+        <td>${cur} ${x.effective_ecpm}</td>
+        <td>${fmtINR(x.ad_revenue_inr)}</td>
+        <td>${fmtINR(x.reward_payouts_inr)}</td>
+      </tr>`).join('')
+      : '<tr><td colspan="9"><div class="empty-state"><p>No activity in this period</p></div></td></tr>';
   } catch (e) {
-    ids.forEach(id => document.getElementById(id).textContent = '—');
-    showToast('Failed to load analytics: ' + e.message);
+    if (req !== _anReq) return;
+    ids.forEach(id => $(id).textContent = '—');
+    $('an-days').innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>Couldn&#39;t load analytics</p></div></td></tr>';
+    showToast('Failed to load analytics: ' + e.message, 'error');
   }
 }
 
