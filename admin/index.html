@@ -4571,6 +4571,83 @@ function setupRealtime() {
   }, 30000);
 }
 
+// ── TAB ALERTS ───────────────────────────────────────
+// While you're on another tab or window, the panel's tab icon gets a green
+// dot for a new signup and a red dot for a new post/reel, and the title
+// counts them. Checked every 30 s (a background tab is slowed to about once
+// a minute by the browser); cleared when you come back to the tab. Quiet on
+// errors - no toasts from a tab nobody is looking at.
+const TAB_ICON = '/images/icon-192.png', TAB_TITLE = 'ThanqYou Admin';
+let _alertSeen = null, _alertNew = { signups: 0, posts: 0 }, _alertIcon = null;
+
+async function latestCreatedAt(table, filter) {
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/${table}?select=created_at${filter}&order=created_at.desc&limit=20`,
+    { headers: { 'x-admin-session': sessionToken } });
+  const rows = await r.json().catch(() => null);
+  if (!Array.isArray(rows)) throw new Error('unavailable');
+  return rows.map(x => x.created_at).filter(Boolean);
+}
+
+async function checkTabAlerts() {
+  if (!sessionToken || document.getElementById('app').style.display !== 'block') { _alertSeen = null; return; }
+  let users, posts;
+  try {
+    [users, posts] = await Promise.all([latestCreatedAt('users', ''), latestCreatedAt('posts', '&is_deleted=eq.false')]);
+  } catch { return; }
+  const seen = _alertSeen;
+  _alertSeen = {
+    users: seen && seen.users > (users[0] || '') ? seen.users : (users[0] || ''),
+    posts: seen && seen.posts > (posts[0] || '') ? seen.posts : (posts[0] || ''),
+  };
+  if (!seen || (!document.hidden && document.hasFocus())) return;
+  const signups = users.filter(t => t > seen.users).length, newPosts = posts.filter(t => t > seen.posts).length;
+  if (!signups && !newPosts) return;
+  _alertNew.signups += signups;
+  _alertNew.posts += newPosts;
+  drawTabAlerts();
+}
+
+function drawTabAlerts() {
+  const { signups, posts } = _alertNew;
+  const parts = [];
+  if (signups) parts.push(`${signups} new signup${signups === 1 ? '' : 's'}`);
+  if (posts) parts.push(`${posts} new post${posts === 1 ? '' : 's'}`);
+  document.title = parts.length ? `(${parts.join(', ')}) ${TAB_TITLE}` : TAB_TITLE;
+  const link = document.querySelector('link[rel="icon"]');
+  if (!signups && !posts) { link.href = TAB_ICON; return; }
+  const paint = () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.drawImage(_alertIcon, 0, 0, 64, 64);
+    const dot = (y, color) => {
+      g.beginPath(); g.arc(48, y, 14, 0, 2 * Math.PI);
+      g.fillStyle = color; g.fill();
+      g.lineWidth = 4; g.strokeStyle = '#fff'; g.stroke();
+    };
+    // Red (post) top-right; green (signup) top-right, or under the red one
+    if (posts) dot(16, '#e5383b');
+    if (signups) dot(posts ? 48 : 16, '#1fa855');
+    link.href = c.toDataURL('image/png');
+  };
+  if (!_alertIcon) { _alertIcon = new Image(); _alertIcon.src = TAB_ICON; }
+  if (_alertIcon.complete && _alertIcon.naturalWidth) paint();
+  else _alertIcon.addEventListener('load', paint, { once: true });
+}
+
+// Back on the tab: clear the dots, and refresh the dashboard if it's open
+function clearTabAlerts() {
+  if (document.hidden || !document.hasFocus()) return;
+  if (!_alertNew.signups && !_alertNew.posts) return;
+  _alertNew = { signups: 0, posts: 0 };
+  drawTabAlerts();
+  const activePage = document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
+  if (activePage === 'dashboard') loadDashboard();
+}
+window.addEventListener('focus', clearTabAlerts);
+document.addEventListener('visibilitychange', clearTabAlerts);
+setInterval(checkTabAlerts, 30000);
+
 // Init
 setupRealtime();
 
