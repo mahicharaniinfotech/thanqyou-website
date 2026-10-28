@@ -70,6 +70,14 @@
   // links must be https:// - messaging apps don't make thanqyou:// links
   // tappable. On Android an intent:// link is used so that, without the
   // app, the browser goes straight to the Play Store.
+  //
+  // The store hop is pinned to the Google Play app (package
+  // com.android.vending): a plain play.google.com link gets claimed by the
+  // phone maker's own store on vivo/iQOO, Oppo, Realme, Xiaomi..., which
+  // then says "this app is unpublished". Chrome only accepts an http(s)
+  // fallback, so a missing app first comes back here with &install=1, and
+  // this page then opens Google Play itself (with a button, in case the
+  // browser wants a tap first).
   var params = new URLSearchParams(window.location.search);
   var raw = params.get('id') || '';
   var id = raw.toUpperCase().replace(/\s/g, '');
@@ -91,20 +99,38 @@
     box.hidden = false;
     var query = 'id=' + encodeURIComponent(id) + (ref ? '&ref=' + ref : '');
     var deepLink = 'thanqyou://u?' + query;
-    var store = 'https://play.google.com/store/apps/details?id=com.thanqyou' +
-      '&referrer=' + encodeURIComponent(query);
-    document.querySelector('#getApp a').href = store;
+    var details = 'details?id=com.thanqyou&referrer=' + encodeURIComponent(query);
+    var store = 'https://play.google.com/store/apps/' + details;
     var isAndroid = /Android/i.test(navigator.userAgent);
-    var target = isAndroid
-      ? 'intent://u?' + query +
-        '#Intent;scheme=thanqyou;package=com.thanqyou;S.browser_fallback_url=' +
-        encodeURIComponent(store) + ';end'
-      : deepLink;
-    openLink.href = target;
-    window.location.href = target;
-    setTimeout(function () {
-      if (!document.hidden) document.getElementById('getApp').classList.add('nudge');
-    }, 2000);
+    // Google Play app only; its own web page if Play isn't on the phone.
+    var playApp = 'intent://' + details +
+      '#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=' +
+      encodeURIComponent(store) + ';end';
+    var getLink = isAndroid ? playApp : store;
+    document.querySelector('#getApp a').href = getLink;
+
+    if (isAndroid && params.get('install') === '1') {
+      // Came back here because the app isn't installed: go to Google Play.
+      document.getElementById('title').textContent = 'Get ThanQYou to see this profile';
+      document.getElementById('help').textContent =
+        'Install ThanQYou from Google Play. The referral code is filled in for you at signup.';
+      openLink.textContent = 'Get ThanQYou on Google Play';
+      openLink.href = playApp;
+      document.getElementById('getApp').hidden = true;
+      window.location.href = playApp;
+    } else {
+      var back = window.location.origin + window.location.pathname + '?' + query + '&install=1';
+      var target = isAndroid
+        ? 'intent://u?' + query +
+          '#Intent;scheme=thanqyou;package=com.thanqyou;S.browser_fallback_url=' +
+          encodeURIComponent(back) + ';end'
+        : deepLink;
+      openLink.href = target;
+      window.location.href = target;
+      setTimeout(function () {
+        if (!document.hidden) document.getElementById('getApp').classList.add('nudge');
+      }, 2000);
+    }
   }
 </script>
 </body>

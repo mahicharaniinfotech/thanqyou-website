@@ -663,6 +663,16 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
     st.addEventListener('mouseenter', on); st.addEventListener('focus', on);
   });
 })();
+
+// Android: open "Get it on Google Play" in the Google Play app itself -
+// vivo/Oppo/Realme/Xiaomi stores otherwise claim play.google.com links
+// and show "this app is unpublished".
+(function(){
+  if (!/Android/i.test(navigator.userAgent)) return;
+  var web = 'https://play.google.com/store/apps/details?id=com.thanqyou';
+  var app = 'intent://details?id=com.thanqyou#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=' + encodeURIComponent(web) + ';end';
+  document.querySelectorAll('a[href="' + web + '"]').forEach(function(a){ a.href = app; a.removeAttribute('target'); });
+})();
 </script>
 </body>
 </html>

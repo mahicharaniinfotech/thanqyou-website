@@ -71,6 +71,13 @@
   setTimeout(function () {
     if (!document.hidden) document.getElementById('getApp').classList.add('nudge');
   }, 2000);
+  // Android: the Google Play app itself - phone makers' stores otherwise
+  // claim play.google.com links ("this app is unpublished").
+  if (/Android/i.test(navigator.userAgent)) {
+    document.querySelector('#getApp a').href =
+      'intent://details?id=com.thanqyou#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=' +
+      encodeURIComponent('https://play.google.com/store/apps/details?id=com.thanqyou') + ';end';
+  }
 </script>
 </body>
 </html>
