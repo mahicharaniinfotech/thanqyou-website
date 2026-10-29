@@ -1569,12 +1569,12 @@
               <button class="toggle on" id="toggle-kyc" aria-label="Automatic KYC" onclick="toggleSetting('kyc_verification_enabled', this)"></button>
             </div>
             <div class="setting-row">
-              <div class="setting-info"><p>New Signups</p><span>Blocking signups needs an app update - not connected yet</span></div>
-              <span class="not-wired">Not connected</span>
+              <div class="setting-info"><p>New Signups</p><span>Off: nobody can create a new account. Existing users sign in as usual</span></div>
+              <button class="toggle on" id="toggle-signups" aria-label="New signups" onclick="toggleSetting('signups_enabled', this)"></button>
             </div>
             <div class="setting-row">
-              <div class="setting-info"><p>Referral Program</p><span>Referral bonuses follow the early-bonus programme rules - not connected yet</span></div>
-              <span class="not-wired">Not connected</span>
+              <div class="setting-info"><p>Referral Program</p><span>Off: no referral bonuses are paid. Friends invited while off never earn one; earlier invites wait and pay when it's back on</span></div>
+              <button class="toggle on" id="toggle-referral" aria-label="Referral program" onclick="toggleSetting('referral_program_enabled', this)"></button>
             </div>
           </div>
           <div class="settings-card">
@@ -4240,13 +4240,13 @@ async function loadAnalytics() {
 }
 
 // ── SETTINGS (Feature Flags) ─────────────────────
-const FLAG_TOGGLES = [['toggle-payout','payouts_enabled'],['toggle-upload','content_upload_enabled'],['toggle-kyc','kyc_verification_enabled']];
+const FLAG_TOGGLES = [['toggle-payout','payouts_enabled'],['toggle-upload','content_upload_enabled'],['toggle-kyc','kyc_verification_enabled'],['toggle-signups','signups_enabled'],['toggle-referral','referral_program_enabled']];
 async function loadSettings() {
   try {
     // app_settings is a key/value table (not one row per flag as
     // columns) - fetch all 5 flag rows and build a lookup map.
     const [rows, versions] = await Promise.all([
-      query('app_settings', "select=key,value&key=in.(payouts_enabled,content_upload_enabled,kyc_verification_enabled,min_supported_build)"),
+      query('app_settings', "select=key,value&key=in.(payouts_enabled,content_upload_enabled,kyc_verification_enabled,signups_enabled,referral_program_enabled,min_supported_build)"),
       query('users', 'select=app_version&app_version=not.is.null')
     ]);
     // Highest build number among users, e.g. "2.1.0+66"
@@ -4270,8 +4270,14 @@ async function loadSettings() {
     showToast('Failed to load settings: ' + e.message);
   }
 }
+// Asked before switching these off - they change what every user can do
+const FLAG_OFF_CONFIRM = {
+  signups_enabled: 'Pause new signups? Nobody will be able to create an account until you turn this back on.',
+  referral_program_enabled: 'Pause referral bonuses? Friends invited while this is off will never earn a referral bonus.'
+};
 async function toggleSetting(flagName, btnEl) {
   var newValue = !btnEl.classList.contains('on');
+  if (!newValue && FLAG_OFF_CONFIRM[flagName] && !confirm(FLAG_OFF_CONFIRM[flagName])) return;
   btnEl.classList.toggle('on');
   try {
     var res = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/app_settings?key=eq.${flagName}`, {
