@@ -3684,7 +3684,7 @@ async function loadUsers() {
   await loadBusinessUids();
   document.getElementById('users-body').innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const [data, wallets, kycData] = await Promise.all([
-    query('users', 'select=id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,ty_id,state,city,region_source,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc'),
+    query('users', 'select=id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,ty_id,state,city,region_source,signup_method,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc'),
     query('coin_wallet', 'select=firebase_uid,balance,lifetime_earned,spendable_earned,locked_current'),
     query('user_kyc', 'select=firebase_uid,status')
   ]);
@@ -4038,6 +4038,7 @@ async function viewUser(uid) {
       <div class="detail-field"><div class="df-label">Device</div><div class="df-value">${escHtml(user.device_model || PLATFORM_NAMES[user.platform] || '—')}${user.os_version ? `<div class="cell-sub">${escHtml(user.os_version)}${user.app_version ? ' · app ' + escHtml(user.app_version) : ''}</div>` : ''}</div></div>
       ${user.banned_at ? `<div class="detail-field" style="grid-column:1/-1"><div class="df-label">Suspended</div><div class="df-value" style="color:var(--red)">${formatDateTime(user.banned_at)} · ${escHtml(user.ban_reason||'')}</div></div>` : ''}
       <div class="detail-field"><div class="df-label">State</div><div class="df-value">${escHtml(user.state||'—')}</div></div>
+      <div class="detail-field"><div class="df-label">Signed up with</div><div class="df-value">${user.signup_method === 'google' ? 'Google + mobile OTP' : 'Mobile number + OTP'}</div></div>
       <div class="detail-field"><div class="df-label">City</div><div class="df-value">${escHtml(user.city||'—')}${user.region_source === 'ip_estimate' ? '<div class="cell-sub">estimated from network</div>' : ''}${socialLocations[user.firebase_uid] ? `<div class="cell-sub">Profile location: ${escHtml(socialLocations[user.firebase_uid])}</div>` : ''}</div></div>
       <div class="detail-field"><div class="df-label">ThanqYou ID</div><div class="df-value" style="font-family:'DM Mono',monospace;letter-spacing:.5px">${escHtml(user.ty_id||'—')}</div></div>
       <div class="detail-field"><div class="df-label">Referral Code</div><div class="df-value">${escHtml(user.referral_code||'—')}</div></div>
