@@ -1250,7 +1250,8 @@
 
       <div class="page" id="page-activity">
         <div class="dash-head page-head">
-          <div><h2 id="act-title">Last login &amp; activity</h2><p>Status as of now · refresh to update</p></div>
+          <div><h2 id="act-title">Last login &amp; activity</h2><p>Status as of now · <span id="act-range-label">Time in app: last 7 days</span></p></div>
+          <div class="dash-filter" data-range="act" data-default="7d"></div>
         </div>
         <div class="mini-stats">
           <div class="mini-stat"><div class="ms-val" id="act-online">—</div><div class="ms-label">Online now</div></div>
@@ -1279,11 +1280,12 @@
               <option value="active">Sort: last active</option>
               <option value="login">Sort: last login</option>
               <option value="idle">Sort: longest inactive</option>
+              <option value="time">Sort: most time in app</option>
             </select>
             <button class="btn btn-red" onclick="emailActivityUsers()" id="act-email">Email these users</button>
           </div>
-          <table><thead><tr><th>User</th><th>Status</th><th>Last login</th><th>Last active</th><th>Platform</th><th>Joined</th></tr></thead>
-          <tbody id="act-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+          <table><thead><tr><th>User</th><th>Status</th><th>Last login</th><th>Last active</th><th title="Time with the Chats tab open, in the chosen dates">Time in Chats</th><th title="Time with the Social tab open, in the chosen dates">Time in Social</th><th>Platform</th><th>Joined</th></tr></thead>
+          <tbody id="act-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
           <div class="pagination"><span id="act-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="activityPage(-1)">← Prev</button><button class="pag-btn active" id="act-page-num">1</button><button class="pag-btn" onclick="activityPage(1)">Next →</button></div></div>
         </div>
       </div>
@@ -2910,7 +2912,7 @@ function emailCreators() {
 }
 
 function emailActivityUsers() {
-  openEmailComposer(getFilteredActivity().map(u => ({ firebase_uid: u.firebase_uid, email: u.email })), 'users');
+  openEmailComposer(getFilteredActivity().rows.map(u => ({ firebase_uid: u.firebase_uid, email: u.email })), 'users');
 }
 
 async function sendAdminEmail(test) {
@@ -3208,7 +3210,7 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
 // The dashboard's Signups & posts chart has its own range (a trend needs several days)
 const PRESET_SETS = { trend: [['7d','7 days'],['14d','14 days'],['30d','30 days'],['90d','90 days'],['month','This month']] };
-const RANGE_RENDER = { trend: () => renderTrendChartRange(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls(), analytics: () => loadAnalytics() };
+const RANGE_RENDER = { trend: () => renderTrendChartRange(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls(), analytics: () => loadAnalytics(), act: () => filterActivity() };
 
 function rangeControlsHTML(prefix, active, presets = RANGE_PRESETS) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
@@ -3784,7 +3786,7 @@ function usersPage(dir) {
 // Last login = latest sign-in on a phone (active_mobile_sessions, written by
 // register-mobile-session). Last active = latest of the three activity stamps
 // the app writes on open/resume. Online uses the same rule as App Installs.
-let activityData = [], activityPage_ = 0;
+let activityData = [], activityPage_ = 0, activityTime = { appTime: [], reelWatch: [] };
 const ACT_STATUS = {
   online: ['badge-green', 'Online'], today: ['badge-blue', 'Active in last 24 h'], week: ['badge-blue', 'Active in last 7 days'],
   idle: ['badge-orange', 'Inactive 7–30 days'], dormant: ['badge-grey', 'Inactive 30+ days'],
@@ -3921,14 +3923,17 @@ function renderChats() {
 }
 
 async function loadActivity() {
-  document.getElementById('act-body').innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('act-body').innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
   document.getElementById('act-title').textContent = accountMode === 'business' ? 'Business last login & activity' : 'Last login & activity';
   await loadBusinessUids();
-  const [users, sessions] = await Promise.all([
+  const [users, sessions, appTime, reelWatch] = await Promise.all([
     query('users', 'select=firebase_uid,display_name,email,phone,account_type,created_at,is_online,last_seen_at,last_seen,last_active_at,platform,app_version,fcm_token_invalid_at'),
     query('active_mobile_sessions', 'select=firebase_uid,logged_in_at'),
+    query('app_time_daily', 'select=firebase_uid,day,chats_seconds,social_seconds'),
+    query('reel_watch_events', 'select=viewer_firebase_uid,seconds_watched,created_at&seconds_watched=gt.0'),
     loadSocialHandles()
   ]);
+  activityTime = { appTime: appTime || [], reelWatch: reelWatch || [] };
   const lastLogin = {};
   (sessions || []).forEach(s => { if (s.logged_in_at && (!lastLogin[s.firebase_uid] || s.logged_in_at > lastLogin[s.firebase_uid])) lastLogin[s.firebase_uid] = s.logged_in_at; });
   const now = Date.now();
@@ -3955,38 +3960,71 @@ function getFilteredActivity() {
   const sort = document.getElementById('act-sort').value;
   // The 24h / 7-day filters include everyone more recent too, matching the cards
   const within = { online: ['online'], today: ['online', 'today'], week: ['online', 'today', 'week'] };
+  const times = activityTimeTotals();
   const rows = activityData.filter(u =>
     (!f || (f === 'gone' ? u._gone : (within[f] || [f]).includes(u._status))) &&
     (!q || [u.display_name, u.email, u.phone, socialHandles[u.firebase_uid]].some(v => plainLower(v).includes(q))));
   const t = ts => ts ? new Date(ts).getTime() : 0;
   if (sort === 'login') rows.sort((a, b) => t(b._login) - t(a._login));
   else if (sort === 'idle') rows.sort((a, b) => t(a._active) - t(b._active));
+  else if (sort === 'time') {
+    const tot = u => { const x = times[u.firebase_uid]; return x ? x.chats + Math.max(x.social, x.reels) : 0; };
+    rows.sort((a, b) => tot(b) - tot(a) || t(b._active) - t(a._active));
+  }
   else rows.sort((a, b) => (b._status === 'online') - (a._status === 'online') || t(b._active) - t(a._active));
-  return rows;
+  return { rows, times };
 }
 
 function filterActivity() { activityPage_ = 0; renderActivity(); }
 
+// Time in app per user for the chosen dates: Chats / Social tabs (counted
+// by the app from build 2.1.0+76), plus reel watching time, which the app
+// has recorded since July.
+function activityTimeTotals() {
+  const { from, to } = getRange('act');
+  const inR = day => (!from || day >= from) && (!to || day <= to);
+  const t = {};
+  const T = uid => (t[uid] ||= { chats: 0, social: 0, reels: 0 });
+  activityTime.appTime.forEach(r => { if (inR(r.day)) { T(r.firebase_uid).chats += r.chats_seconds; T(r.firebase_uid).social += r.social_seconds; } });
+  activityTime.reelWatch.forEach(r => { if (inDayRange(r.created_at, from, to)) T(r.viewer_firebase_uid).reels += r.seconds_watched; });
+  return t;
+}
+function fmtDur(sec) {
+  if (!sec) return '';
+  if (sec < 60) return `${sec}s`;
+  const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+  return h ? `${h}h ${m}m` : `${m}m`;
+}
+
 function renderActivity() {
-  const rows = getFilteredActivity();
+  const { rows, times } = getFilteredActivity();
+  const { from, to } = getRange('act');
+  document.getElementById('act-range-label').textContent = 'Time in app: ' + rangeLabel(from, to);
   document.getElementById('act-email').textContent = `Email these users (${rows.filter(u => (u.email || '').trim()).length})`;
   const start = activityPage_ * PAGE_SIZE, page = rows.slice(start, start + PAGE_SIZE);
   document.getElementById('act-count').textContent = rows.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length}` : '0 users';
   document.getElementById('act-page-num').textContent = activityPage_ + 1;
   const body = document.getElementById('act-body');
-  if (!page.length) { body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
+  if (!page.length) { body.innerHTML = `<tr><td colspan="8"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
+  const timeCells = x => {
+    const none = '<span class="cell-sub">—</span>';
+    const reels = x && x.reels ? `<div class="cell-sub">${fmtDur(x.reels)} watching reels</div>` : '';
+    return `<td style="font-size:12px;white-space:nowrap">${x && x.chats ? `<b>${fmtDur(x.chats)}</b>` : none}</td>`
+      + `<td style="font-size:12px;white-space:nowrap">${x && x.social ? `<b>${fmtDur(x.social)}</b>` : (reels ? '' : none)}${reels}</td>`;
+  };
   body.innerHTML = page.map(u => `<tr>
     <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
     <td>${badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
     <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : '<span class="cell-sub" title="Recorded when the phone signs in or reopens the app">Not recorded yet</span>'}</td>
     <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}</td>
+    ${timeCells(times[u.firebase_uid])}
     <td>${u.platform ? badge(PLATFORM_BADGE, u.platform) : '<span class="badge badge-grey">Unknown</span>'}<div class="cell-sub">${escHtml(u.app_version || 'older build')}</div></td>
     <td style="font-size:12px;white-space:nowrap">${dateTimeCell(u.created_at)}</td>
   </tr>`).join('');
 }
 
 function activityPage(dir) {
-  const maxPage = Math.max(0, Math.ceil(getFilteredActivity().length / PAGE_SIZE) - 1);
+  const maxPage = Math.max(0, Math.ceil(getFilteredActivity().rows.length / PAGE_SIZE) - 1);
   activityPage_ = Math.max(0, Math.min(maxPage, activityPage_ + dir));
   renderActivity();
 }
