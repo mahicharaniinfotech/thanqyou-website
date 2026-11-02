@@ -866,7 +866,7 @@
         <label><input type="radio" name="acct-mode" value="business" onchange="setAccountMode(this.value)"><span>Business</span></label>
       </div>
       <div class="topbar-actions">
-        <span class="target-pill" id="target-pill" title="Users still to sign up to reach 1,000,000 by 31 Oct 2027">🎯 <b id="target-left">—</b><span class="tp-text">to 1M</span></span>
+        <span class="target-pill" id="target-pill" title="Users still to sign up to reach 1,000,000 by 31 Oct 2027">🎯 <b id="target-left">—</b><span class="tp-text" id="target-short">to 1M</span></span>
         <span class="live-pill"><span class="live-dot"></span><span class="btn-text">Live</span></span>
         <button class="btn btn-ghost" onclick="refreshCurrentPage()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
@@ -890,7 +890,7 @@
 
         <div class="goal-card" id="goal-card">
           <div class="goal-head">
-            <div><h3>🎯 Road to 1 million users</h3><p>Target: 10,00,000 users by 31 Oct 2027 · personal accounts only (business accounts not counted)</p></div>
+            <div><h3 id="goal-title">🎯 Road to 1 million users</h3><p id="goal-subtitle">Target: 10,00,000 users by 31 Oct 2027 · personal accounts only (business accounts not counted)</p></div>
             <span class="cell-sub" id="goal-updated"></span>
           </div>
           <div class="goal-grid">
@@ -2029,7 +2029,9 @@ function showPage(name, el) {
   document.getElementById('page-'+name).classList.add('active');
   el.classList.add('active');
   document.getElementById('page-title').textContent = pageTitles[name];
-  document.getElementById('target-pill').hidden = name !== 'dashboard';
+  const goalHome = name === 'dashboard' || name === 'biz';
+  document.getElementById('target-pill').hidden = !goalHome;
+  if (goalHome) placeGoalCard(name);
   document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   closeDrawer();
   window.scrollTo(0, 0);
@@ -2329,6 +2331,7 @@ async function fetchBizList(ts) {
 }
 
 async function loadBizOverview() {
+  loadGoal();
   const { from, to } = getRange('biz');
   document.getElementById('biz-range-label').textContent = `Activity: ${rangeLabel(from, to)}`;
   let list;
@@ -3250,16 +3253,37 @@ async function loadDashboard() {
 }
 
 // ── Road to 1 million ──
-// Target set by the founder (Nov 2026 - Oct 2027). Counts personal accounts
-// only (business excluded) by sign-up time, in IST months. Refreshed with the
-// dashboard, which reloads when a new signup arrives.
-const USER_GOAL = 1000000;
+// Targets set by the founder (Nov 2026 - Oct 2027), one per account mode:
+// personal 10,00,000 on the Dashboard, business 10,000 on Business overview.
+// Counted by sign-up time, in IST months. Refreshed with the page, and every
+// 30 s when a new signup of that kind arrives.
 const GOAL_PLAN = [
   ['2026-11', 25000, 25000], ['2026-12', 35000, 60000], ['2027-01', 45000, 105000],
   ['2027-02', 55000, 160000], ['2027-03', 65000, 225000], ['2027-04', 75000, 300000],
   ['2027-05', 85000, 385000], ['2027-06', 95000, 480000], ['2027-07', 100000, 580000],
   ['2027-08', 105000, 685000], ['2027-09', 110000, 795000], ['2027-10', 205000, 1000000],
 ];
+// Business: same monthly curve as personal, scaled to 10,000
+const GOALS = {
+  individual: { goal: 1000000, plan: GOAL_PLAN, short: '1M', noun: 'users', filter: 'or=(account_type.is.null,account_type.neq.business)',
+    title: '🎯 Road to 1 million users', subtitle: 'Target: 10,00,000 users by 31 Oct 2027 · personal accounts only (business accounts not counted)' },
+  business: { goal: 10000, plan: GOAL_PLAN.map(([ym, t, c]) => [ym, t / 100, c / 100]), short: '10K', noun: 'businesses', filter: 'account_type=eq.business',
+    title: '🎯 Road to 10,000 businesses', subtitle: 'Target: 10,000 business accounts by 31 Oct 2027 · business accounts only' },
+};
+const goalCfg = () => GOALS[accountMode === 'business' ? 'business' : 'individual'];
+function placeGoalCard(page) {
+  const card = document.getElementById('goal-card');
+  const stats = document.querySelector(`#page-${page} .stats-grid`);
+  if (stats && card.nextElementSibling !== stats) stats.before(card);
+  const g = goalCfg();
+  if (!goalData || goalData.cfg !== g) {
+    goalData = null;
+    document.getElementById('goal-title').textContent = g.title;
+    document.getElementById('goal-subtitle').textContent = g.subtitle;
+    ['target-left', 'goal-left', 'goal-total', 'goal-month-new', 'goal-month-sub', 'goal-cum', 'goal-cum-sub'].forEach(id => { document.getElementById(id).textContent = '—'; });
+    document.getElementById('goal-plan').innerHTML = '';
+  }
+}
 const istMonthStart = ym => `${ym}-01T00:00:00+05:30`;
 function nextYm(ym) { let [y, m] = ym.split('-').map(Number); m++; if (m > 12) { m = 1; y++; } return `${y}-${String(m).padStart(2, '0')}`; }
 function ymLabel(ym) { const [y, m] = ym.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' }); }
@@ -3267,18 +3291,20 @@ const nfIN = n => Number(n).toLocaleString('en-IN');
 let goalData = null;
 
 async function loadGoal() {
+  const cfg = goalCfg();
   const istNow = new Date(Date.now() + 330 * 60000).toISOString();
   const curYm = istNow.slice(0, 7);
-  const elapsed = GOAL_PLAN.filter(([ym]) => ym <= curYm);
+  const elapsed = cfg.plan.filter(([ym]) => ym <= curYm);
   const enc = v => encodeURIComponent(v);
-  const personal = 'or=(account_type.is.null,account_type.neq.business)';
+  const f = cfg.filter;
   try {
     const [total, before, ...monthly] = await Promise.all([
-      queryCount('users', `firebase_uid=not.is.null&${personal}`),
-      queryCount('users', `created_at=lt.${enc(istMonthStart(GOAL_PLAN[0][0]))}&${personal}`),
-      ...elapsed.map(([ym]) => queryCount('users', `created_at=gte.${enc(istMonthStart(ym))}&created_at=lt.${enc(istMonthStart(nextYm(ym)))}&${personal}`))
+      queryCount('users', `firebase_uid=not.is.null&${f}`),
+      queryCount('users', `created_at=lt.${enc(istMonthStart(cfg.plan[0][0]))}&${f}`),
+      ...elapsed.map(([ym]) => queryCount('users', `created_at=gte.${enc(istMonthStart(ym))}&created_at=lt.${enc(istMonthStart(nextYm(ym)))}&${f}`))
     ]);
-    goalData = { total, before, monthly, curYm };
+    if (cfg !== goalCfg()) return;   // mode switched while loading
+    goalData = { cfg, total, before, monthly, curYm };
     renderGoal();
   } catch (e) { console.error('goal', e); }
 }
@@ -3286,11 +3312,16 @@ async function loadGoal() {
 function renderGoal() {
   if (!goalData) return;
   const $ = id => document.getElementById(id);
-  const { total, before, monthly, curYm } = goalData;
+  const { cfg, total, before, monthly, curYm } = goalData;
+  const USER_GOAL = cfg.goal, GOAL_PLAN = cfg.plan, noun = cfg.noun;
   const left = Math.max(0, USER_GOAL - total);
   $('target-left').textContent = nfIN(left);
+  $('target-short').textContent = 'to ' + cfg.short;
+  $('target-pill').title = `${noun[0].toUpperCase() + noun.slice(1)} still to sign up to reach ${nfIN(USER_GOAL)} by 31 Oct 2027`;
+  $('goal-title').textContent = cfg.title;
+  $('goal-subtitle').textContent = cfg.subtitle;
   $('goal-left').textContent = nfIN(left);
-  $('goal-total').textContent = `${nfIN(total)} of ${nfIN(USER_GOAL)} users · ${(total / USER_GOAL * 100).toFixed(total < 10000 ? 3 : 1)}%`;
+  $('goal-total').textContent = `${nfIN(total)} of ${nfIN(USER_GOAL)} ${noun} · ${(total / USER_GOAL * 100).toFixed(total / USER_GOAL < 0.01 ? 3 : 1)}%`;
   $('goal-overall-bar').style.width = Math.min(100, total / USER_GOAL * 100) + '%';
   $('goal-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
@@ -3306,7 +3337,7 @@ function renderGoal() {
     const need = Math.max(0, target - got);
     $('goal-month-label').textContent = ymLabel(ym);
     $('goal-month-new').textContent = nfIN(got);
-    $('goal-month-sub').textContent = `of ${nfIN(target)} new users` + (need ? ` · need ~${nfIN(Math.ceil(need / daysLeft))}/day for ${daysLeft} more day${daysLeft === 1 ? '' : 's'}` : ' · target reached 🎉');
+    $('goal-month-sub').textContent = `of ${nfIN(target)} new ${noun}` + (need ? ` · need ~${nfIN(Math.ceil(need / daysLeft))}/day for ${daysLeft} more day${daysLeft === 1 ? '' : 's'}` : ' · target reached 🎉');
     setBar('goal-month-barwrap', 'goal-month-bar', got / target * 100);
     $('goal-cum-label').textContent = `Total by end of ${ymLabel(ym).split(' ')[0]}`;
     $('goal-cum').textContent = nfIN(total);
@@ -3333,7 +3364,7 @@ function renderGoal() {
     return `<tr class="${ym === curYm ? 'now' : ''}"><td>${ymLabel(ym)}</td><td>${nfIN(target)}</td><td>${has ? nfIN(got) : '—'}</td><td>${nfIN(cum)}</td><td>${has ? nfIN(running) : '—'}</td><td>${state}</td></tr>`;
   }).join('');
   $('goal-plan').innerHTML = `<div style="overflow-x:auto"><table class="goal-table"><thead><tr><th>Month</th><th>Target new</th><th>Actual new</th><th>Cumulative target</th><th>Actual total</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
-    + `<div class="cell-sub" style="margin-top:6px">Actual total includes the ${nfIN(before)} users who joined before November 2026.</div>`;
+    + `<div class="cell-sub" style="margin-top:6px">Actual total includes the ${nfIN(before)} ${noun} who joined before November 2026.</div>`;
 }
 
 function toggleGoalPlan() {
@@ -4815,7 +4846,7 @@ async function loadNotifications() {
 // of them changed - it used to re-download every table twice a minute.
 // A full reload still runs every 10 min (AdMob, "today" rolling over), and
 // nothing runs while the browser tab is hidden.
-let _dashSig = null, _dashFullAt = 0;
+let _dashSig = null, _dashFullAt = 0, _bizGoalSig = null;
 async function dashSignature() {
   const latest = t => query(t, 'select=created_at&order=created_at.desc&limit=1').then(r => (r[0] || {}).created_at || '');
   return (await Promise.all(['users', 'posts'].map(latest))).join('|');
@@ -4823,7 +4854,14 @@ async function dashSignature() {
 function setupRealtime() {
   setInterval(async () => {
     const activePage = document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
-    if (activePage !== 'dashboard' || document.hidden) return;
+    if (document.hidden) return;
+    if (activePage === 'biz') {
+      const r = await query('users', 'select=created_at&account_type=eq.business&order=created_at.desc&limit=1').catch(() => null);
+      const sig = r ? (r[0] || {}).created_at || '' : _bizGoalSig;
+      if (sig !== _bizGoalSig) { _bizGoalSig = sig; loadGoal(); }
+      return;
+    }
+    if (activePage !== 'dashboard') return;
     const sig = await dashSignature();
     if (sig !== _dashSig || Date.now() - _dashFullAt > 10 * 60000) loadDashboard();
     else refreshSignupTime();
