@@ -890,7 +890,7 @@
 
         <div class="goal-card" id="goal-card">
           <div class="goal-head">
-            <div><h3>🎯 Road to 1 million users</h3><p>Target: 10,00,000 users by 31 Oct 2027 · every account that signs up counts</p></div>
+            <div><h3>🎯 Road to 1 million users</h3><p>Target: 10,00,000 users by 31 Oct 2027 · personal accounts only (business accounts not counted)</p></div>
             <span class="cell-sub" id="goal-updated"></span>
           </div>
           <div class="goal-grid">
@@ -3250,8 +3250,8 @@ async function loadDashboard() {
 }
 
 // ── Road to 1 million ──
-// Target set by the founder (Nov 2026 - Oct 2027). Counts every account
-// (personal + business) by sign-up time, in IST months. Refreshed with the
+// Target set by the founder (Nov 2026 - Oct 2027). Counts personal accounts
+// only (business excluded) by sign-up time, in IST months. Refreshed with the
 // dashboard, which reloads when a new signup arrives.
 const USER_GOAL = 1000000;
 const GOAL_PLAN = [
@@ -3271,11 +3271,12 @@ async function loadGoal() {
   const curYm = istNow.slice(0, 7);
   const elapsed = GOAL_PLAN.filter(([ym]) => ym <= curYm);
   const enc = v => encodeURIComponent(v);
+  const personal = 'or=(account_type.is.null,account_type.neq.business)';
   try {
     const [total, before, ...monthly] = await Promise.all([
-      queryCount('users', 'firebase_uid=not.is.null'),
-      queryCount('users', `created_at=lt.${enc(istMonthStart(GOAL_PLAN[0][0]))}`),
-      ...elapsed.map(([ym]) => queryCount('users', `created_at=gte.${enc(istMonthStart(ym))}&created_at=lt.${enc(istMonthStart(nextYm(ym)))}`))
+      queryCount('users', `firebase_uid=not.is.null&${personal}`),
+      queryCount('users', `created_at=lt.${enc(istMonthStart(GOAL_PLAN[0][0]))}&${personal}`),
+      ...elapsed.map(([ym]) => queryCount('users', `created_at=gte.${enc(istMonthStart(ym))}&created_at=lt.${enc(istMonthStart(nextYm(ym)))}&${personal}`))
     ]);
     goalData = { total, before, monthly, curYm };
     renderGoal();
