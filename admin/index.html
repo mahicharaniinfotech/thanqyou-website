@@ -158,15 +158,18 @@
   .stat-card .stat-change.down { color:#B03A2E; }
 
   /* DASHBOARD */
-  .dash-hero { position:relative; overflow:hidden; display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap; padding:26px 28px; margin-bottom:22px; border-radius:20px; color:#fff;
+  .dash-hero { position:relative; overflow:hidden; display:flex; align-items:flex-start; justify-content:space-between; gap:14px 18px; flex-wrap:wrap; padding:16px 22px; margin-bottom:18px; border-radius:20px; color:#fff;
     background:radial-gradient(80% 140% at 100% 0%, rgba(242,109,109,0.30), transparent 55%), radial-gradient(70% 130% at 0% 100%, rgba(168,139,250,0.22), transparent 60%), linear-gradient(135deg, #2C1418 0%, #722F37 58%, #8C3F49 100%);
     box-shadow:0 20px 44px rgba(114,47,55,0.24); }
   .dash-hero::after { content:''; position:absolute; right:-70px; top:-70px; width:240px; height:240px; border-radius:50%; border:1px solid rgba(255,255,255,0.12); box-shadow:0 0 0 34px rgba(255,255,255,0.03), 0 0 0 70px rgba(255,255,255,0.02); pointer-events:none; }
   .dash-hero > * { position:relative; z-index:1; }
   .dash-hero .dh-eyebrow { font-size:11px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; color:rgba(255,255,255,0.72); }
-  .dash-hero h2 { font-size:30px; font-weight:800; letter-spacing:-0.8px; color:#fff; margin-top:6px; line-height:1.1; }
-  .dash-hero p { font-size:13px; color:rgba(255,255,255,0.78); margin-top:6px; }
-  @media (max-width:768px) { .dash-hero { padding:20px 18px; border-radius:16px; } .dash-hero h2 { font-size:24px; } }
+  .dash-hero h2 { font-size:24px; font-weight:800; letter-spacing:-0.6px; color:#fff; margin-top:3px; line-height:1.1; }
+  .dash-hero p { font-size:12.5px; color:rgba(255,255,255,0.78); margin-top:3px; }
+  .dash-hero .dash-filter { margin-top:10px; }
+  .dash-hero .last-signup { margin-top:0; }
+  @media (min-width:769px) { .dash-hero .last-signup { position:absolute; top:14px; right:20px; max-width:calc(100% - 340px); } }
+  @media (max-width:768px) { .dash-hero { padding:16px 18px; border-radius:16px; } .dash-hero h2 { font-size:21px; } }
   /* Latest signup, in the dashboard banner */
   .last-signup { display:inline-flex; align-items:center; gap:10px; margin-top:14px; padding:7px 14px 7px 7px; max-width:100%;
     border-radius:999px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.18); font-size:12.5px; color:#fff; }
@@ -902,9 +905,9 @@
             <div class="dh-eyebrow" id="dash-greet">Welcome back</div>
             <h2>ThanQ You AT A Glance</h2>
             <p id="dash-range-label">All time</p>
-            <div class="last-signup" id="last-signup" aria-live="polite"></div>
+            <div class="dash-filter" data-range="dash" data-default="all"></div>
           </div>
-          <div class="dash-filter" data-range="dash" data-default="all"></div>
+          <div class="last-signup" id="last-signup" aria-live="polite"></div>
         </div>
 
         <div class="stats-grid" id="dash-stats">
