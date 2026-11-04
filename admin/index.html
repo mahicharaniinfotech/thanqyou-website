@@ -96,7 +96,8 @@
   /* Road to 1 million: countdown pill (top bar, Dashboard only) + plan card */
   .target-pill { display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border:none; border-radius:20px; background:rgba(201,138,42,0.12); color:#8A5A12; font-family:inherit; font-size:12px; font-weight:600; white-space:nowrap; cursor:pointer; }
   .target-pill b { font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; color:#6E440A; }
-  .target-pill[hidden] { display:none; }
+  .target-pill[hidden], #notif-btn[hidden] { display:none; }
+  @media (max-width:1400px) { #notif-btn .btn-text { display:none; } }
   .goal-strip { display:inline-flex; align-items:stretch; gap:14px; flex:0 1 auto; min-width:0; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; color:inherit; font-family:inherit; text-align:left; cursor:pointer; }
   .goal-strip[hidden] { display:none; }
   .goal-strip:hover { border-color:#C98A2A; }
@@ -889,6 +890,7 @@
       </div>
       <div class="topbar-actions">
         <button class="target-pill" id="target-pill" onclick="openGoalPlan()" title="Users still to sign up to reach 1,000,000 by 31 Oct 2027">🎯 <b id="target-left">—</b><span class="tp-text" id="target-short">to 1M</span></button>
+        <button class="btn btn-ghost" id="notif-btn" onclick="enableDesktopAlerts()" title="Get a desktop notification for new signups and uploads" hidden>🔔 <span class="btn-text">Alerts</span></button>
         <span class="live-pill"><span class="live-dot"></span><span class="btn-text">Live</span></span>
         <button class="btn btn-ghost" onclick="refreshCurrentPage()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
@@ -4901,38 +4903,86 @@ function setupRealtime() {
 }
 
 // ── TAB ALERTS ───────────────────────────────────────
-// While you're on another tab or window, the panel's tab icon gets a green
-// dot for a new signup and a red dot for a new post/reel, and the title
-// counts them. Checked every 30 s (a background tab is slowed to about once
-// a minute by the browser); cleared when you come back to the tab. Quiet on
-// errors - no toasts from a tab nobody is looking at.
+// While you're on another tab or window, a new signup or post/reel shows a
+// desktop notification, like WhatsApp Web. Needs this tab open. If
+// notifications aren't allowed, the tab icon gets a green dot for a signup
+// and a red dot for a post/reel, and the title counts them. Checked every
+// 30 s (a background tab is slowed to about once a minute by the browser);
+// dots clear when you come back to the tab. Quiet on errors - no toasts from
+// a tab nobody is looking at.
 const TAB_ICON = '/images/icon-192.png', TAB_TITLE = 'ThanqYou Admin';
 let _alertSeen = null, _alertNew = { signups: 0, posts: 0 }, _alertIcon = null;
 
-async function latestCreatedAt(table, filter) {
-  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/${table}?select=created_at${filter}&order=created_at.desc&limit=20`,
+async function latestRows(table, columns, filter) {
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/${table}?select=${columns}${filter}&order=created_at.desc&limit=20`,
     { headers: { 'x-admin-session': sessionToken } });
   const rows = await r.json().catch(() => null);
   if (!Array.isArray(rows)) throw new Error('unavailable');
-  return rows.map(x => x.created_at).filter(Boolean);
+  return rows.filter(x => x.created_at);
+}
+
+const desktopAlertsOn = () => 'Notification' in window && Notification.permission === 'granted';
+
+function syncNotifBtn() {
+  document.getElementById('notif-btn').hidden = !('Notification' in window) || Notification.permission === 'granted';
+}
+
+async function enableDesktopAlerts() {
+  if (Notification.permission === 'denied') {
+    showToast('Notifications are blocked. Click the icon left of the web address, set Notifications to Allow, then reload.', 'error');
+    return;
+  }
+  await Notification.requestPermission();
+  syncNotifBtn();
+  if (desktopAlertsOn()) desktopAlert('Desktop alerts are on', 'You will be notified of new signups and uploads while this tab is open.', 'test', 'dashboard');
+}
+
+function desktopAlert(title, body, tag, page) {
+  const n = new Notification(title, { body, tag, icon: TAB_ICON });
+  n.onclick = () => { window.focus(); goPage(page); n.close(); };
+}
+
+async function showDesktopAlerts(signups, posts) {
+  const nameOf = u => u.display_name || 'A new user';
+  const list = names => names.slice(0, 3).join(', ') + (names.length > 3 ? ` and ${names.length - 3} more` : '');
+  if (signups.length === 1) {
+    const u = signups[0];
+    desktopAlert('New signup 🎉', `${nameOf(u)} joined ThanqYou${u.account_type === 'business' ? ' (Business)' : ''}`, `signup-${u.created_at}`, 'users');
+  } else if (signups.length) {
+    desktopAlert(`${signups.length} new signups 🎉`, list(signups.map(nameOf)), `signup-${signups[0].created_at}`, 'users');
+  }
+  if (!posts.length) return;
+  const uids = [...new Set(posts.map(p => p.firebase_uid).filter(Boolean))];
+  const owners = uids.length ? await query('users', `select=firebase_uid,display_name&firebase_uid=in.(${uids.map(u => `"${u}"`).join(',')})`) : [];
+  const nameFor = p => (owners.find(o => o.firebase_uid === p.firebase_uid) || {}).display_name || 'A user';
+  if (posts.length === 1) {
+    const reel = (posts[0].media_types || []).includes('video');
+    desktopAlert(`New ${reel ? 'reel' : 'post'} uploaded`, `${nameFor(posts[0])} uploaded a ${reel ? 'reel' : 'photo'}`, `post-${posts[0].created_at}`, 'content');
+  } else {
+    desktopAlert(`${posts.length} new uploads`, list([...new Set(posts.map(nameFor))]), `post-${posts[0].created_at}`, 'content');
+  }
 }
 
 async function checkTabAlerts() {
   if (!sessionToken || document.getElementById('app').style.display !== 'block') { _alertSeen = null; return; }
   let users, posts;
   try {
-    [users, posts] = await Promise.all([latestCreatedAt('users', ''), latestCreatedAt('posts', '&is_deleted=eq.false')]);
+    [users, posts] = await Promise.all([
+      latestRows('users', 'created_at,display_name,account_type', ''),
+      latestRows('posts', 'created_at,firebase_uid,media_types', '&is_deleted=eq.false'),
+    ]);
   } catch { return; }
   const seen = _alertSeen;
   _alertSeen = {
-    users: seen && seen.users > (users[0] || '') ? seen.users : (users[0] || ''),
-    posts: seen && seen.posts > (posts[0] || '') ? seen.posts : (posts[0] || ''),
+    users: seen && seen.users > (users[0]?.created_at || '') ? seen.users : (users[0]?.created_at || ''),
+    posts: seen && seen.posts > (posts[0]?.created_at || '') ? seen.posts : (posts[0]?.created_at || ''),
   };
   if (!seen || (!document.hidden && document.hasFocus())) return;
-  const signups = users.filter(t => t > seen.users).length, newPosts = posts.filter(t => t > seen.posts).length;
-  if (!signups && !newPosts) return;
-  _alertNew.signups += signups;
-  _alertNew.posts += newPosts;
+  const signups = users.filter(u => u.created_at > seen.users), newPosts = posts.filter(p => p.created_at > seen.posts);
+  if (!signups.length && !newPosts.length) return;
+  if (desktopAlertsOn()) { showDesktopAlerts(signups, newPosts).catch(() => {}); return; }
+  _alertNew.signups += signups.length;
+  _alertNew.posts += newPosts.length;
   drawTabAlerts();
 }
 
@@ -4976,6 +5026,7 @@ function clearTabAlerts() {
 window.addEventListener('focus', clearTabAlerts);
 document.addEventListener('visibilitychange', clearTabAlerts);
 setInterval(checkTabAlerts, 30000);
+syncNotifBtn();
 
 // Init
 setupRealtime();
