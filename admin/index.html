@@ -4961,10 +4961,12 @@ async function latestRows(table, columns, filter) {
   return rows.filter(x => x.created_at);
 }
 
-const desktopAlertsOn = () => 'Notification' in window && Notification.permission === 'granted';
+// Phone browsers refuse new Notification(), so phones keep the tab dots
+const canDesktopAlert = 'Notification' in window && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+const desktopAlertsOn = () => canDesktopAlert && Notification.permission === 'granted';
 
 function syncNotifBtn() {
-  document.getElementById('notif-btn').hidden = !('Notification' in window) || Notification.permission === 'granted';
+  document.getElementById('notif-btn').hidden = !canDesktopAlert || Notification.permission === 'granted';
 }
 
 async function enableDesktopAlerts() {
