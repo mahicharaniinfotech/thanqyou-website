@@ -169,7 +169,10 @@
   .dash-hero p { font-size:12.5px; color:rgba(255,255,255,0.78); margin-top:3px; }
   .dash-hero .dash-filter { margin-top:10px; }
   .dash-hero .last-signup { margin-top:0; }
-  @media (min-width:769px) { .dash-hero .last-signup { position:absolute; top:14px; right:20px; max-width:calc(100% - 340px); } }
+  @media (min-width:769px) { .dash-hero .last-signup { position:absolute; top:14px; right:22px; max-width:calc(100% - 340px); } }
+  /* Presets on the left, From/To on the right under Last signup */
+  .dash-hero > div:first-child { flex:1 1 100%; min-width:0; }
+  @media (min-width:1100px) { .dash-hero .date-range { position:absolute; right:0; bottom:0; } }
   @media (max-width:768px) { .dash-hero { padding:16px 18px; border-radius:16px; } .dash-hero h2 { font-size:21px; } }
   /* Latest signup, in the dashboard banner */
   .last-signup { display:inline-flex; align-items:center; gap:10px; margin-top:14px; padding:7px 14px 7px 7px; max-width:100%;
