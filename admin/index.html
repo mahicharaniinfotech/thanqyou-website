@@ -94,10 +94,25 @@
   .topbar .topbar-sub { font-size:12px; color:var(--grey); margin-top:2px; }
   .topbar-actions { display:flex; align-items:center; gap:10px; }
   /* Road to 1 million: countdown pill (top bar, Dashboard only) + plan card */
-  .target-pill { display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:20px; background:rgba(201,138,42,0.12); color:#8A5A12; font-size:12px; font-weight:600; white-space:nowrap; }
+  .target-pill { display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border:none; border-radius:20px; background:rgba(201,138,42,0.12); color:#8A5A12; font-family:inherit; font-size:12px; font-weight:600; white-space:nowrap; cursor:pointer; }
   .target-pill b { font-size:14px; font-weight:800; font-variant-numeric:tabular-nums; color:#6E440A; }
   .target-pill[hidden] { display:none; }
-  .goal-card { background:var(--dark2); border:1px solid var(--line); border-radius:16px; padding:20px 22px; margin-bottom:18px; }
+  .goal-strip { display:inline-flex; align-items:stretch; gap:14px; flex:0 1 auto; min-width:0; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; color:inherit; font-family:inherit; text-align:left; cursor:pointer; }
+  .goal-strip[hidden] { display:none; }
+  .goal-strip:hover { border-color:#C98A2A; }
+  .gs-cell { min-width:0; }
+  .gs-cell + .gs-cell { padding-left:14px; border-left:1px solid var(--line); }
+  .gs-label, .gs-value, .gs-bar { display:block; }
+  .gs-label { font-size:9.5px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--grey2); white-space:nowrap; }
+  .gs-value { font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .gs-value small { font-size:11px; font-weight:500; color:var(--grey); }
+  .gs-extra { margin-left:4px; }
+  .gs-bar { height:3px; border-radius:3px; background:var(--dark3); overflow:hidden; margin-top:2px; }
+  .gs-bar > span { display:block; height:100%; background:#C98A2A; }
+  .gs-more { align-self:center; font-size:11px; color:var(--grey); }
+  @media (max-width:1640px) { .gs-extra { display:none; } }
+  @media (max-width:1400px) { .goal-strip { gap:10px; padding:5px 10px; } .gs-cell + .gs-cell { padding-left:10px; } .gs-more { display:none; } }
+  @media (max-width:1240px) { .goal-strip { display:none; } }
   .goal-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
   .goal-head h3 { font-size:15px; font-weight:800; }
   .goal-head p { font-size:12px; color:var(--grey); margin-top:2px; }
@@ -113,7 +128,6 @@
   .goal-table td, .goal-table th { padding:7px 8px; text-align:right; white-space:nowrap; }
   .goal-table td:first-child, .goal-table th:first-child { text-align:left; }
   .goal-table tr.now td { background:rgba(201,138,42,0.08); font-weight:700; }
-  .goal-toggle { background:none; border:none; color:var(--red); font-weight:600; font-size:12.5px; cursor:pointer; padding:0; margin-top:12px; }
   @media (max-width: 760px) { .goal-grid { grid-template-columns:minmax(0,1fr); } .target-pill .tp-text { display:none; } }
   .live-pill { display:inline-flex; align-items:center; gap:7px; padding:6px 11px; border-radius:20px; background:rgba(30,142,78,0.08); color:var(--green); font-size:12px; font-weight:600; }
   .btn { padding:8px 16px; border-radius:9px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; }
@@ -861,12 +875,17 @@
         <h1 id="page-title">Dashboard</h1>
         <div class="topbar-sub" id="topbar-date"></div>
       </div>
+      <button class="goal-strip" id="goal-strip" onclick="openGoalPlan()" title="Open target details and monthly plan">
+        <span class="gs-cell"><span class="gs-label" id="gs-month-label">This month</span><span class="gs-value"><span id="gs-month">—</span><small class="gs-extra" id="gs-month-extra"></small></span><span class="gs-bar"><span id="gs-month-bar" style="width:0"></span></span></span>
+        <span class="gs-cell"><span class="gs-label" id="gs-cum-label">Total</span><span class="gs-value"><span id="gs-cum">—</span><small class="gs-extra" id="gs-cum-extra"></small></span><span class="gs-bar"><span id="gs-cum-bar" style="width:0"></span></span></span>
+        <span class="gs-more">▾</span>
+      </button>
       <div class="mode-switch" role="radiogroup" aria-label="Account type">
         <label><input type="radio" name="acct-mode" value="individual" checked onchange="setAccountMode(this.value)"><span>Individual</span></label>
         <label><input type="radio" name="acct-mode" value="business" onchange="setAccountMode(this.value)"><span>Business</span></label>
       </div>
       <div class="topbar-actions">
-        <span class="target-pill" id="target-pill" title="Users still to sign up to reach 1,000,000 by 31 Oct 2027">🎯 <b id="target-left">—</b><span class="tp-text" id="target-short">to 1M</span></span>
+        <button class="target-pill" id="target-pill" onclick="openGoalPlan()" title="Users still to sign up to reach 1,000,000 by 31 Oct 2027">🎯 <b id="target-left">—</b><span class="tp-text" id="target-short">to 1M</span></button>
         <span class="live-pill"><span class="live-dot"></span><span class="btn-text">Live</span></span>
         <button class="btn btn-ghost" onclick="refreshCurrentPage()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
@@ -886,20 +905,6 @@
             <div class="last-signup" id="last-signup" aria-live="polite"></div>
           </div>
           <div class="dash-filter" data-range="dash" data-default="all"></div>
-        </div>
-
-        <div class="goal-card" id="goal-card">
-          <div class="goal-head">
-            <div><h3 id="goal-title">🎯 Road to 1 million users</h3><p id="goal-subtitle">Target: 10,00,000 users by 31 Oct 2027 · personal accounts only (business accounts not counted)</p></div>
-            <span class="cell-sub" id="goal-updated"></span>
-          </div>
-          <div class="goal-grid">
-            <div class="goal-box"><div class="gl">Still to go</div><div class="gv" id="goal-left">—</div><div class="gs" id="goal-total">—</div><div class="goal-bar"><span id="goal-overall-bar" style="width:0"></span></div></div>
-            <div class="goal-box"><div class="gl" id="goal-month-label">This month</div><div class="gv" id="goal-month-new">—</div><div class="gs" id="goal-month-sub">—</div><div class="goal-bar" id="goal-month-barwrap"><span id="goal-month-bar" style="width:0"></span></div></div>
-            <div class="goal-box"><div class="gl" id="goal-cum-label">Total by month end</div><div class="gv" id="goal-cum">—</div><div class="gs" id="goal-cum-sub">—</div><div class="goal-bar" id="goal-cum-barwrap"><span id="goal-cum-bar" style="width:0"></span></div></div>
-          </div>
-          <button class="goal-toggle" id="goal-toggle" onclick="toggleGoalPlan()">Show monthly plan ▾</button>
-          <div id="goal-plan" hidden></div>
         </div>
 
         <div class="stats-grid" id="dash-stats">
@@ -1664,6 +1669,20 @@
   <img id="photo-view-img" alt="Profile photo" referrerpolicy="no-referrer">
   <a id="photo-view-open" href="#" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Open original ↗</a>
 </div>
+<div class="modal-overlay" id="goal-modal" onclick="if(event.target===this)closeModal('goal-modal')">
+  <div class="modal" style="width:820px;max-width:100%">
+    <div class="goal-head">
+      <div><h3 id="goal-title">🎯 Road to 1 million users</h3><p id="goal-subtitle">Target: 10,00,000 users by 31 Oct 2027 · personal accounts only (business accounts not counted)</p></div>
+      <span style="display:flex;align-items:center;gap:10px"><span class="cell-sub" id="goal-updated"></span><button onclick="closeModal('goal-modal')" aria-label="Close" style="background:none;border:none;color:var(--grey);cursor:pointer;font-size:20px">×</button></span>
+    </div>
+    <div class="goal-grid">
+      <div class="goal-box"><div class="gl">Still to go</div><div class="gv" id="goal-left">—</div><div class="gs" id="goal-total">—</div><div class="goal-bar"><span id="goal-overall-bar" style="width:0"></span></div></div>
+      <div class="goal-box"><div class="gl" id="goal-month-label">This month</div><div class="gv" id="goal-month-new">—</div><div class="gs" id="goal-month-sub">—</div><div class="goal-bar" id="goal-month-barwrap"><span id="goal-month-bar" style="width:0"></span></div></div>
+      <div class="goal-box"><div class="gl" id="goal-cum-label">Total by month end</div><div class="gv" id="goal-cum">—</div><div class="gs" id="goal-cum-sub">—</div><div class="goal-bar" id="goal-cum-barwrap"><span id="goal-cum-bar" style="width:0"></span></div></div>
+    </div>
+    <div id="goal-plan"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="upload-modal" onclick="if(event.target===this)closeUpload()">
   <div class="modal" style="width:560px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -2034,7 +2053,8 @@ function showPage(name, el) {
   document.getElementById('page-title').textContent = pageTitles[name];
   const goalHome = name === 'dashboard' || name === 'biz';
   document.getElementById('target-pill').hidden = !goalHome;
-  if (goalHome) placeGoalCard(name);
+  document.getElementById('goal-strip').hidden = !goalHome;
+  if (goalHome) syncGoalMode();
   document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   closeDrawer();
   window.scrollTo(0, 0);
@@ -3274,16 +3294,14 @@ const GOALS = {
     title: '🎯 Road to 10,000 businesses', subtitle: 'Target: 10,000 business accounts by 31 Oct 2027 · business accounts only' },
 };
 const goalCfg = () => GOALS[accountMode === 'business' ? 'business' : 'individual'];
-function placeGoalCard(page) {
-  const card = document.getElementById('goal-card');
-  const stats = document.querySelector(`#page-${page} .stats-grid`);
-  if (stats && card.nextElementSibling !== stats) stats.before(card);
+function syncGoalMode() {
   const g = goalCfg();
   if (!goalData || goalData.cfg !== g) {
     goalData = null;
     document.getElementById('goal-title').textContent = g.title;
     document.getElementById('goal-subtitle').textContent = g.subtitle;
-    ['target-left', 'goal-left', 'goal-total', 'goal-month-new', 'goal-month-sub', 'goal-cum', 'goal-cum-sub'].forEach(id => { document.getElementById(id).textContent = '—'; });
+    ['target-left', 'goal-left', 'goal-total', 'goal-month-new', 'goal-month-sub', 'goal-cum', 'goal-cum-sub', 'gs-month', 'gs-cum'].forEach(id => { document.getElementById(id).textContent = '—'; });
+    ['gs-month-extra', 'gs-cum-extra'].forEach(id => { document.getElementById(id).textContent = ''; });
     document.getElementById('goal-plan').innerHTML = '';
   }
 }
@@ -3342,10 +3360,18 @@ function renderGoal() {
     $('goal-month-new').textContent = nfIN(got);
     $('goal-month-sub').textContent = `of ${nfIN(target)} new ${noun}` + (need ? ` · need ~${nfIN(Math.ceil(need / daysLeft))}/day for ${daysLeft} more day${daysLeft === 1 ? '' : 's'}` : ` · target reached 🎉${got > target ? ` · ${nfIN(got - target)} beyond target` : ''}`);
     setBar('goal-month-barwrap', 'goal-month-bar', got / target * 100);
+    $('gs-month-label').textContent = ymLabel(ym);
+    $('gs-month').innerHTML = `${nfIN(got)} <small>/ ${nfIN(target)}</small>`;
+    $('gs-month-extra').textContent = need ? `need ~${nfIN(Math.ceil(need / daysLeft))}/day` : got > target ? `${nfIN(got - target)} beyond` : 'reached 🎉';
+    $('gs-month-bar').style.width = Math.min(100, got / target * 100) + '%';
     $('goal-cum-label').textContent = `Total by end of ${ymLabel(ym).split(' ')[0]}`;
     $('goal-cum').textContent = nfIN(total);
     $('goal-cum-sub').textContent = `target ${nfIN(cum)} · ${total > cum ? nfIN(total - cum) + ' beyond target 🎉' : total === cum ? 'reached 🎉' : nfIN(cum - total) + ' to go'}`;
     setBar('goal-cum-barwrap', 'goal-cum-bar', total / cum * 100);
+    $('gs-cum-label').textContent = `Total by ${ymLabel(ym).slice(0, 3)} end`;
+    $('gs-cum').innerHTML = `${nfIN(total)} <small>/ ${nfIN(cum)}</small>`;
+    $('gs-cum-extra').textContent = total > cum ? `${nfIN(total - cum)} beyond` : total === cum ? 'reached 🎉' : `${nfIN(cum - total)} to go`;
+    $('gs-cum-bar').style.width = Math.min(100, total / cum * 100) + '%';
   } else {
     const before0 = curYm < GOAL_PLAN[0][0];
     $('goal-month-label').textContent = before0 ? 'Plan starts' : 'Plan finished';
@@ -3353,6 +3379,10 @@ function renderGoal() {
     $('goal-month-sub').textContent = before0 ? `first month target ${nfIN(GOAL_PLAN[0][1])}` : '';
     $('goal-cum').textContent = nfIN(total);
     $('goal-cum-sub').textContent = '';
+    $('gs-month-label').textContent = $('goal-month-label').textContent;
+    $('gs-month').textContent = $('goal-month-new').textContent;
+    $('gs-cum-label').textContent = 'Total';
+    $('gs-cum').textContent = nfIN(total);
   }
 
   // Month-by-month plan vs actual
@@ -3370,11 +3400,7 @@ function renderGoal() {
     + `<div class="cell-sub" style="margin-top:6px">Actual total includes the ${nfIN(before)} ${noun} who joined before November 2026.</div>`;
 }
 
-function toggleGoalPlan() {
-  const plan = document.getElementById('goal-plan');
-  plan.hidden = !plan.hidden;
-  document.getElementById('goal-toggle').textContent = plan.hidden ? 'Show monthly plan ▾' : 'Hide monthly plan ▴';
-}
+function openGoalPlan() { openModal('goal-modal'); }
 
 // Local-time YYYY-MM-DD, so "today" matches the admin's calendar, not UTC
 function localDay(d) {
