@@ -1950,8 +1950,11 @@ async function queryCount(table, params = '') {
       'Prefer': 'count=exact'
     }
   });
-  const count = r.headers.get('content-range');
-  return count ? parseInt(count.split('/')[1]) : 0;
+  // From the body: admin-proxy doesn't pass the content-range header back
+  const rows = await r.json().catch(() => null);
+  const count = Array.isArray(rows) && rows[0] ? Number(rows[0].count) : NaN;
+  if (!r.ok || !Number.isFinite(count)) throw new Error(`count ${table}: HTTP ${r.status}`);
+  return count;
 }
 
 async function update(table, id, data) {
@@ -3337,11 +3340,11 @@ function renderGoal() {
     const need = Math.max(0, target - got);
     $('goal-month-label').textContent = ymLabel(ym);
     $('goal-month-new').textContent = nfIN(got);
-    $('goal-month-sub').textContent = `of ${nfIN(target)} new ${noun}` + (need ? ` · need ~${nfIN(Math.ceil(need / daysLeft))}/day for ${daysLeft} more day${daysLeft === 1 ? '' : 's'}` : ' · target reached 🎉');
+    $('goal-month-sub').textContent = `of ${nfIN(target)} new ${noun}` + (need ? ` · need ~${nfIN(Math.ceil(need / daysLeft))}/day for ${daysLeft} more day${daysLeft === 1 ? '' : 's'}` : ` · target reached 🎉${got > target ? ` · ${nfIN(got - target)} beyond target` : ''}`);
     setBar('goal-month-barwrap', 'goal-month-bar', got / target * 100);
     $('goal-cum-label').textContent = `Total by end of ${ymLabel(ym).split(' ')[0]}`;
     $('goal-cum').textContent = nfIN(total);
-    $('goal-cum-sub').textContent = `target ${nfIN(cum)} · ${total >= cum ? 'reached 🎉' : nfIN(cum - total) + ' to go'}`;
+    $('goal-cum-sub').textContent = `target ${nfIN(cum)} · ${total > cum ? nfIN(total - cum) + ' beyond target 🎉' : total === cum ? 'reached 🎉' : nfIN(cum - total) + ' to go'}`;
     setBar('goal-cum-barwrap', 'goal-cum-bar', total / cum * 100);
   } else {
     const before0 = curYm < GOAL_PLAN[0][0];
@@ -3361,7 +3364,7 @@ function renderGoal() {
     const state = !has ? '<span class="cell-sub">upcoming</span>'
       : ym === curYm ? '<span class="badge badge-blue">in progress</span>'
       : got >= target ? '<span class="badge badge-green">hit</span>' : '<span class="badge badge-orange">missed</span>';
-    return `<tr class="${ym === curYm ? 'now' : ''}"><td>${ymLabel(ym)}</td><td>${nfIN(target)}</td><td>${has ? nfIN(got) : '—'}</td><td>${nfIN(cum)}</td><td>${has ? nfIN(running) : '—'}</td><td>${state}</td></tr>`;
+    return `<tr class="${ym === curYm ? 'now' : ''}"><td>${ymLabel(ym)}</td><td>${nfIN(target)}</td><td>${has ? nfIN(got) + (got > target ? ` (+${nfIN(got - target)})` : '') : '—'}</td><td>${nfIN(cum)}</td><td>${has ? nfIN(running) : '—'}</td><td>${state}</td></tr>`;
   }).join('');
   $('goal-plan').innerHTML = `<div style="overflow-x:auto"><table class="goal-table"><thead><tr><th>Month</th><th>Target new</th><th>Actual new</th><th>Cumulative target</th><th>Actual total</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
     + `<div class="cell-sub" style="margin-top:6px">Actual total includes the ${nfIN(before)} ${noun} who joined before November 2026.</div>`;
