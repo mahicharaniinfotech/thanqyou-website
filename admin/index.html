@@ -103,7 +103,14 @@
   .topbar-titles.has-au { flex:0 0 auto; }
   .au-strip { display:inline-flex; align-items:center; gap:14px; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; }
   .au-strip + .goal-strip { margin-left:auto; }
-  @media (max-width:1560px) { .au-strip { display:none; } .topbar-titles.has-au { flex:1; } }
+  @media (max-width:1560px) { .target-pill .tp-text, .topbar .live-pill .btn-text, .topbar .btn .btn-text { display:none; } }
+  @media (max-width:1060px) {
+    .topbar { flex-wrap:wrap; }
+    .topbar-titles.has-au { flex:1; }
+    .au-strip { order:11; width:100%; justify-content:center; padding:4px 12px; }
+    .au-strip .gs-label, .au-strip .gs-value { display:inline; }
+    .au-strip .gs-label { margin-right:6px; }
+  }
   .goal-strip:hover { border-color:#C98A2A; }
   .gs-cell { min-width:0; }
   .gs-cell + .gs-cell { padding-left:14px; border-left:1px solid var(--line); }
@@ -117,7 +124,7 @@
   .gs-more { align-self:center; font-size:11px; color:var(--grey); }
   @media (max-width:1640px) { .gs-extra { display:none; } }
   @media (max-width:1400px) { .goal-strip { gap:10px; padding:5px 10px; } .gs-cell + .gs-cell { padding-left:10px; } .gs-more { display:none; } }
-  @media (max-width:1240px) { .goal-strip { display:none; } }
+  @media (max-width:1340px) { .goal-strip { display:none; } }
   .goal-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
   .goal-head h3 { font-size:15px; font-weight:800; }
   .goal-head p { font-size:12px; color:var(--grey); margin-top:2px; }
