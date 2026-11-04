@@ -99,7 +99,11 @@
   .target-pill[hidden], #notif-btn[hidden] { display:none; }
   @media (max-width:1400px) { #notif-btn .btn-text { display:none; } }
   .goal-strip { display:inline-flex; align-items:stretch; gap:14px; flex:0 1 auto; min-width:0; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; color:inherit; font-family:inherit; text-align:left; cursor:pointer; }
-  .goal-strip[hidden] { display:none; }
+  .goal-strip[hidden], .au-strip[hidden] { display:none; }
+  .topbar-titles.has-au { flex:0 0 auto; }
+  .au-strip { display:inline-flex; align-items:center; gap:14px; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; }
+  .au-strip + .goal-strip { margin-left:auto; }
+  @media (max-width:1560px) { .au-strip { display:none; } .topbar-titles.has-au { flex:1; } }
   .goal-strip:hover { border-color:#C98A2A; }
   .gs-cell { min-width:0; }
   .gs-cell + .gs-cell { padding-left:14px; border-left:1px solid var(--line); }
@@ -878,9 +882,13 @@
       <button class="menu-btn" onclick="openDrawer()" aria-label="Open menu">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-titles">
+      <div class="topbar-titles has-au" id="topbar-titles">
         <h1 id="page-title">Dashboard</h1>
         <div class="topbar-sub" id="topbar-date"></div>
+      </div>
+      <div class="au-strip" id="au-strip" title="Active = opened the app. DAU: in the last 24 hours. MAU: in the last 30 days.">
+        <span class="gs-cell"><span class="gs-label">DAU</span><span class="gs-value" id="au-dau">—</span></span>
+        <span class="gs-cell"><span class="gs-label">MAU</span><span class="gs-value" id="au-mau">—</span></span>
       </div>
       <button class="goal-strip" id="goal-strip" onclick="openGoalPlan()" title="Open target details and monthly plan">
         <span class="gs-cell"><span class="gs-label" id="gs-month-label">This month</span><span class="gs-value"><span id="gs-month">—</span><small class="gs-extra" id="gs-month-extra"></small></span><span class="gs-bar"><span id="gs-month-bar" style="width:0"></span></span></span>
@@ -2062,6 +2070,8 @@ function showPage(name, el) {
   const goalHome = name === 'dashboard' || name === 'biz';
   document.getElementById('target-pill').hidden = !goalHome;
   document.getElementById('goal-strip').hidden = !goalHome;
+  document.getElementById('au-strip').hidden = !goalHome;
+  document.getElementById('topbar-titles').classList.toggle('has-au', goalHome);
   if (goalHome) syncGoalMode();
   document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   closeDrawer();
@@ -3308,7 +3318,7 @@ function syncGoalMode() {
     goalData = null;
     document.getElementById('goal-title').textContent = g.title;
     document.getElementById('goal-subtitle').textContent = g.subtitle;
-    ['target-left', 'goal-left', 'goal-total', 'goal-month-new', 'goal-month-sub', 'goal-cum', 'goal-cum-sub', 'gs-month', 'gs-cum'].forEach(id => { document.getElementById(id).textContent = '—'; });
+    ['target-left', 'goal-left', 'goal-total', 'goal-month-new', 'goal-month-sub', 'goal-cum', 'goal-cum-sub', 'gs-month', 'gs-cum', 'au-dau', 'au-mau'].forEach(id => { document.getElementById(id).textContent = '—'; });
     ['gs-month-extra', 'gs-cum-extra'].forEach(id => { document.getElementById(id).textContent = ''; });
     document.getElementById('goal-plan').innerHTML = '';
   }
@@ -3319,7 +3329,26 @@ function ymLabel(ym) { const [y, m] = ym.split('-').map(Number); return new Date
 const nfIN = n => Number(n).toLocaleString('en-IN');
 let goalData = null;
 
+// DAU / MAU: same rule as the Last Login page (latest of the three
+// last-seen stamps), rolling 24 hours and 30 days, for the current mode.
+async function loadActiveUsers() {
+  const cfg = goalCfg();
+  const since = ms => {
+    const t = new Date(Date.now() - ms).toISOString();
+    const f = cfg.filter.startsWith('or=') ? cfg.filter.slice(3) : '';
+    const seen = `or(${['last_seen_at', 'last_seen', 'last_active_at'].map(c => `${c}.gte."${t}"`).join(',')})`;
+    return f ? `and=${encodeURIComponent(`(${seen},or${f})`)}` : `${cfg.filter}&or=${encodeURIComponent(seen.slice(2))}`;
+  };
+  try {
+    const [dau, mau] = await Promise.all([queryCount('users', since(864e5)), queryCount('users', since(30 * 864e5))]);
+    if (cfg !== goalCfg()) return;   // mode switched while loading
+    document.getElementById('au-dau').textContent = nfIN(dau);
+    document.getElementById('au-mau').textContent = nfIN(mau);
+  } catch (e) { console.error('active users', e); }
+}
+
 async function loadGoal() {
+  loadActiveUsers();
   const cfg = goalCfg();
   const istNow = new Date(Date.now() + 330 * 60000).toISOString();
   const curYm = istNow.slice(0, 7);
@@ -4889,6 +4918,7 @@ async function dashSignature() {
   return (await Promise.all(['users', 'posts'].map(latest))).join('|');
 }
 function setupRealtime() {
+  setInterval(() => { if (!document.hidden && !document.getElementById('au-strip').hidden && sessionToken) loadActiveUsers(); }, 5 * 60000);
   setInterval(async () => {
     const activePage = document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
     if (document.hidden) return;
