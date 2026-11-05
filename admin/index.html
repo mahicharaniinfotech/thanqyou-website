@@ -100,6 +100,7 @@
   @media (max-width:1400px) { #notif-btn .btn-text { display:none; } }
   .goal-strip { display:inline-flex; align-items:stretch; gap:14px; flex:0 1 auto; min-width:0; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; color:inherit; font-family:inherit; text-align:left; cursor:pointer; }
   .goal-strip[hidden] { display:none; }
+  .au-type { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:12.5px; font-weight:600; color:var(--grey); }
   .au-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
   .au-box { background:var(--dark2); border:1px solid var(--line); border-radius:14px; padding:16px 18px; min-width:0; }
   .au-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
@@ -1010,34 +1011,6 @@
           <div><h2>Reach metrics</h2><p id="metrics-range-label">Last 7 days</p></div>
           <div class="dash-filter" data-range="metrics" data-default="7d"></div>
         </div>
-        <div class="au-grid">
-          <div class="au-box">
-            <div class="au-head">
-              <h3 title="Different people active on this day">DAU · Daily active users</h3>
-              <div class="au-controls">
-                <div class="seg" id="au-day-seg" role="group" aria-label="DAU day">
-                  <button data-day="today" onclick="setAuDay('today')">Today</button>
-                  <button data-day="yesterday" onclick="setAuDay('yesterday')">Yesterday</button>
-                </div>
-                <div class="date-range"><input type="date" id="au-day" aria-label="DAU date" onchange="setAuDay(this.value)"></div>
-              </div>
-            </div>
-            <div class="au-val" id="au-dau">—</div>
-            <div class="au-sub" id="au-dau-sub"></div>
-            <div class="au-note" id="au-dau-note"></div>
-          </div>
-          <div class="au-box">
-            <div class="au-head">
-              <h3 title="Different people active at least once in this month">MAU · Monthly active users</h3>
-              <div class="au-controls">
-                <div class="date-range"><select id="au-month" aria-label="MAU month" onchange="setAuMonth(this.value)"></select></div>
-              </div>
-            </div>
-            <div class="au-val" id="au-mau">—</div>
-            <div class="au-sub" id="au-mau-sub"></div>
-            <div class="au-note" id="au-mau-note"></div>
-          </div>
-        </div>
         <div class="seg metrics-tabs" id="metrics-tabs" role="tablist" aria-label="Metrics view">
           <button class="active" data-tab="posts" onclick="setMetricsTab('posts')">Posts</button>
           <button data-tab="users" onclick="setMetricsTab('users')">Users</button>
@@ -1468,8 +1441,43 @@
             <div class="date-range" title="Show a whole month"><span class="dr-lbl">Month</span><input type="month" id="analytics-month" aria-label="Month" onchange="setAnalyticsMonth(this.value)"></div>
           </div>
         </div>
+        <div class="au-type">
+          <span>DAU &amp; MAU for</span>
+          <div class="seg" id="au-type-seg" role="group" aria-label="Account type">
+            <button class="active" data-type="individual" onclick="setAuType('individual')">Personal</button>
+            <button data-type="business" onclick="setAuType('business')">Business</button>
+          </div>
+        </div>
+        <div class="au-grid">
+          <div class="au-box">
+            <div class="au-head">
+              <h3 title="Different people active on this day">DAU · Daily active users</h3>
+              <div class="au-controls">
+                <div class="seg" id="au-day-seg" role="group" aria-label="DAU day">
+                  <button data-day="today" onclick="setAuDay('today')">Today</button>
+                  <button data-day="yesterday" onclick="setAuDay('yesterday')">Yesterday</button>
+                </div>
+                <div class="date-range"><input type="date" id="au-day" aria-label="DAU date" onchange="setAuDay(this.value)"></div>
+              </div>
+            </div>
+            <div class="au-val" id="au-dau">—</div>
+            <div class="au-sub" id="au-dau-sub"></div>
+            <div class="au-note" id="au-dau-note"></div>
+          </div>
+          <div class="au-box">
+            <div class="au-head">
+              <h3 title="Different people active at least once in this month">MAU · Monthly active users</h3>
+              <div class="au-controls">
+                <div class="date-range"><select id="au-month" aria-label="MAU month" onchange="setAuMonth(this.value)"></select></div>
+              </div>
+            </div>
+            <div class="au-val" id="au-mau">—</div>
+            <div class="au-sub" id="au-mau-sub"></div>
+            <div class="au-note" id="au-mau-note"></div>
+          </div>
+        </div>
         <div class="mini-stats" style="grid-template-columns:repeat(4,1fr)">
-          <div class="mini-stat"><div class="ms-val" id="an-dau">—</div><div class="ms-label">Active users</div><div class="ms-sub" id="an-dau-sub"></div></div>
+          <div class="mini-stat"><div class="ms-val" id="an-dau">—</div><div class="ms-label">Reel watchers</div><div class="ms-sub" id="an-dau-sub"></div></div>
           <div class="mini-stat"><div class="ms-val" id="an-watchtime">—</div><div class="ms-label">Avg watch time / user / day</div></div>
           <div class="mini-stat"><div class="ms-val" id="an-reelsperuser">—</div><div class="ms-label">Reels watched / user / day</div></div>
           <div class="mini-stat"><div class="ms-val" id="an-impressions">—</div><div class="ms-label">Ad impressions</div></div>
@@ -1483,7 +1491,7 @@
         <div class="table-card" style="margin-top:16px">
           <div class="table-header"><h3>Day by day</h3><span class="cell-sub" id="an-note"></span></div>
           <div style="overflow-x:auto">
-          <table><thead><tr><th>Day</th><th>Active users</th><th>Watch time / user</th><th>Reels / user</th><th>Ad impressions</th><th>Fill rate</th><th>eCPM</th><th>Ad revenue</th><th>Payouts</th></tr></thead>
+          <table><thead><tr><th>Day</th><th>Reel watchers</th><th>Watch time / user</th><th>Reels / user</th><th>Ad impressions</th><th>Fill rate</th><th>eCPM</th><th>Ad revenue</th><th>Payouts</th></tr></thead>
           <tbody id="an-days"><tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
           </div>
         </div>
@@ -2815,13 +2823,14 @@ function setMetricsTab(tab) {
   document.getElementById('metrics-creators-card').style.display = tab === 'creators' ? '' : 'none';
 }
 
-// DAU / MAU. Counted per IST day from user_daily_activity, for the current
-// mode: DAU is one day; MAU is a calendar month, or 1st to today for this month.
+// DAU / MAU on Analytics. Counted per IST day from user_daily_activity: DAU is
+// one day; MAU is a calendar month, or 1st to today for this month. Analytics
+// has no Business mode, so this section has its own Personal/Business switch.
 const AU_FIRST_MONTH = '2026-09';
 const istToday = () => new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
 const auDate = (d, opts) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', opts || { day: 'numeric', month: 'short', year: 'numeric' });
 const AU_ESTIMATE_NOTE = 'Rebuilt from recorded actions (watching, posting, logging in), so the true number may be a little higher.';
-let auDay = null, auMonth = null, auDayLoad = 0, auMonthLoad = 0;
+let auDay = null, auMonth = null, auType = 'individual', auDayLoad = 0, auMonthLoad = 0;
 
 function setAuDay(v) {
   const today = istToday();
@@ -2829,6 +2838,12 @@ function setAuDay(v) {
   loadAuDay();
 }
 function setAuMonth(ym) { auMonth = ym; loadAuMonth(); }
+function setAuType(type) {
+  auType = type;
+  document.querySelectorAll('#au-type-seg button').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  loadAuDay();
+  loadAuMonth();
+}
 
 function auNote(id, from, exactFrom) {
   document.getElementById(id).textContent = !exactFrom || from < exactFrom ? AU_ESTIMATE_NOTE : '';
@@ -2845,7 +2860,7 @@ async function loadAuDay() {
   $('au-dau').textContent = '…';
   $('au-dau-sub').textContent = auDate(day, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) + (day === today ? ' · so far today' : '');
   try {
-    const r = await rpc('admin_active_users', { p_from: day, p_to: day, p_account_type: accountMode });
+    const r = await rpc('admin_active_users', { p_from: day, p_to: day, p_account_type: auType });
     if (load !== auDayLoad) return;
     $('au-dau').textContent = nfIN(r.active);
     auNote('au-dau-note', day, r.exact_from);
@@ -2864,7 +2879,7 @@ async function loadAuMonth() {
   $('au-mau').textContent = '…';
   $('au-mau-sub').textContent = `${auDate(from, { day: 'numeric', month: 'short' })} – ${auDate(to)}` + (to === today ? ' · till today' : '');
   try {
-    const r = await rpc('admin_active_users', { p_from: from, p_to: to, p_account_type: accountMode });
+    const r = await rpc('admin_active_users', { p_from: from, p_to: to, p_account_type: auType });
     if (load !== auMonthLoad) return;
     $('au-mau').textContent = nfIN(r.active);
     auNote('au-mau-note', from, r.exact_from);
@@ -2886,7 +2901,6 @@ function loadActiveUsers() {
 }
 
 async function loadMetrics() {
-  loadActiveUsers();
   await ensureAvatars();
   const { from, to } = getRange('metrics');
   document.getElementById('metrics-range-label').textContent = `${accountMode === 'business' ? 'Business accounts' : 'Individual accounts'} · ${rangeLabel(from, to)}`;
@@ -4489,6 +4503,7 @@ function setAnalyticsMonth(v) {
 }
 
 async function loadAnalytics() {
+  loadActiveUsers();
   const $ = id => document.getElementById(id);
   const today = localDay(new Date());
   const { from, to } = getRange('analytics');
