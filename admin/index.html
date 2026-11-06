@@ -2111,6 +2111,7 @@ function showPage(name, el) {
   const goalHome = name === 'dashboard' || name === 'biz';
   document.getElementById('target-pill').hidden = !goalHome;
   document.getElementById('goal-strip').hidden = !goalHome;
+  connectLive();
   if (goalHome) syncGoalMode();
   document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   closeDrawer();
@@ -3400,8 +3401,6 @@ tickClock();
 setInterval(tickClock, 1000);
 
 async function loadDashboard() {
-  // Before the data: a signup landing during the load still shows as new
-  const sigAtStart = dashSignature();
   await loadBusinessUids();
   const [users, posts, kyc] = await Promise.all([
     query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&order=created_at.desc').then(onlyIndividualUsers),
@@ -3414,9 +3413,7 @@ async function loadDashboard() {
   await loadSocialHandles();
   renderLastSignup();
   renderDashStats();
-  _dashFullAt = Date.now();
   loadGoal();
-  sigAtStart.then(sig => { _dashSig = sig; });
   renderDashUsers();
 }
 
@@ -5021,38 +5018,19 @@ async function loadNotifications() {
 // of them changed - it used to re-download every table twice a minute.
 // A full reload still runs every 10 min (AdMob, "today" rolling over), and
 // nothing runs while the browser tab is hidden.
-let _dashSig = null, _dashFullAt = 0, _bizGoalSig = null;
-async function dashSignature() {
-  const latest = t => query(t, 'select=created_at&order=created_at.desc&limit=1').then(r => (r[0] || {}).created_at || '');
-  return (await Promise.all(['users', 'posts'].map(latest))).join('|');
-}
 function setupRealtime() {
-  setInterval(async () => {
-    const activePage = document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
-    if (document.hidden) return;
-    if (activePage === 'biz') {
-      const r = await query('users', 'select=created_at&account_type=eq.business&order=created_at.desc&limit=1').catch(() => null);
-      const sig = r ? (r[0] || {}).created_at || '' : _bizGoalSig;
-      if (sig !== _bizGoalSig) { _bizGoalSig = sig; loadGoal(); }
-      return;
-    }
-    if (activePage !== 'dashboard') return;
-    const sig = await dashSignature();
-    if (sig !== _dashSig || Date.now() - _dashFullAt > 10 * 60000) loadDashboard();
-    else refreshSignupTime();
-  }, 30000);
+  setInterval(refreshSignupTime, 30000);   // the "x minutes ago" text; no network
 }
 
 // ── TAB ALERTS ───────────────────────────────────────
 // While you're on another tab or window, a new signup or post/reel shows a
 // desktop notification, like WhatsApp Web. Needs this tab open. If
 // notifications aren't allowed, the tab icon gets a green dot for a signup
-// and a red dot for a post/reel, and the title counts them. Checked every
-// 30 s (a background tab is slowed to about once a minute by the browser);
-// dots clear when you come back to the tab. Quiet on errors - no toasts from
-// a tab nobody is looking at.
+// and a red dot for a post/reel, and the title counts them. Checked when the
+// database signals new activity (see LIVE SIGNAL); dots clear when you come
+// back to the tab. Quiet on errors - no toasts from a tab nobody is looking at.
 const TAB_ICON = '/images/icon-192.png', TAB_TITLE = 'ThanqYou Admin';
-let _alertSeen = null, _alertNew = { signups: 0, posts: 0 }, _alertIcon = null;
+let _alertSeen = null, _alertNew = { signups: 0, posts: 0 }, _alertIcon = null, _alertCheckedAt = 0;
 
 async function latestRows(table, columns, filter) {
   const r = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/rest/${table}?select=${columns}${filter}&order=created_at.desc&limit=20`,
@@ -5108,6 +5086,7 @@ async function showDesktopAlerts(signups, posts) {
 
 async function checkTabAlerts() {
   if (!sessionToken || document.getElementById('app').style.display !== 'block') { _alertSeen = null; return; }
+  _alertCheckedAt = Date.now();
   let users, posts;
   try {
     [users, posts] = await Promise.all([
@@ -5176,15 +5155,67 @@ function clearTabAlerts() {
   const activePage = document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (activePage === 'dashboard') loadDashboard();
 }
-// Back on the tab: don't wait for the next 30 s check
+// Back on the tab: anything missed while it was asleep
 function onReturnToTab() {
   clearTabAlerts();
   if (!document.hidden) checkTabAlerts();
 }
 window.addEventListener('focus', onReturnToTab);
 document.addEventListener('visibilitychange', onReturnToTab);
-setInterval(checkTabAlerts, 30000);
 syncNotifBtn();
+
+// ── LIVE SIGNAL ──────────────────────────────────────
+// The database signals every new signup and post on a broadcast channel, so
+// the panel does nothing until something happens. The signal carries no data;
+// checkTabAlerts then fetches the rows through admin-proxy. Anyone can post to
+// a public channel, so signals are rate limited and only real new rows reload
+// the page. Publishable key: public by design, it opens only this channel.
+const LIVE_URL = 'wss://nppmtxvlkmwoqnvlngya.supabase.co/realtime/v1/websocket?vsn=1.0.0&apikey=sb_publishable_OZSKP7t75QtmocUwWt84Hg_WAoC-ZY_';
+const LIVE_TOPIC = 'realtime:admin-activity';
+const LIVE_MIN_GAP = 15000;              // between checks caused by signals
+const SAFETY_CHECK_EVERY = 10 * 60000;   // catches a signal that never arrived
+const OFFLINE_CHECK_EVERY = 60000;       // while the connection is down
+let _liveSocket = null, _liveUp = false, _liveBeat = null, _liveWait = null, _liveRef = 0;
+
+function connectLive() {
+  if (_liveSocket || !sessionToken) return;
+  const ws = _liveSocket = new WebSocket(LIVE_URL);
+  const send = (topic, event, payload) => ws.send(JSON.stringify({ topic, event, payload, ref: String(++_liveRef) }));
+  ws.onopen = () => {
+    send(LIVE_TOPIC, 'phx_join', { config: { broadcast: { self: false }, private: false } });
+    _liveBeat = setInterval(() => send('phoenix', 'heartbeat', {}), 25000);
+  };
+  ws.onmessage = e => {
+    let m;
+    try { m = JSON.parse(e.data); } catch { return; }
+    if (m.topic !== LIVE_TOPIC) return;
+    if (m.event === 'phx_reply' && m.payload?.status === 'ok' && !_liveUp) {
+      _liveUp = true;
+      checkTabAlerts();   // anything that arrived while disconnected
+    } else if (m.event === 'broadcast') {
+      onLiveSignal();
+    }
+  };
+  ws.onclose = () => {
+    clearInterval(_liveBeat);
+    _liveSocket = null;
+    _liveUp = false;
+    setTimeout(connectLive, 5000);
+  };
+}
+
+function onLiveSignal() {
+  if (_liveWait) return;
+  // A short pause lets a burst of signups arrive as one check
+  const wait = Math.max(2000, LIVE_MIN_GAP - (Date.now() - _alertCheckedAt));
+  _liveWait = setTimeout(() => { _liveWait = null; checkTabAlerts(); }, wait);
+}
+
+setInterval(() => {
+  connectLive();
+  const gap = Date.now() - _alertCheckedAt;
+  if (gap >= (_liveUp ? SAFETY_CHECK_EVERY : OFFLINE_CHECK_EVERY)) checkTabAlerts();
+}, OFFLINE_CHECK_EVERY);
 
 // Init
 setupRealtime();
