@@ -220,8 +220,20 @@
   .kpi-icon.teal { background:#E3F4F4; color:#0F7A7A; }
   /* Dashboard: 3 + 3 cards (people row, money row) */
   #dash-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
-  @media (min-width:1500px) { #dash-stats { grid-template-columns:repeat(4,minmax(0,1fr)); } }
-  @media (min-width:1281px) and (max-width:1499px) { #watch-card { grid-column:1 / -1; } }
+  @media (min-width:1281px) { #dash-stats { grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,2fr); } }
+  @media (max-width:1280px) { #watch-card { grid-column:1 / -1; } }
+  .kyc-top { grid-template-columns:minmax(0,1fr); }
+  .watch-range { font-size:12.5px; color:var(--grey); margin-top:2px; }
+  .watch-filter { margin-top:10px; }
+  .watch-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:14px; }
+  .watch-grid > div { min-width:0; }
+  .watch-grid > div + div { border-left:1px solid var(--dark3); padding-left:12px; }
+  .watch-grid span { display:block; font-size:12px; color:var(--grey2); font-weight:600; }
+  .watch-grid b { display:block; font-size:clamp(18px,1.55vw,24px); white-space:nowrap; font-weight:800; letter-spacing:-0.5px; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .watch-grid em { display:block; font-style:normal; font-size:11.5px; color:var(--grey2); }
+  .watch-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .goal-link { background:none; border:none; color:var(--red); font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; padding:0; white-space:nowrap; }
+  @media (max-width:760px) { .watch-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .watch-grid > div:nth-child(3) { border-left:none; padding-left:0; } }
   .stat-value.pos { color:var(--green); } .stat-value.neg { color:#A5362B; }
   .be-pct { font-size:15px; font-weight:700; margin-top:4px; } .be-pct.pos { color:var(--green); } .be-pct.neg { color:#A5362B; }
   /* Bank > Payouts card: what the money was paid for, and to whom */
@@ -965,33 +977,22 @@
               <div class="cr-sub" id="s-creator-sub"></div>
             </div>
           </div>
-          <div class="stat-card">
-            <div class="kpi-top">
-              <div><div class="stat-label">KYC completed</div><div class="stat-value" id="s-kyc">—</div></div>
-              <div class="kpi-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
-            </div>
-            <div class="kpi-foot"><span id="s-kyc-d"></span><span class="stat-change" id="s-kyc-c">Loading...</span></div>
-            <div class="kyc-mini" id="kyc-mini" title="KYC status split"></div>
-          </div>
           <div class="stat-card" id="watch-card">
             <div class="kpi-top">
-              <div><div class="stat-label">Watched reels after signup</div><div class="stat-value" id="s-watch-pct">—</div></div>
+              <div><div class="stat-label">Reel watching</div><div class="watch-range" id="w-range"></div></div>
               <div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div>
             </div>
-            <div class="post-split">
-              <div class="ps" title="Users who signed up in the chosen dates">
-                <div class="ps-h"><i style="background:#2a78d6"></i>Signed up</div>
-                <div class="stat-value" id="s-watch-users">—</div>
-              </div>
-              <div class="ps" title="Of those, people who have watched at least one reel at any time since">
-                <div class="ps-h"><i style="background:#1baf7a"></i>Watched</div>
-                <div class="stat-value" id="s-watch-yes">—</div>
-              </div>
+            <div class="dash-filter watch-filter" data-range="watch" data-default="all"></div>
+            <div class="watch-grid">
+              <div title="Different people who watched a reel in these dates"><span>Users watched</span><b id="w-users">—</b></div>
+              <div title="Total time spent watching reels in these dates"><span>Watch time</span><b id="w-time">—</b><em id="w-avg"></em></div>
+              <div title="Ads shown during reels to these users, in these dates"><span>Ads in reels</span><b id="w-reel-ads">—</b></div>
+              <div title="Every ad shown to these users in these dates: reels, wallet banners, app open, feed"><span>All ads to them</span><b id="w-all-ads">—</b></div>
             </div>
-            <div class="creator-rate" title="Signed up but never watched a reel">
-              <div class="cr-top"><span>Never watched</span><b id="s-watch-no">—</b></div>
+            <div class="creator-rate" title="Of the people who signed up in these dates, how many have ever watched a reel">
+              <div class="cr-top"><span>Signups who watched reels</span><b id="s-watch-pct">—</b></div>
               <div class="cr-bar"><span id="s-watch-bar" style="width:0"></span></div>
-              <div class="cr-sub" id="s-watch-sub"></div>
+              <div class="watch-foot"><span class="cr-sub" id="s-watch-sub"></span><button class="goal-link" onclick="openWatchList()">See users ›</button></div>
             </div>
           </div>
         </div>
@@ -1437,6 +1438,16 @@
 
       <!-- KYC -->
       <div class="page" id="page-kyc">
+        <div class="stats-grid kyc-top">
+          <div class="stat-card">
+            <div class="kpi-top">
+              <div><div class="stat-label">KYC completed</div><div class="stat-value" id="s-kyc">—</div></div>
+              <div class="kpi-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+            </div>
+            <div class="kpi-foot"><span id="s-kyc-d"></span><span class="stat-change" id="s-kyc-c">Loading...</span></div>
+            <div class="kyc-mini" id="kyc-mini" title="KYC status split"></div>
+          </div>
+        </div>
         <div class="mini-stats">
           <div class="mini-stat"><div class="ms-val" id="k-pending">—</div><div class="ms-label">In Progress (user)</div></div>
           <div class="mini-stat"><div class="ms-val" id="k-review">—</div><div class="ms-label">Needs Manual Review</div></div>
@@ -1763,6 +1774,15 @@
       <div class="goal-box"><div class="gl" id="goal-cum-label">Total by month end</div><div class="gv" id="goal-cum">—</div><div class="gs" id="goal-cum-sub">—</div><div class="goal-bar" id="goal-cum-barwrap"><span id="goal-cum-bar" style="width:0"></span></div></div>
     </div>
     <div id="goal-plan"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="watch-modal" onclick="if(event.target===this)closeModal('watch-modal')">
+  <div class="modal" style="width:860px;max-width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div><h2>Reel watching by user</h2><div class="watch-range" id="wl-range"></div></div>
+      <button onclick="closeModal('watch-modal')" aria-label="Close" style="background:none;border:none;color:var(--grey);cursor:pointer;font-size:20px">×</button>
+    </div>
+    <div style="overflow-x:auto;max-height:60vh"><table><thead><tr><th>User</th><th>Watch time</th><th>Reels</th><th title="Ads shown during reels">Ads in reels</th><th title="Every ad shown to this person in these dates">All ads</th><th>Last watched</th></tr></thead><tbody id="wl-body"></tbody></table></div>
   </div>
 </div>
 <div class="modal-overlay" id="upload-modal" onclick="if(event.target===this)closeUpload()">
@@ -3433,6 +3453,7 @@ async function loadDashboard() {
   _dashLoaded = true;
   renderLastSignup();
   await renderDashStats();
+  renderWatchCard();
   loadGoal();
   renderDashUsers();
 }
@@ -3582,7 +3603,7 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
 // The dashboard's Signups & posts chart has its own range (a trend needs several days)
 const PRESET_SETS = { trend: [['7d','7 days'],['14d','14 days'],['30d','30 days'],['90d','90 days'],['month','This month']] };
-const RANGE_RENDER = { trend: () => renderTrendChartRange(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls(), analytics: () => loadAnalytics(), act: () => filterActivity() };
+const RANGE_RENDER = { trend: () => renderTrendChartRange(), watch: () => renderWatchCard(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls(), analytics: () => loadAnalytics(), act: () => filterActivity() };
 
 function rangeControlsHTML(prefix, active, presets = RANGE_PRESETS) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
@@ -3658,6 +3679,62 @@ function deltaChip(cur, prev) {
 const DASH_USER_COLS = 'select=firebase_uid,display_name,email,referred_by,account_type,created_at';
 let _dashLoaded = false, _dashStatsReq = 0, _dashTrendReq = 0;
 
+// Reel watching card: its own dates. Ads are for these watchers in these dates.
+let _watchReq = 0, _watchRows = [];
+async function renderWatchCard() {
+  if (!_dashLoaded) return;
+  const $ = id => document.getElementById(id);
+  const { from, to } = getRange('watch');
+  const req = ++_watchReq;
+  let w;
+  try { w = await rpc('admin_reel_watchers', { p_from: from || null, p_to: to || null }); }
+  catch (e) { if (req === _watchReq) $('w-range').textContent = `Couldn't load: ${e.message}`; return; }
+  if (req !== _watchReq) return;
+  const n = v => Number(v).toLocaleString('en-IN');
+  const label = rangeLabel(from, to);
+  $('w-range').textContent = label;
+  $('wl-range').textContent = label;
+  $('w-users').textContent = n(w.watchers);
+  $('w-time').textContent = fmtDuration(w.seconds);
+  $('w-avg').textContent = w.watchers ? `${fmtDuration(w.seconds / w.watchers)} per user` : '';
+  $('w-reel-ads').textContent = n(w.reel_ads);
+  $('w-all-ads').textContent = n(w.all_ads);
+  const pct = w.signed_up ? w.signed_up_watched / w.signed_up * 100 : 0;
+  $('s-watch-pct').textContent = w.signed_up ? `${pct.toFixed(1)}%` : '—';
+  $('s-watch-bar').style.width = Math.min(100, pct) + '%';
+  $('s-watch-sub').textContent = w.signed_up
+    ? `${n(w.signed_up_watched)} of ${n(w.signed_up)} signups · ${n(w.signed_up - w.signed_up_watched)} never watched` : 'No signups in these dates';
+  _watchRows = w.rows;
+}
+
+function openWatchList() {
+  document.getElementById('wl-body').innerHTML = _watchRows.length ? _watchRows.map(r => `<tr>
+    <td><div class="avatar-cell">${avatarHtml(r.firebase_uid, r.display_name)}<div><div style="font-weight:600">${escHtml(r.display_name || '—')}</div>${socialHandleLine(r.firebase_uid)}</div></div></td>
+    <td style="font-size:12px;white-space:nowrap">${r.seconds ? fmtDuration(r.seconds) : '<span class="cell-sub" title="Counted view from an older app version">Not timed</span>'}</td>
+    <td style="font-size:12px">${r.reels || '—'}</td>
+    <td style="font-size:12px">${r.reel_ads}</td>
+    <td style="font-size:12px">${r.all_ads}</td>
+    <td style="font-size:12px;white-space:nowrap">${r.last_at ? formatDateTime(r.last_at) : '—'}</td>
+  </tr>`).join('') : '<tr><td colspan="6"><div class="empty-state"><p>Nobody watched reels in these dates</p></div></td></tr>';
+  openModal('watch-modal');
+}
+
+// KYC completed card, on the KYC page: live personal accounts, all time
+async function renderKycCard() {
+  const $ = id => document.getElementById(id);
+  let st;
+  try { st = await rpc('admin_dashboard_stats', { p_from: null, p_to: null }); }
+  catch (e) { $('s-kyc-c').textContent = "Couldn't load"; return; }
+  const s = { users: st.users }, kycCounts = st.kyc;
+  $('s-kyc').textContent = `${kycCounts.verified} / ${s.users}`;
+  $('s-kyc-d').innerHTML = kycCounts.pending ? `<span class="chip warn">⚠ ${kycCounts.pending} awaiting review</span>`
+    : kycCounts.verified === s.users && s.users ? '<span class="chip up">✓ All verified</span>'
+    : `<span class="chip flat">${s.users - kycCounts.verified} not completed</span>`;
+  $('s-kyc-c').textContent = kycCounts.pending ? `${kycCounts.notStarted} not started` : '';
+  $('kyc-mini').innerHTML = s.users ? Object.keys(kycCounts).filter(k => kycCounts[k])
+    .map(k => `<span style="flex:${kycCounts[k]};background:${DASH_STATUS[k]}" title="${KYC_LABELS[k]}: ${kycCounts[k]}"></span>`).join('') : '';
+}
+
 async function renderDashStats() {
   if (!_dashLoaded) return;
   const from = document.getElementById('dash-from').value;
@@ -3695,7 +3772,6 @@ async function renderDashStats() {
   $('s-posts').textContent = `· ${s.posts.toLocaleString('en-IN')} total`;
   $('s-reels').textContent = reels.toLocaleString('en-IN');
   $('s-photos').textContent = (s.posts - reels).toLocaleString('en-IN');
-  $('s-kyc').textContent = `${kycCounts.verified} / ${s.users}`;
 
   if (from && to) {
     // Compared with the same number of days immediately before the range
@@ -3716,10 +3792,6 @@ async function renderDashStats() {
     $('s-users-c').textContent = '';
     $('s-posts-c').textContent = '';
   }
-  $('s-kyc-d').innerHTML = kycCounts.pending ? `<span class="chip warn">⚠ ${kycCounts.pending} awaiting review</span>`
-    : kycCounts.verified === s.users && s.users ? '<span class="chip up">✓ All verified</span>'
-    : `<span class="chip flat">${s.users - kycCounts.verified} not completed</span>`;
-  $('s-kyc-c').textContent = kycCounts.pending ? `${kycCounts.notStarted} not started` : '';
 
   drawSpark('spark-users', days.map(k => spark.signups[k] || 0), DASH_SERIES[0]);
   // Share of users who have posted: people with at least one post in the
@@ -3730,18 +3802,6 @@ async function renderDashStats() {
   $('s-creator-sub').textContent = `${s.posters.toLocaleString('en-IN')} of ${s.base.toLocaleString('en-IN')} users`
     + (filtered ? ' posted in this period' : ' have posted');
 
-  // Of the people who signed up in the range, how many ever watched a reel
-  const watchPct = s.users ? s.watched / s.users * 100 : 0;
-  $('s-watch-pct').textContent = s.users ? `${watchPct.toFixed(1)}%` : '—';
-  $('s-watch-users').textContent = s.users.toLocaleString('en-IN');
-  $('s-watch-yes').textContent = s.watched.toLocaleString('en-IN');
-  $('s-watch-no').textContent = (s.users - s.watched).toLocaleString('en-IN');
-  $('s-watch-bar').style.width = (s.users ? 100 - watchPct : 0) + '%';
-  $('s-watch-sub').textContent = s.users
-    ? `${(100 - watchPct).toFixed(1)}% signed up${filtered ? ' in this period' : ''} and never watched a reel` : 'No signups in this period';
-
-  $('kyc-mini').innerHTML = s.users ? Object.keys(kycCounts).filter(k => kycCounts[k])
-    .map(k => `<span style="flex:${kycCounts[k]};background:${DASH_STATUS[k]}" title="${KYC_LABELS[k]}: ${kycCounts[k]}"></span>`).join('') : '';
 
   renderTrendChartRange();
   renderBreakdowns(kycCounts, reels, s.posts);
@@ -4674,6 +4734,7 @@ async function toggleSetting(flagName, btnEl) {
 let kycData = [];
 
 async function loadKYC() {
+  renderKycCard();
   document.getElementById('kyc-body').innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const data = await query('user_kyc', 'select=id,firebase_uid,id_type,id_name,aadhaar_last4,status,rejection_reason,submitted_at,verified_at,verified_name,verification_method&order=submitted_at.desc');
   kycData = data || [];
