@@ -92,6 +92,7 @@
   .topbar-titles { flex:1; min-width:0; }
   .topbar h1 { font-size:20px; font-weight:700; letter-spacing:-0.3px; }
   .topbar .topbar-sub { font-size:12px; color:var(--grey); margin-top:2px; }
+  #topbar-time { font-variant-numeric:tabular-nums; }
   .topbar-actions { display:flex; align-items:center; gap:10px; }
   /* Road to 1 million: countdown pill (top bar, Dashboard only) + plan card */
   .target-pill { display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border:none; border-radius:20px; background:rgba(201,138,42,0.12); color:#8A5A12; font-family:inherit; font-size:12px; font-weight:600; white-space:nowrap; cursor:pointer; }
@@ -893,6 +894,7 @@
       <div class="topbar-titles">
         <h1 id="page-title">Dashboard</h1>
         <div class="topbar-sub" id="topbar-date"></div>
+        <div class="topbar-sub" id="topbar-time"></div>
       </div>
       <button class="goal-strip" id="goal-strip" onclick="openGoalPlan()" title="Open target details and monthly plan">
         <span class="gs-cell"><span class="gs-label" id="gs-month-label">This month</span><span class="gs-value"><span id="gs-month">—</span><small class="gs-extra" id="gs-month-extra"></small></span><span class="gs-bar"><span id="gs-month-bar" style="width:0"></span></span></span>
@@ -3386,10 +3388,21 @@ function payoutKind(t) {
   return prettyType(src || t.type);
 }
 
-async function loadDashboard() {
-  await loadBusinessUids();
+// Date and time in the top bar, on every page. IST, like the rest of the panel.
+function tickClock() {
+  const now = new Date(), timeZone = 'Asia/Kolkata';
   document.getElementById('topbar-date').textContent =
-    new Date().toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+    now.toLocaleDateString('en-IN', {weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone});
+  document.getElementById('topbar-time').textContent =
+    now.toLocaleTimeString('en-IN', {hour:'numeric', minute:'2-digit', second:'2-digit', hour12:true, timeZone}) + ' IST';
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+async function loadDashboard() {
+  // Before the data: a signup landing during the load still shows as new
+  const sigAtStart = dashSignature();
+  await loadBusinessUids();
   const [users, posts, kyc] = await Promise.all([
     query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&order=created_at.desc').then(onlyIndividualUsers),
     query('posts', 'select=id,firebase_uid,media_types,created_at&is_deleted=eq.false').then(onlyIndividualPosts),
@@ -3403,7 +3416,7 @@ async function loadDashboard() {
   renderDashStats();
   _dashFullAt = Date.now();
   loadGoal();
-  dashSignature().then(sig => { _dashSig = sig; });
+  sigAtStart.then(sig => { _dashSig = sig; });
   renderDashUsers();
 }
 
@@ -5107,13 +5120,23 @@ async function checkTabAlerts() {
     users: seen && seen.users > (users[0]?.created_at || '') ? seen.users : (users[0]?.created_at || ''),
     posts: seen && seen.posts > (posts[0]?.created_at || '') ? seen.posts : (posts[0]?.created_at || ''),
   };
-  if (!seen || (!document.hidden && document.hasFocus())) return;
+  if (!seen) return;
   const signups = users.filter(u => u.created_at > seen.users), newPosts = posts.filter(p => p.created_at > seen.posts);
   if (!signups.length && !newPosts.length) return;
+  refreshLivePage();
+  if (!document.hidden && document.hasFocus()) return;
   if (desktopAlertsOn()) { showDesktopAlerts(signups, newPosts).catch(() => {}); return; }
   _alertNew.signups += signups.length;
   _alertNew.posts += newPosts.length;
   drawTabAlerts();
+}
+
+// Keeps an open Dashboard / Business overview current, even in a background
+// tab, so the numbers are right whenever you look.
+function refreshLivePage() {
+  const page = document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
+  if (page === 'dashboard') loadDashboard();
+  else if (page === 'biz') loadGoal();
 }
 
 function drawTabAlerts() {
@@ -5153,8 +5176,13 @@ function clearTabAlerts() {
   const activePage = document.querySelector('.nav-item.active')?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (activePage === 'dashboard') loadDashboard();
 }
-window.addEventListener('focus', clearTabAlerts);
-document.addEventListener('visibilitychange', clearTabAlerts);
+// Back on the tab: don't wait for the next 30 s check
+function onReturnToTab() {
+  clearTabAlerts();
+  if (!document.hidden) checkTabAlerts();
+}
+window.addEventListener('focus', onReturnToTab);
+document.addEventListener('visibilitychange', onReturnToTab);
 setInterval(checkTabAlerts, 30000);
 syncNotifBtn();
 
