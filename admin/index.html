@@ -2996,7 +2996,7 @@ async function loadMetricsCreators() {
     const [posts, accounts, users] = await Promise.all([
       query('posts', 'select=social_uid,firebase_uid,created_at&is_deleted=eq.false'),
       query('social_accounts', 'select=social_uid,firebase_uid,username_handle,username'),
-      query('users', 'select=firebase_uid,display_name,email,phone,account_type,last_seen_at,last_seen,last_active_at')
+      query('users', 'select=firebase_uid,display_name,email,phone,account_type,last_seen_at,last_seen,last_active_at&is_deleted=not.is.true')
     ]);
     const userBy = Object.fromEntries(usersForMode(users).map(u => [u.firebase_uid, u]));
     const acctBy = Object.fromEntries((accounts || []).map(a => [a.social_uid, a]));
@@ -4177,7 +4177,7 @@ async function loadChats() {
   document.getElementById('ch-body').innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
   await Promise.all([loadBusinessUids(), ensureAvatars(), loadSocialHandles()]);
   const [users, msgs, convs, members, calls, sessions] = await Promise.all([
-    query('users', 'select=id,firebase_uid,display_name,phone,account_type,is_online,last_seen_at,last_seen,last_active_at'),
+    query('users', 'select=id,firebase_uid,display_name,phone,account_type,is_online,last_seen_at,last_seen,last_active_at&is_deleted=not.is.true'),
     query('messages', 'select=sender_uid,conversation_id,message_type,created_at&order=created_at.desc'),
     query('conversations', 'select=id,type,is_group,created_at'),
     query('conversation_members', 'select=conversation_id,user_id'),
@@ -4898,7 +4898,7 @@ async function onNotifTargetChange() {
   document.getElementById('notif-user-results').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('notif-user-results').classList.add('open');
   const [rows] = await Promise.all([
-    query('users', 'select=firebase_uid,display_name,email,phone,account_type,fcm_token,fcm_token_invalid_at,last_seen_at,last_active_at'),
+    query('users', 'select=firebase_uid,display_name,email,phone,account_type,fcm_token,fcm_token_invalid_at,last_seen_at,last_active_at&is_deleted=not.is.true'),
     loadSocialHandles()
   ]);
   notifUsers = (rows || []).map(u => ({ ...u, _active: [u.last_seen_at, u.last_active_at].filter(Boolean).sort().pop() || '' }))
