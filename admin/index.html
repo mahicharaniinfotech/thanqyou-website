@@ -220,6 +220,8 @@
   .kpi-icon.teal { background:#E3F4F4; color:#0F7A7A; }
   /* Dashboard: 3 + 3 cards (people row, money row) */
   #dash-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  @media (min-width:1500px) { #dash-stats { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+  @media (min-width:1281px) and (max-width:1499px) { #watch-card { grid-column:1 / -1; } }
   .stat-value.pos { color:var(--green); } .stat-value.neg { color:#A5362B; }
   .be-pct { font-size:15px; font-weight:700; margin-top:4px; } .be-pct.pos { color:var(--green); } .be-pct.neg { color:#A5362B; }
   /* Bank > Payouts card: what the money was paid for, and to whom */
@@ -970,6 +972,27 @@
             </div>
             <div class="kpi-foot"><span id="s-kyc-d"></span><span class="stat-change" id="s-kyc-c">Loading...</span></div>
             <div class="kyc-mini" id="kyc-mini" title="KYC status split"></div>
+          </div>
+          <div class="stat-card" id="watch-card">
+            <div class="kpi-top">
+              <div><div class="stat-label">Watched reels after signup</div><div class="stat-value" id="s-watch-pct">—</div></div>
+              <div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div>
+            </div>
+            <div class="post-split">
+              <div class="ps" title="Users who signed up in the chosen dates">
+                <div class="ps-h"><i style="background:#2a78d6"></i>Signed up</div>
+                <div class="stat-value" id="s-watch-users">—</div>
+              </div>
+              <div class="ps" title="Of those, people who have watched at least one reel at any time since">
+                <div class="ps-h"><i style="background:#1baf7a"></i>Watched</div>
+                <div class="stat-value" id="s-watch-yes">—</div>
+              </div>
+            </div>
+            <div class="creator-rate" title="Signed up but never watched a reel">
+              <div class="cr-top"><span>Never watched</span><b id="s-watch-no">—</b></div>
+              <div class="cr-bar"><span id="s-watch-bar" style="width:0"></span></div>
+              <div class="cr-sub" id="s-watch-sub"></div>
+            </div>
           </div>
         </div>
 
@@ -3409,8 +3432,19 @@ async function loadDashboard() {
     query('posts', 'select=id,firebase_uid,media_types,created_at&is_deleted=eq.false').then(onlyIndividualPosts),
     query('user_kyc', 'select=id,firebase_uid,status,submitted_at')
   ]);
+  // A view is in any of these: older builds wrote counted views, not the log
+  const [watchLog, viewCounts, views] = await Promise.all([
+    query('reel_watch_events', 'select=viewer_firebase_uid&seconds_watched=gt.0'),
+    query('reel_view_counts', 'select=firebase_uid'),
+    query('reel_views', 'select=firebase_uid')
+  ]);
+  const watchers = new Set([
+    ...(watchLog || []).map(r => r.viewer_firebase_uid),
+    ...(viewCounts || []).map(r => r.firebase_uid),
+    ...(views || []).map(r => r.firebase_uid)
+  ]);
 
-  window._dashStats = { users: users||[], posts: posts||[], kyc: kyc||[] };
+  window._dashStats = { users: users||[], posts: posts||[], kyc: kyc||[], watchers };
   window._dashUsers = users || [];
   await loadSocialHandles();
   renderLastSignup();
@@ -3723,6 +3757,17 @@ function renderDashStats() {
   $('s-creator-bar').style.width = Math.min(100, pct) + '%';
   $('s-creator-sub').textContent = `${posters.size.toLocaleString('en-IN')} of ${userBase.length.toLocaleString('en-IN')} users`
     + (filtered ? ' posted in this period' : ' have posted');
+
+  // Of the people who signed up in the range, how many ever watched a reel
+  const watched = users.filter(u => d.watchers.has(u.firebase_uid)).length;
+  const watchPct = users.length ? watched / users.length * 100 : 0;
+  $('s-watch-pct').textContent = users.length ? `${watchPct.toFixed(1)}%` : '—';
+  $('s-watch-users').textContent = users.length.toLocaleString('en-IN');
+  $('s-watch-yes').textContent = watched.toLocaleString('en-IN');
+  $('s-watch-no').textContent = (users.length - watched).toLocaleString('en-IN');
+  $('s-watch-bar').style.width = (users.length ? 100 - watchPct : 0) + '%';
+  $('s-watch-sub').textContent = users.length
+    ? `${(100 - watchPct).toFixed(1)}% signed up${filtered ? ' in this period' : ''} and never watched a reel` : 'No signups in this period';
 
   $('kyc-mini').innerHTML = users.length ? Object.keys(kycCounts).filter(k => kycCounts[k])
     .map(k => `<span style="flex:${kycCounts[k]};background:${DASH_STATUS[k]}" title="${KYC_LABELS[k]}: ${kycCounts[k]}"></span>`).join('') : '';
