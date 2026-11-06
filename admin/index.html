@@ -1274,6 +1274,7 @@
               <option value="other">Other / not specified</option>
               <option value="kyc_pending">KYC pending</option>
               <option value="kyc_verified">KYC verified</option>
+              <option value="deleted" id="user-filter-deleted">Deleted accounts</option>
             </select>
           </div>
           <table><thead><tr><th>User</th><th>Email</th><th>State / City</th><th>Device</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
@@ -4039,7 +4040,7 @@ async function loadUsers() {
   await loadBusinessUids();
   document.getElementById('users-body').innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const [data, wallets, kycData] = await Promise.all([
-    query('users', 'select=id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,ty_id,state,city,region_source,signup_method,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc&is_deleted=not.is.true'),
+    query('users', 'select=is_deleted,deleted_at,id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,ty_id,state,city,region_source,signup_method,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc'),
     query('coin_wallet', 'select=firebase_uid,balance,lifetime_earned,spendable_earned,locked_current'),
     query('user_kyc', 'select=firebase_uid,status')
   ]);
@@ -4055,6 +4056,7 @@ async function loadUsers() {
     _wallet: walletMap[u.firebase_uid] || null,
     _kyc: kycMap[u.firebase_uid] || null
   }));
+  document.getElementById('user-filter-deleted').textContent = `Deleted accounts (${usersData.filter(u => u.is_deleted).length})`;
   filterUsers();
 }
 
@@ -4063,17 +4065,19 @@ function filterUsers() { usersCurrentPage = 0; renderUsers(); }
 // Users in the selected date range (drives the stat cards)
 function usersInRange() {
   const { from, to } = getRange('users');
-  return usersData.filter(u => inDayRange(u.created_at, from, to));
+  return usersData.filter(u => !u.is_deleted && inDayRange(u.created_at, from, to));
 }
 
 // Range + search + dropdown (drives the table)
 function getFilteredUsers() {
   const search = plainLower(document.getElementById('user-search').value);
   const filter = document.getElementById('user-filter').value;
-  return usersInRange().filter(u => {
+  // Deleted accounts: never in the counts, listed here whatever the dates
+  const base = filter === 'deleted' ? usersData.filter(u => u.is_deleted) : usersInRange();
+  return base.filter(u => {
     const matchSearch = !search || plainLower(u.display_name).includes(search) || (u.phone||'').includes(search) || plainLower(u.email).includes(search) || plainLower(socialHandles[u.firebase_uid]).includes(search.replace(/^@/, '')) || plainLower(u.ty_id).includes(search.replace(/\s/g, '')) || plainLower(u.state).includes(search) || plainLower(u.city).includes(search);
     const g = genderOf(u);
-    const matchFilter = !filter
+    const matchFilter = !filter || filter === 'deleted'
       || (filter === 'male' && g === 'male')
       || (filter === 'female' && g === 'female')
       || (filter === 'other' && (g === 'other' || g === 'unspecified'))
@@ -4110,7 +4114,7 @@ function renderUsers() {
     return `
     <tr>
       <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name||'—')}${suspendedBadge(u)}</div>${socialHandleLine(u.firebase_uid)}${u.ty_id ? `<div class="cell-sub" style="font-family:'DM Mono',monospace;letter-spacing:.5px">${escHtml(u.ty_id)}</div>` : ''}</div></div></td>
-      <td style="font-size:12px">${escHtml(u.email||'—')}</td>
+      <td style="font-size:12px">${escHtml(u.email||'—')}${u.is_deleted ? `<div class="cell-sub">${escHtml(u.phone||'No phone')}</div><div class="cell-sub">Deleted ${formatDateTime(u.deleted_at)}</div>` : ''}</td>
       <td style="font-size:12px">${regionCell(u)}</td>
       <td style="font-size:12px">${deviceCell(u)}</td>
       <td style="font-size:12px;color:${g==='unspecified'?'var(--grey)':'inherit'}">${GENDER_META[g][0]}</td>
@@ -4120,7 +4124,7 @@ function renderUsers() {
       <td>
         <div style="display:flex;gap:6px">
           <button class="action-btn" onclick="viewUser('${u.firebase_uid}')">View</button>
-          ${u.banned_at
+          ${u.is_deleted ? '' : u.banned_at
             ? `<button class="action-btn success" onclick="banUser('${escHtml(u.firebase_uid)}', false)">Unban</button>`
             : `<button class="action-btn danger" onclick="banUser('${escHtml(u.firebase_uid)}', true)">Ban</button>`}
         </div>
@@ -4460,6 +4464,7 @@ async function viewUser(uid) {
 }
 
 function suspendedBadge(u) {
+  if (u.is_deleted) return ' <span class="badge badge-red">Account deleted</span>';
   return u.banned_at ? ` <span class="badge badge-red" title="${escHtml(u.ban_reason || '')}">Suspended</span>` : '';
 }
 
