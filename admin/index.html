@@ -4040,7 +4040,7 @@ async function loadUsers() {
   await loadBusinessUids();
   document.getElementById('users-body').innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const [data, wallets, kycData] = await Promise.all([
-    query('users', 'select=is_deleted,deleted_at,id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,ty_id,state,city,region_source,signup_method,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc'),
+    query('users', 'select=is_deleted,deleted_at,purged_at,id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,ty_id,state,city,region_source,signup_method,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc'),
     query('coin_wallet', 'select=firebase_uid,balance,lifetime_earned,spendable_earned,locked_current'),
     query('user_kyc', 'select=firebase_uid,status')
   ]);
@@ -4056,7 +4056,7 @@ async function loadUsers() {
     _wallet: walletMap[u.firebase_uid] || null,
     _kyc: kycMap[u.firebase_uid] || null
   }));
-  document.getElementById('user-filter-deleted').textContent = `Deleted accounts (${usersData.filter(u => u.is_deleted).length})`;
+  document.getElementById('user-filter-deleted').textContent = `Deleted accounts (${usersData.filter(u => u.is_deleted && !u.purged_at).length})`;
   filterUsers();
 }
 
@@ -4073,7 +4073,7 @@ function getFilteredUsers() {
   const search = plainLower(document.getElementById('user-search').value);
   const filter = document.getElementById('user-filter').value;
   // Deleted accounts: never in the counts, listed here whatever the dates
-  const base = filter === 'deleted' ? usersData.filter(u => u.is_deleted) : usersInRange();
+  const base = filter === 'deleted' ? usersData.filter(u => u.is_deleted && !u.purged_at) : usersInRange();
   return base.filter(u => {
     const matchSearch = !search || plainLower(u.display_name).includes(search) || (u.phone||'').includes(search) || plainLower(u.email).includes(search) || plainLower(socialHandles[u.firebase_uid]).includes(search.replace(/^@/, '')) || plainLower(u.ty_id).includes(search.replace(/\s/g, '')) || plainLower(u.state).includes(search) || plainLower(u.city).includes(search);
     const g = genderOf(u);
@@ -4114,7 +4114,7 @@ function renderUsers() {
     return `
     <tr>
       <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name||'—')}${suspendedBadge(u)}</div>${socialHandleLine(u.firebase_uid)}${u.ty_id ? `<div class="cell-sub" style="font-family:'DM Mono',monospace;letter-spacing:.5px">${escHtml(u.ty_id)}</div>` : ''}</div></div></td>
-      <td style="font-size:12px">${escHtml(u.email||'—')}${u.is_deleted ? `<div class="cell-sub">${escHtml(u.phone||'No phone')}</div><div class="cell-sub">Deleted ${formatDateTime(u.deleted_at)}</div>` : ''}</td>
+      <td style="font-size:12px">${escHtml(u.email||'—')}${u.is_deleted ? `<div class="cell-sub">${escHtml(u.phone||'No phone')}</div><div class="cell-sub">Deleted ${formatDateTime(u.deleted_at)}</div><div class="cell-sub" style="color:var(--red)" title="Promised on the Delete Account page. Do not contact deleted accounts">Data removed ${formatDate(new Date(new Date(u.deleted_at).getTime() + 30 * 864e5).toISOString())}</div>` : ''}</td>
       <td style="font-size:12px">${regionCell(u)}</td>
       <td style="font-size:12px">${deviceCell(u)}</td>
       <td style="font-size:12px;color:${g==='unspecified'?'var(--grey)':'inherit'}">${GENDER_META[g][0]}</td>
@@ -4285,7 +4285,7 @@ async function loadActivity() {
   document.getElementById('act-title').textContent = accountMode === 'business' ? 'Business last login & activity' : 'Last login & activity';
   await loadBusinessUids();
   const [users, sessions, appTime, reelWatch] = await Promise.all([
-    query('users', 'select=is_deleted,firebase_uid,display_name,email,phone,account_type,created_at,is_online,last_seen_at,last_seen,last_active_at,platform,app_version,fcm_token_invalid_at'),
+    query('users', 'select=is_deleted,purged_at,firebase_uid,display_name,email,phone,account_type,created_at,is_online,last_seen_at,last_seen,last_active_at,platform,app_version,fcm_token_invalid_at'),
     query('active_mobile_sessions', 'select=firebase_uid,logged_in_at'),
     query('app_time_daily', 'select=firebase_uid,day,chats_seconds,social_seconds'),
     query('reel_watch_events', 'select=viewer_firebase_uid,seconds_watched,created_at&seconds_watched=gt.0'),
@@ -4305,7 +4305,7 @@ async function loadActivity() {
   });
   // Deleted accounts count for nothing here; they show only under their filter
   activityData = rowsAll.filter(u => !u.is_deleted);
-  activityDeleted = rowsAll.filter(u => u.is_deleted);
+  activityDeleted = rowsAll.filter(u => u.is_deleted && !u.purged_at);
   const count = st => activityData.filter(u => u._status === st).length;
   document.getElementById('act-online').textContent = count('online');
   document.getElementById('act-24h').textContent = count('online') + count('today');
