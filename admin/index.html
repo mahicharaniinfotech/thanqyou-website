@@ -3427,28 +3427,12 @@ setInterval(tickClock, 1000);
 
 async function loadDashboard() {
   await loadBusinessUids();
-  const [users, posts, kyc] = await Promise.all([
-    query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&is_deleted=not.is.true&order=created_at.desc').then(onlyIndividualUsers),
-    query('posts', 'select=id,firebase_uid,media_types,created_at&is_deleted=eq.false').then(onlyIndividualPosts),
-    query('user_kyc', 'select=id,firebase_uid,status,submitted_at')
-  ]);
-  // A view is in any of these: older builds wrote counted views, not the log
-  const [watchLog, viewCounts, views] = await Promise.all([
-    query('reel_watch_events', 'select=viewer_firebase_uid&seconds_watched=gt.0'),
-    query('reel_view_counts', 'select=firebase_uid'),
-    query('reel_views', 'select=firebase_uid')
-  ]);
-  const watchers = new Set([
-    ...(watchLog || []).map(r => r.viewer_firebase_uid),
-    ...(viewCounts || []).map(r => r.firebase_uid),
-    ...(views || []).map(r => r.firebase_uid)
-  ]);
-
-  window._dashStats = { users: users||[], posts: posts||[], kyc: kyc||[], watchers };
-  window._dashUsers = users || [];
+  const recent = await query('users', `${DASH_USER_COLS}&is_deleted=not.is.true&or=(account_type.is.null,account_type.neq.business)&order=created_at.desc&limit=20`);
+  window._dashUsers = onlyIndividualUsers(recent);
   await loadSocialHandles();
+  _dashLoaded = true;
   renderLastSignup();
-  renderDashStats();
+  await renderDashStats();
   loadGoal();
   renderDashUsers();
 }
@@ -3669,51 +3653,55 @@ function deltaChip(cur, prev) {
   return pct > 0 ? `<span class="chip up">▲ ${pct}%</span>` : `<span class="chip down">▼ ${Math.abs(pct)}%</span>`;
 }
 
-function renderDashStats() {
-  const d = window._dashStats;
-  if (!d) return;
+// Totals come from admin_dashboard_stats / admin_dashboard_trend: personal,
+// live accounts. Nothing here should need a whole table in the browser.
+const DASH_USER_COLS = 'select=firebase_uid,display_name,email,referred_by,account_type,created_at';
+let _dashLoaded = false, _dashStatsReq = 0, _dashTrendReq = 0;
+
+async function renderDashStats() {
+  if (!_dashLoaded) return;
   const from = document.getElementById('dash-from').value;
   const to = document.getElementById('dash-to').value;
   const filtered = !!(from || to);
   const today = localDay(new Date());
-  const inRange = (ts, f, t) => { const day = localDay(ts); return !!day && (!f || day >= f) && (!t || day <= t); };
-  const sumRupees = list => list.reduce((s,t) => s + parseFloat(t.rupees||0), 0);
   const $ = id => document.getElementById(id);
 
-  const users = d.users.filter(u => inRange(u.created_at, from, to));
-  const posts = d.posts.filter(p => inRange(p.created_at, from, to));
-  // KYC is measured against users registered in the range, so people who never started count too
-  const kycByUid = {};
-  d.kyc.forEach(k => { kycByUid[k.firebase_uid] = k; });
-  const kycCounts = { verified:0, pending:0, rejected:0, notStarted:0 };
-  users.forEach(u => {
-    const k = kycByUid[u.firebase_uid];
-    if (!k) kycCounts.notStarted++;
-    else if (k.status === 'verified') kycCounts.verified++;
-    else if (k.status === 'rejected') kycCounts.rejected++;
-    else kycCounts.pending++;
-  });
-  const reels = posts.filter(p => (p.media_types||[]).includes('video')).length;
+  // Trend window: the selected range, or the 14 days ending at the selected/today date
+  let days;
+  if (from && to && from !== to) days = dayList(from, to);
+  else if (from && !to) days = dayList(from, today);
+  else { const end = to || today; days = dayList(addDays(end, -13), end); }
+
+  const req = ++_dashStatsReq;
+  let s, spark;
+  try {
+    [s, spark] = await Promise.all([
+      rpc('admin_dashboard_stats', { p_from: from || null, p_to: to || null }),
+      rpc('admin_dashboard_trend', { p_from: days[0], p_to: days[days.length - 1] })
+    ]);
+  } catch (e) {
+    if (req === _dashStatsReq) showToast(`Couldn't load the Dashboard: ${e.message}`, 'error');
+    return;
+  }
+  if (req !== _dashStatsReq) return; // a newer range was picked meanwhile
+
+  const kycCounts = s.kyc;
+  const reels = s.reels;
 
   const label = rangeLabel(from, to);
   $('dash-range-label').textContent = filtered ? `Showing ${label}` : 'All time · everything since launch';
 
-  $('s-users').textContent = users.length.toLocaleString('en-IN');
-  const isReel = p => (p.media_types||[]).includes('video');
-  $('s-posts').textContent = `· ${posts.length.toLocaleString('en-IN')} total`;
+  $('s-users').textContent = s.users.toLocaleString('en-IN');
+  $('s-posts').textContent = `· ${s.posts.toLocaleString('en-IN')} total`;
   $('s-reels').textContent = reels.toLocaleString('en-IN');
-  $('s-photos').textContent = (posts.length - reels).toLocaleString('en-IN');
-  $('s-kyc').textContent = `${kycCounts.verified} / ${users.length}`;
+  $('s-photos').textContent = (s.posts - reels).toLocaleString('en-IN');
+  $('s-kyc').textContent = `${kycCounts.verified} / ${s.users}`;
 
   if (from && to) {
-    // Compare with the same number of days immediately before the range
-    const len = dayList(from, to).length;
-    const pFrom = addDays(from, -len), pTo = addDays(from, -1);
-    $('s-users-d').innerHTML = deltaChip(users.length, d.users.filter(u => inRange(u.created_at, pFrom, pTo)).length);
-    const prevPosts = d.posts.filter(p => inRange(p.created_at, pFrom, pTo));
-    const prevReels = prevPosts.filter(isReel).length;
-    $('s-reels-d').innerHTML = deltaChip(reels, prevReels);
-    $('s-photos-d').innerHTML = deltaChip(posts.length - reels, prevPosts.length - prevReels);
+    // Compared with the same number of days immediately before the range
+    $('s-users-d').innerHTML = deltaChip(s.users, s.prev.users);
+    $('s-reels-d').innerHTML = deltaChip(reels, s.prev.reels);
+    $('s-photos-d').innerHTML = deltaChip(s.posts - reels, s.prev.posts - s.prev.reels);
     $('s-users-c').textContent = 'vs previous period';
     $('s-posts-c').textContent = 'vs previous period';
   } else if (filtered) {
@@ -3721,65 +3709,48 @@ function renderDashStats() {
     $('s-users-c').textContent = label;
     $('s-posts-c').textContent = label;
   } else {
-    const uToday = d.users.filter(u => localDay(u.created_at) === today).length;
+    const uToday = s.today.users, rToday = s.today.reels, phToday = s.today.posts - s.today.reels;
     $('s-users-d').innerHTML = `<span class="chip ${uToday ? 'up' : 'flat'}">+${uToday} today</span>`;
-    const todayPosts = d.posts.filter(p => localDay(p.created_at) === today);
-    const rToday = todayPosts.filter(isReel).length, phToday = todayPosts.length - rToday;
     $('s-reels-d').innerHTML = `<span class="chip ${rToday ? 'up' : 'flat'}">+${rToday} today</span>`;
     $('s-photos-d').innerHTML = `<span class="chip ${phToday ? 'up' : 'flat'}">+${phToday} today</span>`;
     $('s-users-c').textContent = '';
     $('s-posts-c').textContent = '';
   }
   $('s-kyc-d').innerHTML = kycCounts.pending ? `<span class="chip warn">⚠ ${kycCounts.pending} awaiting review</span>`
-    : kycCounts.verified === users.length && users.length ? '<span class="chip up">✓ All verified</span>'
-    : `<span class="chip flat">${users.length - kycCounts.verified} not completed</span>`;
+    : kycCounts.verified === s.users && s.users ? '<span class="chip up">✓ All verified</span>'
+    : `<span class="chip flat">${s.users - kycCounts.verified} not completed</span>`;
   $('s-kyc-c').textContent = kycCounts.pending ? `${kycCounts.notStarted} not started` : '';
 
-  // Trend window: the selected range, or the 14 days ending at the selected/today date
-  let days;
-  if (from && to && from !== to) days = dayList(from, to);
-  else if (from && !to) days = dayList(from, today);
-  else { const end = to || today; days = dayList(addDays(end, -13), end); }
-  const bucket = (list, key, val) => {
-    const m = {}; list.forEach(x => { const k = localDay(x[key]); m[k] = (m[k]||0) + (val ? val(x) : 1); });
-    return days.map(k => m[k] || 0);
-  };
-  const suSeries = bucket(d.users, 'created_at');
-
-  drawSpark('spark-users', suSeries, DASH_SERIES[0]);
+  drawSpark('spark-users', days.map(k => spark.signups[k] || 0), DASH_SERIES[0]);
   // Share of users who have posted: people with at least one post in the
   // range, out of everyone signed up by the end of the range
-  const userBase = d.users.filter(u => !to || localDay(u.created_at) <= to);
-  const baseIds = new Set(userBase.map(u => u.firebase_uid));
-  const posters = new Set(posts.map(p => p.firebase_uid).filter(uid => baseIds.has(uid)));
-  const pct = userBase.length ? posters.size / userBase.length * 100 : 0;
-  $('s-creator-pct').textContent = userBase.length ? `${pct.toFixed(1)}%` : '—';
+  const pct = s.base ? s.posters / s.base * 100 : 0;
+  $('s-creator-pct').textContent = s.base ? `${pct.toFixed(1)}%` : '—';
   $('s-creator-bar').style.width = Math.min(100, pct) + '%';
-  $('s-creator-sub').textContent = `${posters.size.toLocaleString('en-IN')} of ${userBase.length.toLocaleString('en-IN')} users`
+  $('s-creator-sub').textContent = `${s.posters.toLocaleString('en-IN')} of ${s.base.toLocaleString('en-IN')} users`
     + (filtered ? ' posted in this period' : ' have posted');
 
   // Of the people who signed up in the range, how many ever watched a reel
-  const watched = users.filter(u => d.watchers.has(u.firebase_uid)).length;
-  const watchPct = users.length ? watched / users.length * 100 : 0;
-  $('s-watch-pct').textContent = users.length ? `${watchPct.toFixed(1)}%` : '—';
-  $('s-watch-users').textContent = users.length.toLocaleString('en-IN');
-  $('s-watch-yes').textContent = watched.toLocaleString('en-IN');
-  $('s-watch-no').textContent = (users.length - watched).toLocaleString('en-IN');
-  $('s-watch-bar').style.width = (users.length ? 100 - watchPct : 0) + '%';
-  $('s-watch-sub').textContent = users.length
+  const watchPct = s.users ? s.watched / s.users * 100 : 0;
+  $('s-watch-pct').textContent = s.users ? `${watchPct.toFixed(1)}%` : '—';
+  $('s-watch-users').textContent = s.users.toLocaleString('en-IN');
+  $('s-watch-yes').textContent = s.watched.toLocaleString('en-IN');
+  $('s-watch-no').textContent = (s.users - s.watched).toLocaleString('en-IN');
+  $('s-watch-bar').style.width = (s.users ? 100 - watchPct : 0) + '%';
+  $('s-watch-sub').textContent = s.users
     ? `${(100 - watchPct).toFixed(1)}% signed up${filtered ? ' in this period' : ''} and never watched a reel` : 'No signups in this period';
 
-  $('kyc-mini').innerHTML = users.length ? Object.keys(kycCounts).filter(k => kycCounts[k])
+  $('kyc-mini').innerHTML = s.users ? Object.keys(kycCounts).filter(k => kycCounts[k])
     .map(k => `<span style="flex:${kycCounts[k]};background:${DASH_STATUS[k]}" title="${KYC_LABELS[k]}: ${kycCounts[k]}"></span>`).join('') : '';
 
   renderTrendChartRange();
-  renderBreakdowns(kycCounts, reels, posts.length);
+  renderBreakdowns(kycCounts, reels, s.posts);
 
-  const gc = genderCounts(users);
+  const gc = s.gender;
   $('s-users-g').innerHTML = ['male','female'].map(k => `<span><i style="background:${GENDER_META[k][1]}"></i>${GENDER_META[k][0]} <b>${gc[k]}</b></span>`).join('')
     + (gc.other + gc.unspecified ? `<span><i style="background:${GENDER_META.unspecified[1]}"></i>Other <b>${gc.other + gc.unspecified}</b></span>` : '');
   $('gender-breakdown').innerHTML = Object.keys(GENDER_META).filter(k => k === 'male' || k === 'female' || gc[k])
-    .map(k => breakdownRow(GENDER_META[k][0], gc[k], users.length, GENDER_META[k][1])).join('');
+    .map(k => breakdownRow(GENDER_META[k][0], gc[k], s.users, GENDER_META[k][1])).join('');
 }
 
 // ── BANK ──────────────────────────────────────────────
@@ -3926,17 +3897,20 @@ const CHART_TOOLTIP = { backgroundColor:'#1F1A19', padding:10, cornerRadius:8, t
 
 // Signups & posts chart over its own date range (presets or From/To),
 // independent of the page filter; data is already loaded, so no refetch
-function renderTrendChartRange() {
-  const d = window._dashStats;
-  if (!d) return;
+async function renderTrendChartRange() {
+  if (!_dashLoaded) return;
   const today = localDay(new Date());
   let { from, to } = getRange('trend');
   if (from && to && from > to) [from, to] = [to, from];
   if (!to) to = today;
   if (!from) from = addDays(to, -13);
   const days = dayList(from, to); // capped at 400 days
-  const count = list => { const m = {}; list.forEach(x => { const k = localDay(x.created_at); m[k] = (m[k] || 0) + 1; }); return days.map(k => m[k] || 0); };
-  const signups = count(d.users), posts = count(d.posts);
+  const req = ++_dashTrendReq;
+  let t;
+  try { t = await rpc('admin_dashboard_trend', { p_from: days[0], p_to: days[days.length - 1] }); }
+  catch (e) { console.error('trend', e); return; }
+  if (req !== _dashTrendReq) return;
+  const signups = days.map(k => t.signups[k] || 0), posts = days.map(k => t.posts[k] || 0);
   const total = a => a.reduce((s, n) => s + n, 0);
   document.getElementById('trend-sub').textContent =
     `Daily · ${fmtDay(days[0])} – ${fmtDay(days[days.length - 1])} · ${fmtNum(total(signups))} signups, ${fmtNum(total(posts))} posts`
@@ -4025,18 +3999,27 @@ function renderBreakdowns(kycCounts, reels, totalPosts) {
 }
 
 function filterDashUsers() {
-  renderDashUsers();
+  clearTimeout(_dashSearchTimer);
+  _dashSearchTimer = setTimeout(renderDashUsers, 300);
 }
 
-function renderDashUsers() {
-  const search = plainLower(document.getElementById('dash-search')?.value);
-  const users = window._dashUsers || [];
-  const filtered = search ? users.filter(u =>
-    plainLower(u.display_name).includes(search) ||
-    (u.phone||'').includes(search) ||
-    plainLower(u.email).includes(search) ||
-    (socialHandles[u.firebase_uid]||'').toLowerCase().includes(search.replace(/^@/, ''))
-  ) : users.slice(0,8);
+let _dashSearchTimer = null, _dashSearchReq = 0;
+
+async function renderDashUsers() {
+  // Characters with a meaning in a filter are dropped from the search
+  const search = (document.getElementById('dash-search')?.value || '').trim().replace(/^@/, '').replace(/["\\,()*]/g, ' ').trim();
+  const req = ++_dashSearchReq;
+  let filtered = (window._dashUsers || []).slice(0, 8);
+  if (search) {
+    const term = search.toLowerCase();
+    const byHandle = Object.keys(socialHandles).filter(uid => socialHandles[uid].toLowerCase().includes(term)).slice(0, 50);
+    const match = [`display_name.ilike."*${search}*"`, `email.ilike."*${search}*"`, `phone.ilike."*${search}*"`];
+    if (byHandle.length) match.push(`firebase_uid.in.(${byHandle.map(u => `"${u}"`).join(',')})`);
+    const where = encodeURIComponent(`(or(${match.join(',')}),or(account_type.is.null,account_type.neq.business))`);
+    const rows = await query('users', `${DASH_USER_COLS}&is_deleted=not.is.true&and=${where}&order=created_at.desc&limit=20`);
+    if (req !== _dashSearchReq) return; // typed more meanwhile
+    filtered = onlyIndividualUsers(rows);
+  }
   const recentBody = document.getElementById('recent-users-body');
   if (!filtered.length) {
     recentBody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><p>${search ? 'No users found' : 'No users yet'}</p></div></td></tr>`;
