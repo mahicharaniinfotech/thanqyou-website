@@ -1347,16 +1347,17 @@
               <option value="idle">Inactive 7–30 days</option>
               <option value="dormant">Inactive 30+ days</option>
               <option value="gone">Push bounced (may have uninstalled)</option>
+              <option value="deleted">Deleted accounts</option>
             </select>
             <select id="act-sort" class="tool-select" onchange="filterActivity()">
               <option value="active">Sort: last active</option>
-              <option value="login">Sort: last login</option>
+              <option value="login">Sort: last app open</option>
               <option value="idle">Sort: longest inactive</option>
               <option value="time">Sort: most time in app</option>
             </select>
             <button class="btn btn-red" onclick="emailActivityUsers()" id="act-email">Email these users</button>
           </div>
-          <table><thead><tr><th>User</th><th>Status</th><th>Last login</th><th>Last active</th><th title="Time with the Chats tab open, in the chosen dates">Time in Chats</th><th title="Time with the Social tab open, in the chosen dates">Time in Social</th><th>Platform</th><th>Joined</th></tr></thead>
+          <table><thead><tr><th>User</th><th>Status</th><th title="When this phone last opened or returned to the app. Cleared on sign-out">Last app open</th><th>Last active</th><th title="Time with the Chats tab open, in the chosen dates">Time in Chats</th><th title="Time with the Social tab open, in the chosen dates">Time in Social</th><th>Platform</th><th>Joined</th></tr></thead>
           <tbody id="act-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
           <div class="pagination"><span id="act-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="activityPage(-1)">← Prev</button><button class="pag-btn active" id="act-page-num">1</button><button class="pag-btn" onclick="activityPage(1)">Next →</button></div></div>
         </div>
@@ -3129,7 +3130,7 @@ function emailCreators() {
 }
 
 function emailActivityUsers() {
-  openEmailComposer(getFilteredActivity().rows.map(u => ({ firebase_uid: u.firebase_uid, email: u.email })), 'users');
+  openEmailComposer(getFilteredActivity().rows.filter(u => !u.is_deleted).map(u => ({ firebase_uid: u.firebase_uid, email: u.email })), 'users');
 }
 
 async function sendAdminEmail(test) {
@@ -3344,7 +3345,7 @@ function signupWhen(ts) {
 async function renderLastSignup() {
   const el = document.getElementById('last-signup');
   if (!el) return;
-  const [u] = await query('users', 'select=firebase_uid,display_name,account_type,platform,created_at&order=created_at.desc&limit=1');
+  const [u] = await query('users', 'select=firebase_uid,display_name,account_type,platform,created_at&is_deleted=not.is.true&order=created_at.desc&limit=1');
   if (!u) { el.innerHTML = ''; return; }
   const name = u.display_name || (socialHandles[u.firebase_uid] ? '@' + socialHandles[u.firebase_uid] : 'New user');
   const handle = socialHandles[u.firebase_uid] && u.display_name ? ` <span class="ls-time">@${escHtml(socialHandles[u.firebase_uid])}</span>` : '';
@@ -3403,7 +3404,7 @@ setInterval(tickClock, 1000);
 async function loadDashboard() {
   await loadBusinessUids();
   const [users, posts, kyc] = await Promise.all([
-    query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&order=created_at.desc').then(onlyIndividualUsers),
+    query('users', 'select=firebase_uid,display_name,email,gender,referred_by,account_type,created_at&is_deleted=not.is.true&order=created_at.desc').then(onlyIndividualUsers),
     query('posts', 'select=id,firebase_uid,media_types,created_at&is_deleted=eq.false').then(onlyIndividualPosts),
     query('user_kyc', 'select=id,firebase_uid,status,submitted_at')
   ]);
@@ -3430,9 +3431,9 @@ const GOAL_PLAN = [
 ];
 // Business: same monthly curve as personal, scaled to 10,000
 const GOALS = {
-  individual: { goal: 1000000, plan: GOAL_PLAN, short: '1M', noun: 'users', filter: 'or=(account_type.is.null,account_type.neq.business)',
+  individual: { goal: 1000000, plan: GOAL_PLAN, short: '1M', noun: 'users', filter: 'or=(account_type.is.null,account_type.neq.business)&is_deleted=not.is.true',
     title: '🎯 Road to 1 million users', subtitle: 'Target: 10,00,000 users by 31 Oct 2027 · personal accounts only (business accounts not counted)' },
-  business: { goal: 10000, plan: GOAL_PLAN.map(([ym, t, c]) => [ym, t / 100, c / 100]), short: '10K', noun: 'businesses', filter: 'account_type=eq.business',
+  business: { goal: 10000, plan: GOAL_PLAN.map(([ym, t, c]) => [ym, t / 100, c / 100]), short: '10K', noun: 'businesses', filter: 'account_type=eq.business&is_deleted=not.is.true',
     title: '🎯 Road to 10,000 businesses', subtitle: 'Target: 10,000 business accounts by 31 Oct 2027 · business accounts only' },
 };
 const goalCfg = () => GOALS[accountMode === 'business' ? 'business' : 'individual'];
@@ -4038,7 +4039,7 @@ async function loadUsers() {
   await loadBusinessUids();
   document.getElementById('users-body').innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
   const [data, wallets, kycData] = await Promise.all([
-    query('users', 'select=id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,ty_id,state,city,region_source,signup_method,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc'),
+    query('users', 'select=id,firebase_uid,display_name,avatar_url,email,phone,gender,dob,created_at,account_type,platform,app_version,referral_code,referred_by,username,creator_id,ty_id,state,city,region_source,signup_method,country_code,is_online,last_seen_at,last_active_at,is_deleted,banned_at,ban_reason,device_model,os_version&order=created_at.desc&is_deleted=not.is.true'),
     query('coin_wallet', 'select=firebase_uid,balance,lifetime_earned,spendable_earned,locked_current'),
     query('user_kyc', 'select=firebase_uid,status')
   ]);
@@ -4135,10 +4136,11 @@ function usersPage(dir) {
 }
 
 // ── LAST LOGIN & ACTIVITY ─────────────────────────────
-// Last login = latest sign-in on a phone (active_mobile_sessions, written by
-// register-mobile-session). Last active = latest of the three activity stamps
-// the app writes on open/resume. Online uses the same rule as App Installs.
-let activityData = [], activityPage_ = 0, activityTime = { appTime: [], reelWatch: [] };
+// Last app open = the phone's current session (active_mobile_sessions, written
+// by register-mobile-session on every open/resume, removed on sign-out). Last
+// active = latest of the three activity stamps the app writes on open/resume
+// and stays after sign-out. Online uses the same rule as App Installs.
+let activityData = [], activityDeleted = [], activityPage_ = 0, activityTime = { appTime: [], reelWatch: [] };
 const ACT_STATUS = {
   online: ['badge-green', 'Online'], today: ['badge-blue', 'Active in last 24 h'], week: ['badge-blue', 'Active in last 7 days'],
   idle: ['badge-orange', 'Inactive 7–30 days'], dormant: ['badge-grey', 'Inactive 30+ days'],
@@ -4279,7 +4281,7 @@ async function loadActivity() {
   document.getElementById('act-title').textContent = accountMode === 'business' ? 'Business last login & activity' : 'Last login & activity';
   await loadBusinessUids();
   const [users, sessions, appTime, reelWatch] = await Promise.all([
-    query('users', 'select=firebase_uid,display_name,email,phone,account_type,created_at,is_online,last_seen_at,last_seen,last_active_at,platform,app_version,fcm_token_invalid_at'),
+    query('users', 'select=is_deleted,firebase_uid,display_name,email,phone,account_type,created_at,is_online,last_seen_at,last_seen,last_active_at,platform,app_version,fcm_token_invalid_at'),
     query('active_mobile_sessions', 'select=firebase_uid,logged_in_at'),
     query('app_time_daily', 'select=firebase_uid,day,chats_seconds,social_seconds'),
     query('reel_watch_events', 'select=viewer_firebase_uid,seconds_watched,created_at&seconds_watched=gt.0'),
@@ -4289,7 +4291,7 @@ async function loadActivity() {
   const lastLogin = {};
   (sessions || []).forEach(s => { if (s.logged_in_at && (!lastLogin[s.firebase_uid] || s.logged_in_at > lastLogin[s.firebase_uid])) lastLogin[s.firebase_uid] = s.logged_in_at; });
   const now = Date.now();
-  activityData = usersForMode(users).map(u => {
+  const rowsAll = usersForMode(users).map(u => {
     const stamps = [u.last_seen_at, u.last_seen, u.last_active_at].filter(Boolean).sort();
     const row = { ...u, _login: lastLogin[u.firebase_uid] || null, _active: stamps.pop() || null };
     row._status = activityStatus(row, now);
@@ -4297,6 +4299,9 @@ async function loadActivity() {
     row._gone = !!u.fcm_token_invalid_at && (!row._active || new Date(row._active) < new Date(u.fcm_token_invalid_at));
     return row;
   });
+  // Deleted accounts count for nothing here; they show only under their filter
+  activityData = rowsAll.filter(u => !u.is_deleted);
+  activityDeleted = rowsAll.filter(u => u.is_deleted);
   const count = st => activityData.filter(u => u._status === st).length;
   document.getElementById('act-online').textContent = count('online');
   document.getElementById('act-24h').textContent = count('online') + count('today');
@@ -4313,8 +4318,8 @@ function getFilteredActivity() {
   // The 24h / 7-day filters include everyone more recent too, matching the cards
   const within = { online: ['online'], today: ['online', 'today'], week: ['online', 'today', 'week'] };
   const times = activityTimeTotals();
-  const rows = activityData.filter(u =>
-    (!f || (f === 'gone' ? u._gone : (within[f] || [f]).includes(u._status))) &&
+  const rows = (f === 'deleted' ? activityDeleted : activityData).filter(u =>
+    (!f || f === 'deleted' || (f === 'gone' ? u._gone : (within[f] || [f]).includes(u._status))) &&
     (!q || [u.display_name, u.email, u.phone, socialHandles[u.firebase_uid]].some(v => plainLower(v).includes(q))));
   const t = ts => ts ? new Date(ts).getTime() : 0;
   if (sort === 'login') rows.sort((a, b) => t(b._login) - t(a._login));
@@ -4352,7 +4357,7 @@ function renderActivity() {
   const { rows, times } = getFilteredActivity();
   const { from, to } = getRange('act');
   document.getElementById('act-range-label').textContent = 'Time in app: ' + rangeLabel(from, to);
-  document.getElementById('act-email').textContent = `Email these users (${rows.filter(u => (u.email || '').trim()).length})`;
+  document.getElementById('act-email').textContent = `Email these users (${rows.filter(u => !u.is_deleted && (u.email || '').trim()).length})`;
   const start = activityPage_ * PAGE_SIZE, page = rows.slice(start, start + PAGE_SIZE);
   document.getElementById('act-count').textContent = rows.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length}` : '0 users';
   document.getElementById('act-page-num').textContent = activityPage_ + 1;
@@ -4366,8 +4371,8 @@ function renderActivity() {
   };
   body.innerHTML = page.map(u => `<tr>
     <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
-    <td>${badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
-    <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : '<span class="cell-sub" title="Recorded when the phone signs in or reopens the app">Not recorded yet</span>'}</td>
+    <td>${u.is_deleted ? '<span class="badge badge-red">Account deleted</span>' : badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
+    <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : `<span class="cell-sub" title="No session on a phone now: signed out, or not opened since sessions began being recorded">${u.is_deleted ? 'Account deleted' : 'Signed out'}</span>`}</td>
     <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}</td>
     ${timeCells(times[u.firebase_uid])}
     <td>${u.platform ? badge(PLATFORM_BADGE, u.platform) : '<span class="badge badge-grey">Unknown</span>'}<div class="cell-sub">${escHtml(u.app_version || 'older build')}</div></td>
