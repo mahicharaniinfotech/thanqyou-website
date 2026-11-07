@@ -3431,7 +3431,8 @@ function payoutKind(t) {
   if (src.startsWith('early_bonus_signup') || t.type === 'welcome') return 'Signup bonus';
   if (src.startsWith('reel_')) return 'Reel bonus';
   if (src.startsWith('referral') || t.type === 'referral') return 'Referral bonus';
-  if (src.startsWith('early_bonus')) return 'Engagement bonus';
+  if (src === 'early_bonus_likes') return 'Likes bonus';
+  if (src.startsWith('early_bonus')) return 'Old viewer bonus';
   if (t.type === 'credit') return 'Manual credit';
   return prettyType(src || t.type);
 }
