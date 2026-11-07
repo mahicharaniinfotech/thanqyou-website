@@ -5329,7 +5329,8 @@ async function loadContent(){
   await Promise.all([loadBusinessUids(), ensureAvatars()]);
   document.getElementById('creator-list').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('content-body').innerHTML='<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
-  var res=await Promise.all([query('posts','select=*&is_deleted=eq.false&order=created_at.desc'),query('social_accounts','select=social_uid,username_handle,username,social_avatar_url')]);
+  var res=await Promise.all([query('posts','select=*&is_deleted=eq.false&order=created_at.desc'),query('social_accounts','select=social_uid,username_handle,username,social_avatar_url'),query('post_reports','select=post_id,reason').catch(function(){return [];})]);
+  window._postReports={};(res[2]||[]).forEach(function(r){(window._postReports[r.post_id]=window._postReports[r.post_id]||[]).push(r.reason);});
   document.querySelector('#page-content .dash-head h2').textContent=accountMode==='business'?'Business uploads':'Uploads';
   contentData=postsForMode(res[0]);(res[1]||[]).forEach(function(a){allAccounts[a.social_uid]=a;});
   renderContentRange();
@@ -5382,12 +5383,12 @@ function filterContent(){
     var video=isReel?reelVideoUrl(p):'';
     return '<tr><td><span class="badge '+(isReel?'badge-red':'badge-blue')+'">'+(isReel?'Reel':'Post')+'</span></td>'
       +'<td style="font-size:12px;font-weight:600;white-space:nowrap">@'+escHtml(handleOf(p.social_uid))+'</td>'
-      +'<td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(p.caption||'—')+'</td>'
+      +'<td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+reportBadge(p.id)+escHtml(p.caption||'—')+'</td>'
       +'<td style="font-size:12px;white-space:nowrap">'+(video?'<span class="reel-len" data-src="'+escHtml(video)+'">'+reelLengthLabel(video)+'</span>':'<span class="cell-sub">—</span>')+'</td>'
       +'<td>'+(p.view_count||0)+'</td>'
       +'<td style="color:var(--orange);font-weight:600">'+(p.like_count||0)+'</td>'
       +'<td style="font-size:12px;white-space:nowrap">'+formatDateTime(p.created_at)+'</td>'
-      +'<td><div style="display:flex;gap:6px"><button class="action-btn" onclick="viewUpload(\''+p.id+'\')">View</button><button class="action-btn danger" onclick="deletePost(\''+p.id+'\')">Delete</button></div></td></tr>';
+      +'<td><div style="display:flex;gap:6px"><button class="action-btn" onclick="viewUpload(\''+p.id+'\')">View</button>'+(isReel?'<button class="action-btn danger" onclick="rejectReel(\''+p.id+'\')">Reject copied</button>':'')+'<button class="action-btn danger" onclick="deletePost(\''+p.id+'\')">Delete</button></div></td></tr>';
   }).join('');
   fillReelLengths();
 }
@@ -5404,7 +5405,7 @@ function reelBonusStatus(p){
   if(p.video_duration_seconds!=null && d<15) return '<span class="badge badge-grey">Not eligible</span> <span class="cell-sub">under 15 s</span>';
   var due=new Date(new Date(p.created_at).getTime()+864e5);
   if(due>new Date()) return '<span class="badge badge-blue">Pending</span> <span class="cell-sub">due '+formatDateTime(due.toISOString())+'</span>';
-  return '<span class="badge badge-grey">Not paid</span> <span class="cell-sub">not eligible (e.g. business account or offer ended)</span>';
+  return '<span class="badge badge-grey">Not paid</span> <span class="cell-sub">not eligible (over 3 that day, repeat video, 3 rejected reels, business account or offer ended)</span>';
 }
 function uploadMediaHtml(url,type){
   var u=escHtml(url);
@@ -5441,6 +5442,7 @@ function viewUpload(id){
     +row('Comments',(p.comment_count||0).toLocaleString('en-IN'))
     +(isReel?row('Length',dur):'')
     +row('Reel bonus',reelBonusStatus(p))
+    +((window._postReports||{})[p.id]?row('Reports',escHtml(window._postReports[p.id].join(', '))):'')
     +(p.category?row('Category',escHtml(p.category)):'')
     +(p.location_name?row('Location',escHtml(p.location_name)):'')
     +row('Posted',formatDateTime(p.created_at))
@@ -5595,6 +5597,19 @@ async function blockReportedUser(reportId,socialUid){
     showToast('User blocked');
     loadReports();
   } else showToast('Failed to block user','error');
+}
+function reportBadge(id){
+  var r=(window._postReports||{})[id];
+  return r?'<span class="badge badge-orange" title="'+escHtml(r.join(', '))+'">'+r.length+' report'+(r.length===1?'':'s')+'</span> ':'';
+}
+// Removes a copied reel, takes back its Rs.2 and stops it earning ad money.
+async function rejectReel(id){
+  if(!confirm('Reject this reel as copied? It is removed from the app, its ₹2 bonus is taken back and it earns no ad money. This can\'t be undone.'))return;
+  try{
+    var r=await rpc('admin_reject_reel',{p_post_id:id,p_reason:'Copied content'});
+    showToast('Reel rejected. Strike '+r.strikes+' of 3'+(r.reversed_rupees?', ₹'+r.reversed_rupees+' taken back':''));
+    contentData=contentData.filter(function(p){return p.id!==id;});renderContentRange();
+  }catch(e){showToast('Reject failed: '+e.message,'error');}
 }
 async function deletePost(id){
   if(!confirm('Delete this post? It will be hidden from everyone in the app.'))return;
