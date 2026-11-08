@@ -768,6 +768,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
       KYC
     </div>
+    <div class="nav-item" onclick="showPage('devreset',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+      Device resets <span class="badge badge-orange" id="devreset-count" style="display:none;margin-left:6px"></span>
+    </div>
     <div class="nav-section">Finance</div>
     <div class="nav-item" onclick="showPage('wallet',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
@@ -1437,6 +1441,17 @@
       </div>
 
       <!-- KYC -->
+      <div class="page" id="page-devreset">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Device reset requests</h3>
+            <div class="th-tools"><button class="btn btn-red" onclick="loadDeviceResets()">Refresh</button></div>
+          </div>
+          <p class="cell-sub" style="padding:0 16px 12px">People who lost their old phone and couldn&#39;t use DigiLocker. Call the number on the account and check it&#39;s really them before approving. Approving signs the old phone out and lets them use the new one; they still need the OTP on this number to sign in.</p>
+          <div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Phone</th><th>KYC</th><th>Joined</th><th>What happened</th><th>Requested</th><th>Status</th><th></th></tr></thead>
+          <tbody id="devreset-body"></tbody></table></div>
+        </div>
+      </div>
       <div class="page" id="page-kyc">
         <div class="stats-grid kyc-top">
           <div class="stat-card">
@@ -2144,7 +2159,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
   dashboard:'Dashboard', metrics:'Metrics', chats:'Chats', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', activity:'Last Login', content:'Content', reports:'Reports', kyc:'KYC Verification',
-  wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', bank:'Bank', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
+  devreset:'Device resets', wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', bank:'Bank', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
 function showPage(name, el) {
@@ -2163,7 +2178,7 @@ function showPage(name, el) {
   window.scrollTo(0, 0);
   const loaders = {
     dashboard: loadDashboard, metrics: loadMetrics, chats: loadChats, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, installs: loadInstalls, users: loadUsers, activity: loadActivity, content: loadContent, reports: loadReports,
-    kyc: loadKYC, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts, bank: loadBank,
+    kyc: loadKYC, devreset: loadDeviceResets, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts, bank: loadBank,
     analytics: loadAnalytics, notifications: loadNotifications, settings: loadSettings
   };
   if (loaders[name]) loaders[name]();
@@ -2226,7 +2241,7 @@ function refreshCurrentPage() {
   const active = document.querySelector('.nav-item.active');
   const page = active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (page) {
-    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,installs:loadInstalls,users:loadUsers,activity:loadActivity,content:loadContent,reports:loadReports,kyc:loadKYC,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
+    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,installs:loadInstalls,users:loadUsers,activity:loadActivity,content:loadContent,reports:loadReports,kyc:loadKYC,devreset:loadDeviceResets,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
     if (loaders[page]) loaders[page]();
   }
 }
@@ -4735,6 +4750,82 @@ async function toggleSetting(flagName, btnEl) {
 
 // ── KYC ──────────────────────────────────────────────
 let kycData = [];
+
+// ── Device resets ──
+// Lost phone + no DigiLocker: the user asks from the new phone, an admin
+// checks it's them and approves. Approval moves the account to the new
+// phone, signs the old one out and tells the new one it can continue.
+var devResets=[];
+async function loadDeviceResets(){
+  var body=document.getElementById('devreset-body');
+  body.innerHTML='<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  try{
+    devResets=await query('device_reset_requests','select=*&order=created_at.desc&limit=100')||[];
+  }catch(e){
+    body.innerHTML='<tr><td colspan="8"><div class="empty-state"><p>Couldn&#39;t load requests: '+escHtml(e.message)+'</p></div></td></tr>';
+    return;
+  }
+  var uids=[...new Set(devResets.map(function(r){return r.firebase_uid;}))];
+  var users={},kyc={};
+  if(uids.length){
+    var list=uids.map(encodeURIComponent).join(',');
+    var res=await Promise.all([
+      query('users','select=firebase_uid,display_name,phone,created_at&firebase_uid=in.('+list+')').catch(function(){return [];}),
+      query('user_kyc','select=firebase_uid,status,verified_name&firebase_uid=in.('+list+')').catch(function(){return [];})
+    ]);
+    (res[0]||[]).forEach(function(u){users[u.firebase_uid]=u;});
+    (res[1]||[]).forEach(function(k){kyc[k.firebase_uid]=k;});
+  }
+  var pending=devResets.filter(function(r){return r.status==='pending';}).length;
+  var c=document.getElementById('devreset-count');
+  if(c){c.textContent=pending;c.style.display=pending?'':'none';}
+  if(!devResets.length){body.innerHTML='<tr><td colspan="8"><div class="empty-state"><p>No requests yet</p></div></td></tr>';return;}
+  var st={pending:['badge-orange','Pending'],approved:['badge-green','Approved'],rejected:['badge-red','Rejected']};
+  body.innerHTML=devResets.map(function(r){
+    var u=users[r.firebase_uid]||{},k=kyc[r.firebase_uid];
+    var b=st[r.status]||['badge-grey',r.status];
+    var actions=r.status==='pending'
+      ?'<div style="display:flex;gap:6px"><button class="action-btn" onclick="approveDeviceReset(\''+r.id+'\')">Approve</button><button class="action-btn danger" onclick="rejectDeviceReset(\''+r.id+'\')">Reject</button></div>'
+      :(r.admin_note?'<span class="cell-sub">'+escHtml(r.admin_note)+'</span>':'');
+    return '<tr><td style="font-weight:600">'+escHtml(u.display_name||'User')+'</td>'
+      +'<td style="white-space:nowrap">'+escHtml(u.phone||'—')+'</td>'
+      +'<td>'+(k?escHtml(k.status)+(k.verified_name?'<div class="cell-sub">'+escHtml(k.verified_name)+'</div>':''):'<span class="cell-sub">None</span>')+'</td>'
+      +'<td style="font-size:12px;white-space:nowrap">'+(u.created_at?formatDateTime(u.created_at):'—')+'</td>'
+      +'<td style="font-size:12px;max-width:260px">'+escHtml(r.note||'—')+'</td>'
+      +'<td style="font-size:12px;white-space:nowrap">'+formatDateTime(r.created_at)+'</td>'
+      +'<td><span class="badge '+b[0]+'">'+b[1]+'</span></td>'
+      +'<td>'+actions+'</td></tr>';
+  }).join('');
+}
+function pushTo(uid,token,type,title,body){
+  return fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/send-notification`,{
+    method:'POST',
+    headers:{'x-admin-session':sessionToken,'Content-Type':'application/json'},
+    body:JSON.stringify(Object.assign({to_firebase_uid:uid,title:title,body:body,type:type},token?{fcm_token:token}:{}))
+  }).catch(function(){});
+}
+async function approveDeviceReset(id){
+  var r=devResets.find(function(x){return x.id===id;});
+  if(!r)return;
+  if(!confirm('Approve? Only do this after calling the number on the account and checking it is really them. Their old phone will be signed out.'))return;
+  try{
+    var d=await rpc('admin_approve_device_reset',{p_id:id});
+    if(d.old_fcm_token)pushTo(d.firebase_uid,d.old_fcm_token,'force_logout','Logged out','Your account was moved to a new phone after a request to ThanqYou support. If this was not you, contact support immediately.');
+    pushTo(d.firebase_uid,d.new_fcm_token,'general','You can use ThanqYou again','Your request was approved. Open ThanqYou on your new phone and tap Check now.');
+    showToast('Approved. The user has been notified');
+  }catch(e){showToast('Approve failed: '+e.message,'error');}
+  loadDeviceResets();
+}
+async function rejectDeviceReset(id){
+  var note=prompt('Reason for rejecting? The user will see this.','We could not confirm this is your account');
+  if(note===null)return;
+  try{
+    var d=await rpc('admin_reject_device_reset',{p_id:id,p_note:note});
+    pushTo(d.firebase_uid,d.new_fcm_token,'general','Request not approved',note||'We could not confirm this is your account.');
+    showToast('Request rejected');
+  }catch(e){showToast('Reject failed: '+e.message,'error');}
+  loadDeviceResets();
+}
 
 async function loadKYC() {
   renderKycCard();
