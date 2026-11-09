@@ -100,7 +100,7 @@
   .target-pill[hidden], #notif-btn[hidden] { display:none; }
   @media (max-width:1400px) { #notif-btn .btn-text { display:none; } }
   .goal-strip { display:inline-flex; align-items:stretch; gap:14px; flex:0 1 auto; min-width:0; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; color:inherit; font-family:inherit; text-align:left; cursor:pointer; }
-  .goal-strip[hidden] { display:none; }
+  .goal-strip[hidden], #user-state[hidden] { display:none; }
   .au-type { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:12.5px; font-weight:600; color:var(--grey); }
   .au-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
   .au-box { background:var(--dark2); border:1px solid var(--line); border-radius:14px; padding:16px 18px; min-width:0; }
@@ -1304,6 +1304,8 @@
               <option value="kyc_verified">KYC verified</option>
               <option value="deleted" id="user-filter-deleted">Deleted accounts</option>
             </select>
+            <select id="user-country" onchange="onUserCountry()" aria-label="Country" style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"><option value="">All countries</option></select>
+            <select id="user-state" onchange="filterUsers()" aria-label="State" hidden style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></select>
           </div>
           <table><thead><tr><th>User</th><th>Email</th><th>State / City</th><th>Device</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
           <tbody id="users-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
@@ -4174,6 +4176,47 @@ function usersInRange() {
   return usersData.filter(u => !u.is_deleted && inDayRange(u.created_at, from, to));
 }
 
+// Country and state. Every account is +91 so far; the state list is only for
+// India. Older accounts have no state (signup didn't ask), listed as not set.
+const COUNTRY_NAMES = { IN: 'India' };
+const STATE_NOT_SET = '__none';
+const countryOf = u => String(u.country_code || (String(u.phone || '').startsWith('+91') ? 'IN' : '')).toUpperCase();
+const stateOf = u => String(u.state || '').trim();
+
+function onUserCountry() {
+  document.getElementById('user-state').value = '';
+  filterUsers();
+}
+
+// Options with counts for the people in the chosen dates; keeps the selection
+function buildRegionFilters(base) {
+  const cSel = document.getElementById('user-country'), sSel = document.getElementById('user-state');
+  const keepC = cSel.value, keepS = sSel.value;
+  const tally = (list, key) => list.reduce((m, u) => { const k = key(u); m[k] = (m[k] || 0) + 1; return m; }, {});
+  const opt = (v, label, n) => `<option value="${escHtml(v)}">${escHtml(label)} (${n.toLocaleString('en-IN')})</option>`;
+  const byC = tally(base, countryOf);
+  cSel.innerHTML = opt('', 'All countries', base.length) + Object.keys(byC).filter(Boolean)
+    .sort((a, b) => byC[b] - byC[a]).map(c => opt(c, COUNTRY_NAMES[c] || c, byC[c])).join('')
+    + (byC[''] ? opt(STATE_NOT_SET, 'Country not set', byC['']) : '');
+  cSel.value = keepC in byC || keepC === '' || (keepC === STATE_NOT_SET && byC['']) ? keepC : '';
+  const india = cSel.value === 'IN';
+  sSel.hidden = !india;
+  if (!india) { sSel.value = ''; return; }
+  const inIndia = base.filter(u => countryOf(u) === 'IN');
+  const byS = tally(inIndia, stateOf);
+  sSel.innerHTML = opt('', 'All states', inIndia.length) + Object.keys(byS).filter(Boolean)
+    .sort((a, b) => byS[b] - byS[a] || a.localeCompare(b)).map(st => opt(st, st, byS[st])).join('')
+    + (byS[''] ? opt(STATE_NOT_SET, 'State not set', byS['']) : '');
+  sSel.value = keepS === '' || keepS in byS || (keepS === STATE_NOT_SET && byS['']) ? keepS : '';
+}
+
+function matchRegion(u) {
+  const c = document.getElementById('user-country').value, st = document.getElementById('user-state').value;
+  if (c === STATE_NOT_SET ? countryOf(u) !== '' : c && countryOf(u) !== c) return false;
+  if (c !== 'IN' || !st) return true;
+  return st === STATE_NOT_SET ? !stateOf(u) : stateOf(u) === st;
+}
+
 // Range + search + dropdown (drives the table)
 function getFilteredUsers() {
   const search = plainLower(document.getElementById('user-search').value);
@@ -4189,13 +4232,15 @@ function getFilteredUsers() {
       || (filter === 'other' && (g === 'other' || g === 'unspecified'))
       || (filter === 'kyc_pending' && u._kyc && isPendingKYC(u._kyc))
       || (filter === 'kyc_verified' && u._kyc?.status === 'verified');
-    return matchSearch && matchFilter;
+    return matchSearch && matchFilter && matchRegion(u);
   });
 }
 
 function renderUsers() {
   const { from, to } = getRange('users');
   const inRange = usersInRange();
+  buildRegionFilters(document.getElementById('user-filter').value === 'deleted'
+    ? usersData.filter(u => u.is_deleted && !u.purged_at) : inRange);
   const gc = genderCounts(inRange);
   document.getElementById('users-range-label').textContent = `Showing ${rangeLabel(from, to)}`;
   document.getElementById('u-total').textContent = inRange.length;
