@@ -402,6 +402,7 @@
 
   /* KPI MINI */
   .mini-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:20px; }
+  .act-group-label { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--grey); margin:4px 0 8px; }
   .ms-sub { font-size:11.5px; color:var(--grey2); margin-top:4px; }
   #page-chats .mini-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
   @media (max-width:900px) { #page-chats .mini-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
@@ -1362,13 +1363,18 @@
           <div><h2 id="act-title">Watch hours &amp; last login</h2><p>Status as of now · <span id="act-range-label">Time in app: last 7 days</span></p></div>
           <div class="dash-filter" data-range="act" data-default="today"></div>
         </div>
+        <div class="act-group-label">Right now</div>
         <div class="mini-stats">
           <div class="mini-stat"><div class="ms-val" id="act-online">—</div><div class="ms-label">Online now</div></div>
           <div class="mini-stat"><div class="ms-val" id="act-24h">—</div><div class="ms-label">Active in last 24 hours</div></div>
           <div class="mini-stat"><div class="ms-val" id="act-7d">—</div><div class="ms-label">Active in last 7 days</div></div>
           <div class="mini-stat"><div class="ms-val" id="act-30">—</div><div class="ms-label">Inactive 30+ days</div></div>
           <div class="mini-stat"><div class="ms-val" id="act-gone">—</div><div class="ms-label">Push bounced since last use</div></div>
-          <div class="mini-stat"><div class="ms-val" id="act-reel-time">—</div><div class="ms-label">Watching reels (chosen dates)</div></div>
+        </div>
+        <div class="act-group-label">In the chosen dates · <span id="act-range-cards">Today</span></div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="ms-val" id="act-range-users">—</div><div class="ms-label">Active users</div></div>
+          <div class="mini-stat"><div class="ms-val" id="act-reel-time">—</div><div class="ms-label">Watching reels</div></div>
           <div class="mini-stat"><div class="ms-val" id="act-views">—</div><div class="ms-label">Views given</div></div>
           <div class="mini-stat"><div class="ms-val" id="act-likes">—</div><div class="ms-label">Likes given</div></div>
         </div>
@@ -1397,8 +1403,8 @@
             </select>
             <button class="btn btn-red" onclick="emailActivityUsers()" id="act-email">Email these users</button>
           </div>
-          <table><thead><tr><th>User</th><th>Status</th><th title="When this phone last opened or returned to the app. Cleared on sign-out">Last app open</th><th>Last active</th><th title="Time with the Chats tab open, in the chosen dates">Time in Chats</th><th title="Time with the Social tab open, in the chosen dates">Time in Social</th><th title="Time actually playing reels, in the chosen dates">Watching reels</th><th title="Different reels opened">Reels watched</th><th title="Reels watched long enough to count as a view">Views given</th><th>Likes given</th><th>Platform</th><th>Joined</th></tr></thead>
-          <tbody id="act-body"><tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+          <div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Status</th><th title="When this phone last opened or returned to the app. Cleared on sign-out">Last app open</th><th>Last active</th><th title="Time with the Chats tab open, in the chosen dates">Time in Chats</th><th title="Time with the Social tab open, in the chosen dates">Time in Social</th><th title="Time actually playing reels, in the chosen dates">Watching reels</th><th title="Different reels opened">Reels watched</th><th title="Reels watched long enough to count as a view">Views given</th><th>Likes given</th><th>Platform</th><th>Joined</th></tr></thead>
+          <tbody id="act-body"><tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
           <div class="pagination"><span id="act-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="activityPage(-1)">← Prev</button><button class="pag-btn active" id="act-page-num">1</button><button class="pag-btn" onclick="activityPage(1)">Next →</button></div></div>
         </div>
       </div>
@@ -4531,6 +4537,14 @@ async function loadActivityWatch() {
     if (ids.has(r.firebase_uid)) { sec += r.reel_s; views += r.views; likes += r.likes; }
   });
   document.getElementById('act-reel-time').textContent = fmtDur(sec) || '0m';
+  // Anyone with Chats/Social time, reel watching or likes in the dates.
+  const times = activityTimeTotals();
+  const active = activityData.filter(u => {
+    const t = times[u.firebase_uid], w = activityWatch[u.firebase_uid];
+    return (t && (t.chats || t.social || t.reels)) || (w && (w.reel_s || w.likes || w.chat_s || w.social_s));
+  }).length;
+  document.getElementById('act-range-users').textContent = fmtNum(active);
+  document.getElementById('act-range-cards').textContent = rangeLabel(from, to);
   document.getElementById('act-views').textContent = fmtNum(views);
   document.getElementById('act-likes').textContent = fmtNum(likes);
   renderActivity();
