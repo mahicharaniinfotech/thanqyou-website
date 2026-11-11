@@ -402,6 +402,8 @@
 
   /* KPI MINI */
   .mini-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:20px; }
+  .action-btn.wa-btn { color:#1e8e4e; border-color:rgba(37,211,102,.45); }
+  .action-btn.wa-btn:hover { background:rgba(37,211,102,.12); }
   .act-group-label { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--grey); margin:4px 0 8px; }
   .ms-sub { font-size:11.5px; color:var(--grey2); margin-top:4px; }
   #page-chats .mini-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -4221,6 +4223,28 @@ async function loadUsers() {
   filterUsers();
 }
 
+// WhatsApp a user from the admin panel (one at a time, from your own
+// WhatsApp): opens wa.me with the number and a message you can edit.
+// Not for bulk sending - that needs the WhatsApp Business API.
+function waDigits(phone) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (d.length === 10) d = '91' + d;
+  return d.length >= 11 ? d : '';
+}
+function waButton(phone, name) {
+  const d = waDigits(phone);
+  if (!d) return '';
+  return `<button class="action-btn wa-btn" title="Message on WhatsApp" data-wa="${d}" data-name="${escHtml(name || '')}" onclick="event.stopPropagation();openWhatsApp(this.dataset.wa, this.dataset.name)">WhatsApp</button>`;
+}
+function openWhatsApp(digits, name) {
+  if (!/^\d{11,15}$/.test(digits || '')) return;
+  const first = String(name || '').trim().split(/\s+/)[0] || 'there';
+  const text = prompt(`Message to ${name || 'this user'} on WhatsApp (you can still edit it in WhatsApp before sending):`,
+    `Hi ${first}, this is the ThanQYou team. `);
+  if (text === null) return;
+  window.open('https://wa.me/' + digits + (text.trim() ? '?text=' + encodeURIComponent(text) : ''), '_blank', 'noopener');
+}
+
 function filterUsers() { usersCurrentPage = 0; renderUsers(); }
 
 // Users in the selected date range (drives the stat cards)
@@ -4328,6 +4352,7 @@ function renderUsers() {
       <td>
         <div style="display:flex;gap:6px">
           <button class="action-btn" onclick="viewUser('${u.firebase_uid}')">View</button>
+          ${u.is_deleted ? '' : waButton(u.phone, u.display_name)}
           ${u.is_deleted ? '' : u.banned_at
             ? `<button class="action-btn success" onclick="banUser('${escHtml(u.firebase_uid)}', false)">Unban</button>`
             : `<button class="action-btn danger" onclick="banUser('${escHtml(u.firebase_uid)}', true)">Ban</button>`}
@@ -4614,7 +4639,7 @@ function renderActivity() {
       + `<td style="font-size:12px">${n(w && w.likes)}</td>`;
   };
   body.innerHTML = page.map(u => `<tr>
-    <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
+    <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}${u.is_deleted ? '' : `<div style="margin-top:5px">${waButton(u.phone, u.display_name)}</div>`}</div></div></td>
     <td>${u.is_deleted ? '<span class="badge badge-red">Account deleted</span>' : badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
     <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : `<span class="cell-sub" title="No session on a phone now: signed out, or not opened since sessions began being recorded">${u.is_deleted ? 'Account deleted' : 'Signed out'}</span>`}</td>
     <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}</td>
