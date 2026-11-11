@@ -404,6 +404,12 @@
   .mini-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:20px; }
   .action-btn.wa-btn { color:#1e8e4e; border-color:rgba(37,211,102,.45); }
   .action-btn.wa-btn:hover { background:rgba(37,211,102,.12); }
+  .act-table th.grp { text-align:center; border-left:2px solid var(--line); border-bottom:1px solid var(--line); }
+  .act-table th.sub, .act-table td.num { text-align:center; padding-left:8px; padding-right:8px; white-space:nowrap; }
+  .act-table th.sub { font-size:10px; }
+  .act-table .gs { border-left:2px solid var(--line); }
+  .action-btn.tq-btn { color:#722F37; border-color:rgba(114,47,55,.35); }
+  .action-btn.tq-btn:hover { background:rgba(114,47,55,.08); }
   .act-group-label { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--grey); margin:4px 0 8px; }
   .ms-sub { font-size:11.5px; color:var(--grey2); margin-top:4px; }
   #page-chats .mini-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -1405,8 +1411,8 @@
             </select>
             <button class="btn btn-red" onclick="emailActivityUsers()" id="act-email">Email these users</button>
           </div>
-          <div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Status</th><th title="Last active, and when this phone last opened the app (cleared on sign-out)">Last seen</th><th title="In the chosen dates: Chats tab, Social tab, and actually playing reels">Time in app</th><th title="In the chosen dates: different reels opened, reels watched long enough to count as a view, likes given">Reels, views, likes</th><th>Platform &amp; joined</th></tr></thead>
-          <tbody id="act-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+          <div style="overflow-x:auto"><table class="act-table"><thead><tr><th rowspan="2">User</th><th rowspan="2">Status</th><th rowspan="2" title="Last active, and when this phone last opened the app (cleared on sign-out)">Last seen</th><th colspan="3" class="grp" title="In the chosen dates">Time in app</th><th colspan="3" class="grp" title="In the chosen dates">Reels activity</th><th rowspan="2">Platform &amp; joined</th></tr><tr><th class="sub gs" title="Time with the Chats tab open">Chats</th><th class="sub" title="Time with the Social tab open">Social</th><th class="sub" title="Time actually playing reels">Reels</th><th class="sub gs" title="Different reels opened">Reels</th><th class="sub" title="Reels watched long enough to count as a view">Views</th><th class="sub" title="Likes given">Likes</th></tr></thead>
+          <tbody id="act-body"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
           <div class="pagination"><span id="act-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="activityPage(-1)">← Prev</button><button class="pag-btn active" id="act-page-num">1</button><button class="pag-btn" onclick="activityPage(1)">Next →</button></div></div>
         </div>
       </div>
@@ -4245,6 +4251,38 @@ function openWhatsApp(digits, name) {
   window.open('https://wa.me/' + digits + (text.trim() ? '?text=' + encodeURIComponent(text) : ''), '_blank', 'noopener');
 }
 
+// ThanQYou message: a push notification from ThanQYou to one user, with a
+// copy in their in-app notifications. Same as Notifications > A single user.
+function tqButton(uid, name) {
+  if (!uid) return '';
+  return `<button class="action-btn tq-btn" title="Send a ThanQYou notification" data-uid="${escHtml(uid)}" data-name="${escHtml(name || '')}" onclick="event.stopPropagation();sendThanqyouMessage(this)">ThanQYou</button>`;
+}
+async function sendThanqyouMessage(btn) {
+  const uid = btn.dataset.uid, name = btn.dataset.name || 'this user';
+  const first = name.trim().split(/\s+/)[0] || 'there';
+  const body = prompt(`ThanQYou notification to ${name}\n\nMessage (shown on their phone and in their in-app notifications):`, `Hi ${first}, `);
+  if (body === null || !body.trim()) return;
+  const title = prompt('Title:', 'ThanQYou');
+  if (title === null || !title.trim()) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/admin-broadcast-notification`, {
+      method: 'POST',
+      headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title.trim(), body: body.trim(), target: 'user', firebase_uid: uid })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
+    if (d.no_device) showToast(`${name} has no phone registered for push. Saved to their in-app notifications`, 'error');
+    else if (d.delivered) showToast(`Sent to ${name}`, 'success');
+    else showToast(`Couldn't reach ${name}'s phone (push bounced). Saved to their in-app notifications`, 'error');
+  } catch (e) {
+    showToast(`Couldn't send: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function filterUsers() { usersCurrentPage = 0; renderUsers(); }
 
 // Users in the selected date range (drives the stat cards)
@@ -4352,7 +4390,7 @@ function renderUsers() {
       <td>
         <div style="display:flex;gap:6px">
           <button class="action-btn" onclick="viewUser('${u.firebase_uid}')">View</button>
-          ${u.is_deleted ? '' : waButton(u.phone, u.display_name)}
+          ${u.is_deleted ? '' : waButton(u.phone, u.display_name) + tqButton(u.firebase_uid, u.display_name)}
           ${u.is_deleted ? '' : u.banned_at
             ? `<button class="action-btn success" onclick="banUser('${escHtml(u.firebase_uid)}', false)">Unban</button>`
             : `<button class="action-btn danger" onclick="banUser('${escHtml(u.firebase_uid)}', true)">Ban</button>`}
@@ -4510,7 +4548,7 @@ function renderChats() {
 }
 
 async function loadActivity() {
-  document.getElementById('act-body').innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('act-body').innerHTML = '<tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr>';
   document.getElementById('act-title').textContent = accountMode === 'business' ? 'Business watch hours & last login' : 'Watch hours & last login';
   await loadBusinessUids();
   const [users, sessions, appTime, reelWatch] = await Promise.all([
@@ -4626,21 +4664,20 @@ function renderActivity() {
   document.getElementById('act-count').textContent = rows.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length}` : '0 users';
   document.getElementById('act-page-num').textContent = activityPage_ + 1;
   const body = document.getElementById('act-body');
-  if (!page.length) { body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
-  // One line per figure; only figures above zero are shown.
-  const lines = items => {
-    const shown = items.filter(([, v]) => v);
-    return shown.length
-      ? shown.map(([label, v]) => `<div style="white-space:nowrap"><span class="cell-sub" style="display:inline">${label}</span> <b>${v}</b></div>`).join('')
-      : '<span class="cell-sub">—</span>';
-  };
+  if (!page.length) { body.innerHTML = `<tr><td colspan="10"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
+  // One narrow column per figure, in two groups (time / reels activity).
+  const cell = (v, groupStart) => `<td class="num${groupStart ? ' gs' : ''}" style="font-size:12px">${v ? `<b>${v}</b>` : '<span class="cell-sub">—</span>'}</td>`;
   const timeCells = (x, w) => {
     const reelSec = w ? w.reel_s : (x ? x.reels : 0);
-    return `<td style="font-size:12px">${lines([['Chats', x && x.chats ? fmtDur(x.chats) : ''], ['Social', x && x.social ? fmtDur(x.social) : ''], ['Reels', reelSec ? fmtDur(reelSec) : '']])}</td>`
-      + `<td style="font-size:12px">${lines([['Reels', w && w.reels ? fmtNum(w.reels) : ''], ['Views', w && w.views ? fmtNum(w.views) : ''], ['Likes', w && w.likes ? fmtNum(w.likes) : '']])}</td>`;
+    return cell(x && x.chats ? fmtDur(x.chats) : '', true)
+      + cell(x && x.social ? fmtDur(x.social) : '')
+      + cell(reelSec ? fmtDur(reelSec) : '')
+      + cell(w && w.reels ? fmtNum(w.reels) : '', true)
+      + cell(w && w.views ? fmtNum(w.views) : '')
+      + cell(w && w.likes ? fmtNum(w.likes) : '');
   };
   body.innerHTML = page.map(u => `<tr>
-    <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}${u.is_deleted ? '' : `<div style="margin-top:5px">${waButton(u.phone, u.display_name)}</div>`}</div></div></td>
+    <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}${u.is_deleted ? '' : `<div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">${waButton(u.phone, u.display_name)}${tqButton(u.firebase_uid, u.display_name)}</div>`}</div></div></td>
     <td>${u.is_deleted ? '<span class="badge badge-red">Account deleted</span>' : badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
     <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}<div class="cell-sub" title="When this phone last opened the app. Cleared on sign-out">App open: ${u._login ? formatDateTime(u._login) : (u.is_deleted ? 'account deleted' : 'signed out')}</div></td>
     ${timeCells(times[u.firebase_uid], activityWatch[u.firebase_uid])}
