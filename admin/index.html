@@ -1405,8 +1405,8 @@
             </select>
             <button class="btn btn-red" onclick="emailActivityUsers()" id="act-email">Email these users</button>
           </div>
-          <div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Status</th><th title="When this phone last opened or returned to the app. Cleared on sign-out">Last app open</th><th>Last active</th><th title="Time with the Chats tab open, in the chosen dates">Time in Chats</th><th title="Time with the Social tab open, in the chosen dates">Time in Social</th><th title="Time actually playing reels, in the chosen dates">Watching reels</th><th title="Different reels opened">Reels watched</th><th title="Reels watched long enough to count as a view">Views given</th><th>Likes given</th><th>Platform</th><th>Joined</th></tr></thead>
-          <tbody id="act-body"><tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
+          <div style="overflow-x:auto"><table><thead><tr><th>User</th><th>Status</th><th title="Last active, and when this phone last opened the app (cleared on sign-out)">Last seen</th><th title="In the chosen dates: Chats tab, Social tab, and actually playing reels">Time in app</th><th title="In the chosen dates: different reels opened, reels watched long enough to count as a view, likes given">Reels, views, likes</th><th>Platform &amp; joined</th></tr></thead>
+          <tbody id="act-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div>
           <div class="pagination"><span id="act-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="activityPage(-1)">← Prev</button><button class="pag-btn active" id="act-page-num">1</button><button class="pag-btn" onclick="activityPage(1)">Next →</button></div></div>
         </div>
       </div>
@@ -4510,7 +4510,7 @@ function renderChats() {
 }
 
 async function loadActivity() {
-  document.getElementById('act-body').innerHTML = '<tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('act-body').innerHTML = '<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
   document.getElementById('act-title').textContent = accountMode === 'business' ? 'Business watch hours & last login' : 'Watch hours & last login';
   await loadBusinessUids();
   const [users, sessions, appTime, reelWatch] = await Promise.all([
@@ -4626,26 +4626,25 @@ function renderActivity() {
   document.getElementById('act-count').textContent = rows.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length}` : '0 users';
   document.getElementById('act-page-num').textContent = activityPage_ + 1;
   const body = document.getElementById('act-body');
-  if (!page.length) { body.innerHTML = `<tr><td colspan="12"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
+  if (!page.length) { body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
+  // One line per figure; only figures above zero are shown.
+  const lines = items => {
+    const shown = items.filter(([, v]) => v);
+    return shown.length
+      ? shown.map(([label, v]) => `<div style="white-space:nowrap"><span class="cell-sub" style="display:inline">${label}</span> <b>${v}</b></div>`).join('')
+      : '<span class="cell-sub">—</span>';
+  };
   const timeCells = (x, w) => {
-    const none = '<span class="cell-sub">—</span>';
     const reelSec = w ? w.reel_s : (x ? x.reels : 0);
-    const n = v => v ? fmtNum(v) : none;
-    return `<td style="font-size:12px;white-space:nowrap">${x && x.chats ? `<b>${fmtDur(x.chats)}</b>` : none}</td>`
-      + `<td style="font-size:12px;white-space:nowrap">${x && x.social ? `<b>${fmtDur(x.social)}</b>` : none}</td>`
-      + `<td style="font-size:12px;white-space:nowrap">${reelSec ? `<b>${fmtDur(reelSec)}</b>` : none}</td>`
-      + `<td style="font-size:12px">${n(w && w.reels)}</td>`
-      + `<td style="font-size:12px">${n(w && w.views)}</td>`
-      + `<td style="font-size:12px">${n(w && w.likes)}</td>`;
+    return `<td style="font-size:12px">${lines([['Chats', x && x.chats ? fmtDur(x.chats) : ''], ['Social', x && x.social ? fmtDur(x.social) : ''], ['Reels', reelSec ? fmtDur(reelSec) : '']])}</td>`
+      + `<td style="font-size:12px">${lines([['Reels', w && w.reels ? fmtNum(w.reels) : ''], ['Views', w && w.views ? fmtNum(w.views) : ''], ['Likes', w && w.likes ? fmtNum(w.likes) : '']])}</td>`;
   };
   body.innerHTML = page.map(u => `<tr>
     <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}${u.is_deleted ? '' : `<div style="margin-top:5px">${waButton(u.phone, u.display_name)}</div>`}</div></div></td>
     <td>${u.is_deleted ? '<span class="badge badge-red">Account deleted</span>' : badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
-    <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : `<span class="cell-sub" title="No session on a phone now: signed out, or not opened since sessions began being recorded">${u.is_deleted ? 'Account deleted' : 'Signed out'}</span>`}</td>
-    <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}</td>
+    <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}<div class="cell-sub" title="When this phone last opened the app. Cleared on sign-out">App open: ${u._login ? formatDateTime(u._login) : (u.is_deleted ? 'account deleted' : 'signed out')}</div></td>
     ${timeCells(times[u.firebase_uid], activityWatch[u.firebase_uid])}
-    <td>${u.platform ? badge(PLATFORM_BADGE, u.platform) : '<span class="badge badge-grey">Unknown</span>'}<div class="cell-sub">${escHtml(u.app_version || 'older build')}</div></td>
-    <td style="font-size:12px;white-space:nowrap">${dateTimeCell(u.created_at)}</td>
+    <td>${u.platform ? badge(PLATFORM_BADGE, u.platform) : '<span class="badge badge-grey">Unknown</span>'}<div class="cell-sub">${escHtml(u.app_version || 'older build')}</div><div class="cell-sub">Joined ${formatDate(u.created_at)}</div></td>
   </tr>`).join('');
 }
 
