@@ -759,7 +759,7 @@
     </div>
     <div class="nav-item" onclick="showPage('activity',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Last Login
+      Watch hours
     </div>
     <div class="nav-item" onclick="showPage('content',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -827,7 +827,7 @@
     </div>
     <div class="nav-item" onclick="showPage('activity',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Last Login
+      Watch hours
     </div>
     <div class="nav-item" onclick="showPage('content',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -1359,8 +1359,8 @@
 
       <div class="page" id="page-activity">
         <div class="dash-head page-head">
-          <div><h2 id="act-title">Last login &amp; activity</h2><p>Status as of now · <span id="act-range-label">Time in app: last 7 days</span></p></div>
-          <div class="dash-filter" data-range="act" data-default="7d"></div>
+          <div><h2 id="act-title">Watch hours &amp; last login</h2><p>Status as of now · <span id="act-range-label">Time in app: last 7 days</span></p></div>
+          <div class="dash-filter" data-range="act" data-default="today"></div>
         </div>
         <div class="mini-stats">
           <div class="mini-stat"><div class="ms-val" id="act-online">—</div><div class="ms-label">Online now</div></div>
@@ -1368,6 +1368,9 @@
           <div class="mini-stat"><div class="ms-val" id="act-7d">—</div><div class="ms-label">Active in last 7 days</div></div>
           <div class="mini-stat"><div class="ms-val" id="act-30">—</div><div class="ms-label">Inactive 30+ days</div></div>
           <div class="mini-stat"><div class="ms-val" id="act-gone">—</div><div class="ms-label">Push bounced since last use</div></div>
+          <div class="mini-stat"><div class="ms-val" id="act-reel-time">—</div><div class="ms-label">Watching reels (chosen dates)</div></div>
+          <div class="mini-stat"><div class="ms-val" id="act-views">—</div><div class="ms-label">Views given</div></div>
+          <div class="mini-stat"><div class="ms-val" id="act-likes">—</div><div class="ms-label">Likes given</div></div>
         </div>
         <div class="table-card">
           <div class="table-header">
@@ -1394,8 +1397,8 @@
             </select>
             <button class="btn btn-red" onclick="emailActivityUsers()" id="act-email">Email these users</button>
           </div>
-          <table><thead><tr><th>User</th><th>Status</th><th title="When this phone last opened or returned to the app. Cleared on sign-out">Last app open</th><th>Last active</th><th title="Time with the Chats tab open, in the chosen dates">Time in Chats</th><th title="Time with the Social tab open, in the chosen dates">Time in Social</th><th>Platform</th><th>Joined</th></tr></thead>
-          <tbody id="act-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
+          <table><thead><tr><th>User</th><th>Status</th><th title="When this phone last opened or returned to the app. Cleared on sign-out">Last app open</th><th>Last active</th><th title="Time with the Chats tab open, in the chosen dates">Time in Chats</th><th title="Time with the Social tab open, in the chosen dates">Time in Social</th><th title="Time actually playing reels, in the chosen dates">Watching reels</th><th title="Different reels opened">Reels watched</th><th title="Reels watched long enough to count as a view">Views given</th><th>Likes given</th><th>Platform</th><th>Joined</th></tr></thead>
+          <tbody id="act-body"><tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
           <div class="pagination"><span id="act-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="activityPage(-1)">← Prev</button><button class="pag-btn active" id="act-page-num">1</button><button class="pag-btn" onclick="activityPage(1)">Next →</button></div></div>
         </div>
       </div>
@@ -2176,7 +2179,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
-  dashboard:'Dashboard', metrics:'Metrics', chats:'Chats', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', activity:'Last Login', content:'Content', reports:'Reports', kyc:'KYC Verification',
+  dashboard:'Dashboard', metrics:'Metrics', chats:'Chats', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', activity:'Watch hours', content:'Content', reports:'Reports', kyc:'KYC Verification',
   devreset:'Device resets', wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', bank:'Bank', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
@@ -3667,7 +3670,7 @@ function isPendingKYC(k) { return k.status === 'pending' || k.status === 'pendin
 const RANGE_PRESETS = [['today','Today'],['yesterday','Yesterday'],['7d','7 days'],['month','This month'],['all','All time']];
 // The dashboard's Signups & posts chart has its own range (a trend needs several days)
 const PRESET_SETS = { trend: [['7d','7 days'],['14d','14 days'],['30d','30 days'],['90d','90 days'],['month','This month']] };
-const RANGE_RENDER = { trend: () => renderTrendChartRange(), watch: () => renderWatchCard(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls(), analytics: () => loadAnalytics(), act: () => filterActivity() };
+const RANGE_RENDER = { trend: () => renderTrendChartRange(), watch: () => renderWatchCard(), dash: () => renderDashStats(), chats: () => renderChats(), bank: () => renderBank(), users: () => filterUsers(), content: () => renderContentRange(), metrics: () => loadMetrics(), biz: () => loadBizOverview(), bizlist: () => loadBusinessList(), promo: () => loadPromos(), apps: () => loadInstalls(), analytics: () => loadAnalytics(), act: () => { loadActivityWatch(); filterActivity(); } };
 
 function rangeControlsHTML(prefix, active, presets = RANGE_PRESETS) {
   return `<div class="seg" id="${prefix}-seg" role="group" aria-label="Date presets">`
@@ -4476,8 +4479,8 @@ function renderChats() {
 }
 
 async function loadActivity() {
-  document.getElementById('act-body').innerHTML = '<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
-  document.getElementById('act-title').textContent = accountMode === 'business' ? 'Business last login & activity' : 'Last login & activity';
+  document.getElementById('act-body').innerHTML = '<tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('act-title').textContent = accountMode === 'business' ? 'Business watch hours & last login' : 'Watch hours & last login';
   await loadBusinessUids();
   const [users, sessions, appTime, reelWatch] = await Promise.all([
     query('users', 'select=is_deleted,purged_at,firebase_uid,display_name,email,phone,account_type,created_at,is_online,last_seen_at,last_seen,last_active_at,platform,app_version,fcm_token_invalid_at'),
@@ -4508,6 +4511,29 @@ async function loadActivity() {
   document.getElementById('act-30').textContent = count('dormant');
   document.getElementById('act-gone').textContent = activityData.filter(u => u._gone).length;
   filterActivity();
+  loadActivityWatch();
+}
+
+// Reels watched, views and likes given for the chosen dates, worked out on
+// the server (admin_watch_hours), merged into the table by user.
+let activityWatch = {}, _actWatchReq = 0;
+async function loadActivityWatch() {
+  const { from, to } = getRange('act'), req = ++_actWatchReq;
+  let d;
+  try { d = await rpc('admin_watch_hours', { p_from: from || null, p_to: to || null, p_limit: 100000 }); }
+  catch (e) { return; }
+  if (req !== _actWatchReq) return;
+  const ids = new Set(activityData.map(u => u.firebase_uid));
+  activityWatch = {};
+  let sec = 0, views = 0, likes = 0;
+  (d && d.rows || []).forEach(r => {
+    activityWatch[r.firebase_uid] = r;
+    if (ids.has(r.firebase_uid)) { sec += r.reel_s; views += r.views; likes += r.likes; }
+  });
+  document.getElementById('act-reel-time').textContent = fmtDur(sec) || '0m';
+  document.getElementById('act-views').textContent = fmtNum(views);
+  document.getElementById('act-likes').textContent = fmtNum(likes);
+  renderActivity();
 }
 
 function getFilteredActivity() {
@@ -4561,19 +4587,24 @@ function renderActivity() {
   document.getElementById('act-count').textContent = rows.length ? `${start + 1}–${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length}` : '0 users';
   document.getElementById('act-page-num').textContent = activityPage_ + 1;
   const body = document.getElementById('act-body');
-  if (!page.length) { body.innerHTML = `<tr><td colspan="8"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
-  const timeCells = x => {
+  if (!page.length) { body.innerHTML = `<tr><td colspan="12"><div class="empty-state"><p>${activityData.length ? 'No users match this filter' : 'No users yet'}</p></div></td></tr>`; return; }
+  const timeCells = (x, w) => {
     const none = '<span class="cell-sub">—</span>';
-    const reels = x && x.reels ? `<div class="cell-sub">${fmtDur(x.reels)} watching reels</div>` : '';
+    const reelSec = w ? w.reel_s : (x ? x.reels : 0);
+    const n = v => v ? fmtNum(v) : none;
     return `<td style="font-size:12px;white-space:nowrap">${x && x.chats ? `<b>${fmtDur(x.chats)}</b>` : none}</td>`
-      + `<td style="font-size:12px;white-space:nowrap">${x && x.social ? `<b>${fmtDur(x.social)}</b>` : (reels ? '' : none)}${reels}</td>`;
+      + `<td style="font-size:12px;white-space:nowrap">${x && x.social ? `<b>${fmtDur(x.social)}</b>` : none}</td>`
+      + `<td style="font-size:12px;white-space:nowrap">${reelSec ? `<b>${fmtDur(reelSec)}</b>` : none}</td>`
+      + `<td style="font-size:12px">${n(w && w.reels)}</td>`
+      + `<td style="font-size:12px">${n(w && w.views)}</td>`
+      + `<td style="font-size:12px">${n(w && w.likes)}</td>`;
   };
   body.innerHTML = page.map(u => `<tr>
     <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name || '—')}</div>${socialHandleLine(u.firebase_uid)}</div></div></td>
     <td>${u.is_deleted ? '<span class="badge badge-red">Account deleted</span>' : badge(ACT_STATUS, u._status)}${u._gone ? `<div class="cell-sub" style="color:var(--red)">Push bounced ${formatDate(u.fcm_token_invalid_at)} · may have uninstalled</div>` : ''}</td>
     <td style="font-size:12px;white-space:nowrap">${u._login ? dateTimeCell(u._login) + agoLine(u._login) : `<span class="cell-sub" title="No session on a phone now: signed out, or not opened since sessions began being recorded">${u.is_deleted ? 'Account deleted' : 'Signed out'}</span>`}</td>
     <td style="font-size:12px;white-space:nowrap">${u._active ? dateTimeCell(u._active) + agoLine(u._active) : '<span class="cell-sub">Never opened</span>'}</td>
-    ${timeCells(times[u.firebase_uid])}
+    ${timeCells(times[u.firebase_uid], activityWatch[u.firebase_uid])}
     <td>${u.platform ? badge(PLATFORM_BADGE, u.platform) : '<span class="badge badge-grey">Unknown</span>'}<div class="cell-sub">${escHtml(u.app_version || 'older build')}</div></td>
     <td style="font-size:12px;white-space:nowrap">${dateTimeCell(u.created_at)}</td>
   </tr>`).join('');
