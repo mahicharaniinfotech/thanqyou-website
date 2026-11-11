@@ -1688,6 +1688,21 @@
       <!-- NOTIFICATIONS -->
       <div class="page" id="page-notifications">
         <div class="notif-form">
+          <h3>💬 ThanQYou chat message</h3>
+          <p class="cell-sub" style="margin:-4px 0 12px">Lands in each user&#39;s official ThanQYou chat (one-way, users can&#39;t reply), with a push &quot;ThanQYou: your message&quot;.</p>
+          <div class="form-grid">
+            <div class="form-group" style="grid-column:1/-1">
+              <label>Message</label>
+              <textarea id="official-text" rows="3" maxlength="2000" placeholder="Write the message users will see in their ThanQYou chat..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Send to</label>
+              <select id="official-target"><option value="active">Active users (last 7 days)</option><option value="all">All users</option></select>
+            </div>
+          </div>
+          <button class="btn btn-red" id="official-send-btn" onclick="sendOfficialToMany()">Send to ThanQYou chats</button>
+        </div>
+        <div class="notif-form">
           <h3>📣 Send Push Notification</h3>
           <div class="form-grid">
             <div class="form-group">
@@ -4251,31 +4266,22 @@ function openWhatsApp(digits, name) {
   window.open('https://wa.me/' + digits + (text.trim() ? '?text=' + encodeURIComponent(text) : ''), '_blank', 'noopener');
 }
 
-// ThanQYou message: a push notification from ThanQYou to one user, with a
-// copy in their in-app notifications. Same as Notifications > A single user.
+// ThanQYou message: lands in the user's official ThanQYou chat (one-way),
+// with a push "ThanQYou: ..." (admin_send_official_message).
 function tqButton(uid, name) {
   if (!uid) return '';
-  return `<button class="action-btn tq-btn" title="Send a ThanQYou notification" data-uid="${escHtml(uid)}" data-name="${escHtml(name || '')}" onclick="event.stopPropagation();sendThanqyouMessage(this)">ThanQYou</button>`;
+  return `<button class="action-btn tq-btn" title="Message in their ThanQYou chat" data-uid="${escHtml(uid)}" data-name="${escHtml(name || '')}" onclick="event.stopPropagation();sendThanqyouMessage(this)">ThanQYou</button>`;
 }
 async function sendThanqyouMessage(btn) {
   const uid = btn.dataset.uid, name = btn.dataset.name || 'this user';
   const first = name.trim().split(/\s+/)[0] || 'there';
-  const body = prompt(`ThanQYou notification to ${name}\n\nMessage (shown on their phone and in their in-app notifications):`, `Hi ${first}, `);
-  if (body === null || !body.trim()) return;
-  const title = prompt('Title:', 'ThanQYou');
-  if (title === null || !title.trim()) return;
+  const text = prompt(`Message to ${name} in their ThanQYou chat (they get a push "ThanQYou: ..." and can't reply):`, `Hi ${first}, `);
+  if (text === null || !text.trim()) return;
   btn.disabled = true;
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/admin-broadcast-notification`, {
-      method: 'POST',
-      headers: { 'x-admin-session': sessionToken, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title.trim(), body: body.trim(), target: 'user', firebase_uid: uid })
-    });
-    const d = await res.json().catch(() => ({}));
-    if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
-    if (d.no_device) showToast(`${name} has no phone registered for push. Saved to their in-app notifications`, 'error');
-    else if (d.delivered) showToast(`Sent to ${name}`, 'success');
-    else showToast(`Couldn't reach ${name}'s phone (push bounced). Saved to their in-app notifications`, 'error');
+    const d = await rpc('admin_send_official_message', { p_target: 'user', p_firebase_uid: uid, p_text: text.trim() });
+    if (d && d.sent) showToast(`Sent to ${name}'s ThanQYou chat`, 'success');
+    else showToast(`Not sent: ${name} may be deleted or banned`, 'error');
   } catch (e) {
     showToast(`Couldn't send: ${e.message}`, 'error');
   } finally {
@@ -5329,6 +5335,25 @@ function clearNotifUser() {
   document.getElementById('notif-user-picked').innerHTML = '';
   renderNotifUserResults();
   document.getElementById('notif-user-search').focus();
+}
+
+async function sendOfficialToMany() {
+  const text = document.getElementById('official-text').value.trim();
+  const target = document.getElementById('official-target').value;
+  if (!text) { showToast('Write the message first', 'error'); return; }
+  const who = target === 'all' ? 'ALL users' : 'users active in the last 7 days';
+  if (!confirm(`Send this to ${who} in their ThanQYou chat?\n\nEveryone also gets a push. This can't be undone.`)) return;
+  const btn = document.getElementById('official-send-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const d = await rpc('admin_send_official_message', { p_target: target, p_firebase_uid: null, p_text: text });
+    showToast(`Sent to ${fmtNum(d && d.sent)} users' ThanQYou chats`, 'success');
+    document.getElementById('official-text').value = '';
+  } catch (e) {
+    showToast(`Couldn't send: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send to ThanQYou chats';
+  }
 }
 
 async function sendNotification() {
