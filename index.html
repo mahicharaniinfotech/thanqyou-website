@@ -260,21 +260,6 @@ footer{border-top:1px solid var(--line);background:var(--bg2);padding-block:56px
 .feat p{font-size:15px;color:var(--fg2);line-height:1.65;}
 .feat p a{color:var(--gold);}
 
-/* EARNINGS */
-.earn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
-.earn{background:linear-gradient(180deg,#1c1b18,#151412);border:1px solid var(--line);border-radius:18px;padding:26px 22px;display:flex;flex-direction:column;min-width:0;}
-.earn.hl{border-color:rgba(233,188,83,.45);}
-.earn small{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);}
-.earn h3{font-family:var(--display);font-size:20px;font-weight:800;margin:8px 0 14px;line-height:1.25;}
-.earn .big{font-family:var(--display);font-weight:800;font-size:2.4rem;line-height:1;letter-spacing:-.02em;}
-.earn .big span{font-size:15px;font-weight:600;color:var(--fg2);letter-spacing:0;margin-left:6px;}
-.earn ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:10px;}
-.earn li{font-size:15px;color:var(--fg2);line-height:1.55;padding-left:18px;position:relative;}
-.earn li::before{content:'';position:absolute;left:0;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--gold);}
-.earn li b{color:var(--fg);font-weight:700;}
-.earn-note{margin-top:26px;display:flex;flex-wrap:wrap;gap:10px 26px;justify-content:center;font-size:14.5px;color:var(--fg3);text-align:center;}
-.earn-note a{color:var(--gold);}
-
 /* FAQ */
 .faq{max-width:860px;margin-inline:auto;}
 .faq details{border-bottom:1px solid var(--line2);}
@@ -314,7 +299,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   .step p{max-height:none;opacity:1;}
   .shots{grid-template-columns:repeat(2,1fr);}
   .trust{grid-template-columns:repeat(2,1fr);}
-  .feat-grid,.earn-grid{grid-template-columns:repeat(2,1fr);}
+  .feat-grid{grid-template-columns:repeat(2,1fr);}
   .why-art{margin-inline:auto;margin-bottom:40px;}
 }
 @media(max-width:600px){
@@ -360,7 +345,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   .float-card{left:0;}
   .blob{right:-10%;}
   .stats{gap:36px;}
-  .feat-grid,.earn-grid{grid-template-columns:1fr;}
+  .feat-grid{grid-template-columns:1fr;}
   .faq summary{font-size:16.5px;padding:18px 2px;}
 }
 @media(prefers-reduced-motion:reduce){
@@ -376,7 +361,6 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
     <ul class="nav-links">
       <li><a href="#about">About</a></li>
       <li><a href="#features">Features</a></li>
-      <li><a href="#earnings">Earnings</a></li>
       <li><a href="#business">For Business</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#contact">Contact</a></li>
@@ -389,7 +373,6 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   <div class="drawer" id="drawer" hidden>
     <a href="#about">About</a>
     <a href="#features">Features</a>
-    <a href="#earnings">Earnings</a>
     <a href="#business">For Business</a>
     <a href="#faq">FAQ</a>
     <a href="#contact">Contact</a>
@@ -511,17 +494,17 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
       <h2 class="h2">Everything in one<br>login</h2>
     </div>
     <div class="shots">
-      <a class="shot" href="#earnings">
+      <a class="shot" href="#features">
         <div class="frame photo"><img src="images/site/reels-festival-market.webp" width="760" height="1140" alt="A creator filming a reel at a festive Indian market, holding up his ThanQYou profile" loading="lazy"></div>
         <div class="cap"><div><small>Social · Reels</small><h3>Post reels, get paid for views</h3></div><svg viewBox="0 0 24 24"><path d="M7 17L17 7M8 7h9v9"/></svg></div>
-        <span class="shot-note">Share reels, photos and stories. Creators earn from the ads shown after their reels, plus ₹2 for every 1,000 views and ₹0.03 for every 5 likes.</span>
+        <span class="shot-note">Share reels, photos and stories. Creators earn from the ads shown after their reels, and from views and likes.</span>
       </a>
       <a class="shot" href="#features">
         <div class="frame f2"><div class="device"><img src="images/site/app-social-feed.webp" width="540" height="1138" alt="The ThanQYou app's social home screen" loading="lazy"></div></div>
         <div class="cap"><div><small>Messenger · Calls</small><h3>Chats that stay private</h3></div><svg viewBox="0 0 24 24"><path d="M7 17L17 7M8 7h9v9"/></svg></div>
         <span class="shot-note">Chats, groups and calls are end-to-end encrypted. Only the people in the conversation can read or hear them.</span>
       </a>
-      <a class="shot" href="#earnings">
+      <a class="shot" href="#features">
         <div class="frame f3"><div class="device"><img src="images/site/app-welcome.webp" width="540" height="1203" alt="The ThanQYou app's welcome screen with sign-up options" loading="lazy"></div></div>
         <div class="cap"><div><small>Wallet · KYC</small><h3>Real bank payouts</h3></div><svg viewBox="0 0 24 24"><path d="M7 17L17 7M8 7h9v9"/></svg></div>
         <span class="shot-note">Verify once with KYC and your earnings go straight to your bank account every month.</span>
@@ -547,60 +530,6 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
       <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg></span><h3>Business profiles</h3><p>A verified profile for shops and brands, with promoted posts and reach insights.</p></div>
       <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><h3>Use it on your computer</h3><p>Link your phone at <a href="https://app.thanqyou.com/#/link-device">app.thanqyou.com</a> and use ThanQYou in your browser.</p></div>
     </div>
-  </div>
-</section>
-
-<!-- EARNINGS -->
-<section class="sec" id="earnings" style="padding-top:40px">
-  <div class="glow" style="width:640px;height:640px;left:-240px;top:10%"></div>
-  <div class="wrap">
-    <div class="sec-head">
-      <div class="eyebrow">How you earn <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 8v9H8"/></svg></div>
-      <h2 class="h2">Clear rates, <b>no guesswork</b></h2>
-      <p class="muted" style="max-width:620px;margin:16px auto 0">Every rupee is worked out by a fixed formula. No lucky draws, and you are never paid for viewing or clicking ads.</p>
-    </div>
-    <div class="earn-grid">
-      <div class="earn">
-        <small>Watch reels</small>
-        <h3>Paid for your time</h3>
-        <div class="big">₹0.25<span>per full hour</span></div>
-        <ul>
-          <li>Counts up to <b>5 hours a day</b>; minutes carry over to the next hour</li>
-          <li><b>₹200 bonus</b> at 100 hours in a month, or <b>₹350</b> at 150 hours</li>
-          <li>Added to your wallet every night</li>
-        </ul>
-      </div>
-      <div class="earn">
-        <small>Create reels</small>
-        <h3>Earn from ads &amp; views</h3>
-        <div class="big">40%<span>of ad revenue</span></div>
-        <ul>
-          <li>The two reels before each ad share it: <b>25%</b> and <b>15%</b></li>
-          <li><b>₹2 for every 1,000 views</b> and <b>₹0.03 for every 5 likes</b>, for as long as your post is up</li>
-          <li>Paid on the 1st of each month; only post reels you made or have the right to post</li>
-        </ul>
-      </div>
-      <div class="earn hl">
-        <small>Early user offer</small>
-        <h3>For the first 25,000 users</h3>
-        <div class="big">₹5<span>on signing up</span></div>
-        <ul>
-          <li><b>₹3</b> for each friend who joins with your code</li>
-          <li><b>₹2</b> each for your first 3 reels a day (15 seconds or longer)</li>
-        </ul>
-      </div>
-      <div class="earn">
-        <small>Payouts</small>
-        <h3>Straight to your bank</h3>
-        <div class="big">5th<span>of every month</span></div>
-        <ul>
-          <li>Sent automatically once your balance reaches <b>₹300</b></li>
-          <li>One-time KYC needed before your first payout</li>
-          <li>Below ₹300, your balance stays in your wallet</li>
-        </ul>
-      </div>
-    </div>
-    <div class="earn-note"><span>Rates as of November 2026 and may change.</span><span>Full rules in our <a href="/terms-of-service.html">Terms of Service</a>.</span></div>
   </div>
 </section>
 
