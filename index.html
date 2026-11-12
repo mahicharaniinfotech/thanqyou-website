@@ -103,19 +103,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding-top:env(safe-area-in
 @keyframes morph{50%{border-radius:40% 60% 45% 55%/60% 40% 60% 40%;transform:rotate(8deg)}}
 .blob svg{position:absolute;inset:0;width:100%;height:100%;animation:twist 24s linear infinite;}
 @keyframes twist{to{transform:rotate(-360deg)}}
-.phone{position:relative;z-index:2;width:250px;max-width:70vw;aspect-ratio:9/19;border-radius:38px;background:#0b0b0b;padding:10px;border:1px solid var(--line2);box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 6px #1a1918;transform:rotate(-6deg);}
-.screen{width:100%;height:100%;border-radius:30px;overflow:hidden;position:relative;background:linear-gradient(170deg,#3a1f5c 0%,#b3325f 45%,#f09a3e 100%);}
-.screen .notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:80px;height:20px;border-radius:12px;background:#0b0b0b;z-index:2;}
-.reel-ui{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.65));}
-.reel-user{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;}
-.reel-user i{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#f06e3e);border:2px solid #fff;}
-.reel-cap{font-size:12px;opacity:.85;margin:6px 0 12px;}
-.earn-pill{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;background:var(--gold);color:var(--on-gold);font-weight:800;font-size:12px;padding:6px 11px;border-radius:100px;}
-.reel-side{position:absolute;right:12px;bottom:90px;display:flex;flex-direction:column;gap:16px;}
-.reel-side span{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;}
-.reel-side svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2;}
-.float-card{position:absolute;z-index:3;left:-6%;bottom:12%;background:rgba(29,28,25,.9);backdrop-filter:blur(10px);border:1px solid var(--line2);border-radius:18px;padding:14px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 20px 40px rgba(0,0,0,.4);}
-.float-card .coin{width:38px;height:38px;border-radius:50%;background:var(--gold);color:var(--on-gold);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;}
+.poster{position:relative;z-index:2;width:330px;max-width:78vw;aspect-ratio:2/3;border-radius:28px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 6px #1a1918;transform:rotate(-4deg);background:#1a1918;}
+.poster img,.photo img{display:block;width:100%;height:100%;object-fit:cover;}
+.float-card{position:absolute;z-index:3;left:-6%;bottom:12%;background:rgba(29,28,25,.92);backdrop-filter:blur(10px);border:1px solid var(--line2);border-radius:18px;padding:14px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 20px 40px rgba(0,0,0,.4);}
+.float-card .coin{width:38px;height:38px;border-radius:50%;background:var(--gold);color:var(--on-gold);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17px;flex-shrink:0;}
 .float-card small{display:block;font-size:12.5px;color:var(--fg3);}
 .float-card strong{font-family:var(--display);font-size:17px;}
 
@@ -186,24 +177,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding-top:env(safe-area-in
 .sec-head .h2{margin-top:14px;}
 .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
 .shot{text-decoration:none;display:block;}
-.shot .frame{aspect-ratio:3/4;border-radius:6px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;transition:transform .5s;}
+.shot .frame{aspect-ratio:2/3;border-radius:14px;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;transition:transform .5s;border:1px solid var(--line);}
 .shot:hover .frame{transform:translateY(-6px);}
-.shot .frame.f1{background:radial-gradient(circle at 30% 20%,#ff5fa2 0%,transparent 45%),radial-gradient(circle at 80% 80%,#5a7cf0 0%,transparent 50%),linear-gradient(160deg,#2b1845,#0f0d1a);}
 .shot .frame.f2{background:radial-gradient(circle at 50% 30%,rgba(233,188,83,.45),transparent 55%),linear-gradient(160deg,#1f2a2e,#0c1113);}
 .shot .frame.f3{background:radial-gradient(circle at 50% 45%,#f0a53e 0%,transparent 45%),radial-gradient(circle at 30% 80%,#e8386f,transparent 45%),linear-gradient(160deg,#241a10,#0d0b08);}
-.mini{width:52%;aspect-ratio:9/18;border-radius:22px;background:rgba(10,10,10,.75);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(8px);padding:14px 10px;display:flex;flex-direction:column;gap:8px;box-shadow:0 30px 60px rgba(0,0,0,.5);}
-.mini .bar{height:7px;border-radius:4px;background:rgba(255,255,255,.18);}
-.mini .bar.w6{width:60%;}.mini .bar.w8{width:80%;}.mini .bar.w4{width:40%;}
-.mini .tile{flex:1;border-radius:12px;background:linear-gradient(160deg,#ff5fa2,#5a7cf0);}
-.mini .row{display:flex;gap:6px;align-items:center;}
-.mini .row i{width:18px;height:18px;border-radius:50%;background:var(--gold);flex-shrink:0;}
-.mini .b-in{align-self:flex-start;width:70%;height:22px;border-radius:10px;background:#2c2a25;}
-.mini .b-out{align-self:flex-end;width:60%;height:22px;border-radius:10px;background:var(--gold);}
-.mini .bal{font-family:var(--display);font-weight:800;font-size:22px;color:var(--gold);text-align:center;margin-top:6px;}
-.mini .lbl{font-size:9px;text-align:center;color:var(--fg3);letter-spacing:.1em;text-transform:uppercase;}
-.mini .chart{flex:1;display:flex;align-items:flex-end;gap:4px;padding:6px 2px;}
-.mini .chart i{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--gold),rgba(233,188,83,.25));}
-.mini .btn{height:24px;border-radius:12px;background:var(--gold);}
+.device{width:58%;border-radius:26px;border:7px solid #0b0b0b;background:#0b0b0b;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.12);}
+.device img{display:block;width:100%;height:auto;}
+.shot-note{display:block;font-size:14.5px;color:var(--fg2);margin-top:10px;line-height:1.6;}
 .shot .cap{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:16px 0 14px;border-bottom:1px solid var(--line2);}
 .shot .cap small{display:block;font-size:13.5px;color:var(--fg3);margin-bottom:4px;}
 .shot .cap h3{font-family:var(--display);font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;line-height:1.3;}
@@ -213,13 +193,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding-top:env(safe-area-in
 /* WHY */
 .why-grid{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center;}
 .why-art{position:relative;max-width:440px;}
-.why-art .ph{aspect-ratio:4/5;border-radius:6px;background:radial-gradient(circle at 70% 25%,rgba(233,188,83,.35),transparent 50%),linear-gradient(160deg,#2a2622,#131210);display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.why-art .ph img{width:44%;border-radius:28%;box-shadow:0 30px 60px rgba(0,0,0,.55);transform:rotate(-8deg);}
-.why-art .gcard{position:absolute;right:-14%;bottom:-8%;width:62%;background:var(--gold);color:var(--on-gold);border-radius:4px;padding:26px 22px;box-shadow:0 30px 60px rgba(0,0,0,.45);}
-.why-art .gcard .c{width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
-.why-art .gcard .c svg{width:18px;height:18px;stroke:var(--on-gold);fill:none;stroke-width:2.2;transform:rotate(-45deg);}
-.why-art .gcard p{font-family:var(--display);font-size:clamp(1.15rem,1.9vw,1.4rem);line-height:1.3;font-weight:500;}
-.why-art .gcard b{font-weight:800;}
+.why-art .ph{aspect-ratio:2/3;border-radius:6px;background:radial-gradient(circle at 70% 25%,rgba(233,188,83,.35),transparent 50%),linear-gradient(160deg,#2a2622,#131210);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.why-art .ph{border:1px solid var(--line);}
 .why-list{margin-top:34px;display:flex;flex-direction:column;}
 .why-item{padding-block:20px;border-bottom:1px solid var(--line2);}
 .why-item h4{font-family:var(--display);font-size:16px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
@@ -268,22 +243,51 @@ footer{border-top:1px solid var(--line);background:var(--bg2);padding-block:56px
 .bf .bi svg{width:20px;height:20px;stroke:var(--gold);fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;}
 .bf h4{font-family:var(--display);font-size:17px;font-weight:800;margin-bottom:6px;}
 .bf p{font-size:15.5px;color:var(--fg2);line-height:1.7;}
-.biz-card{position:relative;background:linear-gradient(170deg,#211f1b,#151412);border:1px solid var(--line2);border-radius:22px;padding:26px;box-shadow:0 40px 80px rgba(0,0,0,.45);max-width:440px;width:100%;margin-inline:auto;}
-.bc-top{display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--line);}
-.bc-top img{width:44px;height:44px;border-radius:12px;}
-.bc-top strong{display:block;font-family:var(--display);font-size:17.5px;}
-.bc-top small{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--fg2);}
 .vdot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px rgba(233,188,83,.2);}
-.bc-tag{margin-left:auto;font-family:var(--display);font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--on-gold);background:var(--gold);padding:5px 10px;border-radius:100px;}
-.bc-label{font-family:var(--display);font-size:12.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--fg3);margin:20px 0 14px;}
-.bc-bars{display:flex;flex-direction:column;gap:14px;}
-.bc-bars div{display:grid;grid-template-columns:108px 1fr;align-items:center;gap:12px;font-size:14.5px;color:var(--fg2);}
-.bc-bars i{display:block;height:8px;border-radius:4px;background:#2c2a25;position:relative;overflow:hidden;}
-.bc-bars i::after{content:'';position:absolute;inset:0;width:var(--w);border-radius:4px;background:linear-gradient(90deg,var(--gold-deep),var(--gold));}
-.bc-chart{display:flex;align-items:flex-end;gap:8px;height:120px;margin-top:24px;padding-top:10px;border-top:1px solid var(--line);}
-.bc-chart i{flex:1;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--gold),rgba(233,188,83,.15));}
-.bc-note{position:absolute;right:18px;bottom:10px;font-size:10px;color:var(--fg3);letter-spacing:.08em;text-transform:uppercase;}
 
+
+/* BUSINESS PHOTO */
+.biz-photo{position:relative;max-width:440px;width:100%;margin-inline:auto;}
+.biz-photo .photo{aspect-ratio:4/5;border-radius:22px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 40px 80px rgba(0,0,0,.45);}
+
+/* FEATURES */
+.feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+.feat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px 22px;min-width:0;transition:border-color .25s,transform .25s;}
+.feat:hover{border-color:rgba(233,188,83,.4);transform:translateY(-3px);}
+.feat .bi{width:44px;height:44px;border-radius:12px;background:rgba(233,188,83,.1);border:1px solid rgba(233,188,83,.3);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+.feat .bi svg{width:20px;height:20px;stroke:var(--gold);fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;}
+.feat h3{font-family:var(--display);font-size:17.5px;font-weight:800;margin-bottom:8px;}
+.feat p{font-size:15px;color:var(--fg2);line-height:1.65;}
+.feat p a{color:var(--gold);}
+
+/* EARNINGS */
+.earn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;}
+.earn{background:linear-gradient(180deg,#1c1b18,#151412);border:1px solid var(--line);border-radius:18px;padding:26px 22px;display:flex;flex-direction:column;min-width:0;}
+.earn.hl{border-color:rgba(233,188,83,.45);}
+.earn small{font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);}
+.earn h3{font-family:var(--display);font-size:20px;font-weight:800;margin:8px 0 14px;line-height:1.25;}
+.earn .big{font-family:var(--display);font-weight:800;font-size:2.4rem;line-height:1;letter-spacing:-.02em;}
+.earn .big span{font-size:15px;font-weight:600;color:var(--fg2);letter-spacing:0;margin-left:6px;}
+.earn ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:10px;}
+.earn li{font-size:15px;color:var(--fg2);line-height:1.55;padding-left:18px;position:relative;}
+.earn li::before{content:'';position:absolute;left:0;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--gold);}
+.earn li b{color:var(--fg);font-weight:700;}
+.earn-note{margin-top:26px;display:flex;flex-wrap:wrap;gap:10px 26px;justify-content:center;font-size:14.5px;color:var(--fg3);text-align:center;}
+.earn-note a{color:var(--gold);}
+
+/* FAQ */
+.faq{max-width:860px;margin-inline:auto;}
+.faq details{border-bottom:1px solid var(--line2);}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:18px;padding:22px 2px;font-family:var(--display);font-size:18px;font-weight:700;}
+.faq summary::-webkit-details-marker{display:none;}
+.faq summary i{flex-shrink:0;width:30px;height:30px;border-radius:50%;border:1px solid var(--line2);position:relative;transition:background .3s;}
+.faq summary i::before,.faq summary i::after{content:'';position:absolute;left:50%;top:50%;width:11px;height:1.8px;background:var(--fg);transform:translate(-50%,-50%);}
+.faq summary i::after{transform:translate(-50%,-50%) rotate(90deg);transition:opacity .3s;}
+.faq details[open] summary i{background:var(--gold);border-color:var(--gold);}
+.faq details[open] summary i::before{background:var(--on-gold);}
+.faq details[open] summary i::after{opacity:0;}
+.faq details p{color:var(--fg2);font-size:16px;line-height:1.75;padding:0 2px 22px;max-width:760px;}
+.faq details p a{color:var(--gold);}
 
 /* MOBILE MENU */
 .nav-right{display:flex;align-items:center;gap:12px;}
@@ -310,6 +314,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   .step p{max-height:none;opacity:1;}
   .shots{grid-template-columns:repeat(2,1fr);}
   .trust{grid-template-columns:repeat(2,1fr);}
+  .feat-grid,.earn-grid{grid-template-columns:repeat(2,1fr);}
   .why-art{margin-inline:auto;margin-bottom:40px;}
 }
 @media(max-width:600px){
@@ -327,7 +332,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   .shot .cap h3{font-size:17px;}
   .hero-meta{margin-top:30px;gap:22px;}
   .hero-art{min-height:420px;margin-top:10px;}
-  .phone{width:210px;}
+  .poster{width:250px;}
   .float-card{bottom:6%;padding:11px 13px;}
   .lines{display:none;}
   .sec{padding-block:72px;}
@@ -344,8 +349,6 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   .shots::-webkit-scrollbar{display:none;}
   .shot{flex:0 0 78%;scroll-snap-align:center;}
   .sec-head{margin-bottom:34px;}
-  .biz-card{padding:20px;}
-  .bc-bars div{grid-template-columns:100px 1fr;}
   .why-art{margin-bottom:56px;max-width:340px;}
   .cta{padding-block:90px;}
   .foot-emails{gap:22px;}
@@ -357,7 +360,8 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   .float-card{left:0;}
   .blob{right:-10%;}
   .stats{gap:36px;}
-  .why-art .gcard{right:-4%;}
+  .feat-grid,.earn-grid{grid-template-columns:1fr;}
+  .faq summary{font-size:16.5px;padding:18px 2px;}
 }
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important;}
@@ -370,11 +374,11 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   <div class="wrap nav-in">
     <a href="#top" class="brand"><img src="images/icon-192.png" alt="ThanQYou"><span class="brand-name">ThanQ<span>You</span></span></a>
     <ul class="nav-links">
-      <li><a href="#top">Home</a></li>
       <li><a href="#about">About</a></li>
-      <li><a href="#how">How it works</a></li>
-      <li><a href="#inside">Inside the app</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#earnings">Earnings</a></li>
       <li><a href="#business">For Business</a></li>
+      <li><a href="#faq">FAQ</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
     <div class="nav-right">
@@ -383,11 +387,11 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
     </div>
   </div>
   <div class="drawer" id="drawer" hidden>
-    <a href="#top">Home</a>
     <a href="#about">About</a>
-    <a href="#how">How it works</a>
-    <a href="#inside">Inside the app</a>
+    <a href="#features">Features</a>
+    <a href="#earnings">Earnings</a>
     <a href="#business">For Business</a>
+    <a href="#faq">FAQ</a>
     <a href="#contact">Contact</a>
     <a href="https://app.thanqyou.com/#/link-device" class="drawer-cta">Link Device →</a>
   </div>
@@ -408,7 +412,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
       <div class="hero-meta">
         <a href="#how" class="explore"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>See how<br>it works</a>
         <div>
-          <p class="hero-sub">Post reels, chat end-to-end encrypted, and <strong>get paid real money</strong> for your time on ThanQYou and the reels you create — all inside one app, built in India for the world.</p>
+          <p class="hero-sub">Reels, end-to-end encrypted chats, free calls and a wallet — in one app. <strong>Get paid real money</strong> for the time you spend watching reels and for the reels you create, straight to your bank. Built in India, for the world.</p>
           <div class="chips">
             <span class="chip"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="12" rx="1.5"/><rect x="13" y="3" width="8" height="7" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>Reels &amp; Posts</span>
             <span class="chip"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Encrypted Chat</span>
@@ -421,22 +425,8 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
     </div>
     <div class="hero-art">
       <div class="blob" aria-hidden="true"><div class="pink"></div><svg id="prism" viewBox="-100 -100 200 200"></svg></div>
-      <div class="phone">
-        <div class="screen">
-          <div class="notch"></div>
-          <div class="reel-side">
-            <span><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>
-            <span><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.2 7.6L3 21l1.9-5.7A8.4 8.4 0 1 1 21 11.5z"/></svg></span>
-            <span><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></span>
-          </div>
-          <div class="reel-ui">
-            <div class="reel-user"><i></i>@yourhandle</div>
-            <div class="reel-cap">Sunset run at Necklace Road 🌇</div>
-            <div class="earn-pill">₹ Earning on ThanQYou</div>
-          </div>
-        </div>
-      </div>
-      <div class="float-card"><div class="coin">₹</div><div><small>Wallet</small><strong>Payouts to your bank</strong></div></div>
+      <figure class="poster"><img src="images/site/hero-cafe-friends.webp" width="760" height="1140" alt="Three friends at a Hyderabad cafe laughing over the ThanQYou chats screen, Charminar in the background" fetchpriority="high"></figure>
+      <div class="float-card"><div class="coin">₹</div><div><small>Wallet</small><strong>Paid to your bank monthly</strong></div></div>
     </div>
   </div>
 </header>
@@ -495,17 +485,17 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
         </div>
         <div class="step on">
           <h3>Create &amp; enjoy reels</h3>
-          <p>Your genuine time on ThanQYou and every reel you post add to your wallet. Views and likes on your reels count too.</p>
+          <p>Every full hour of reels you watch adds to your wallet, and the reels you post earn from ads and views. You can see each day's earnings in the app.</p>
           <div class="foot"><span class="go"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span class="n">02</span></div>
         </div>
         <div class="step">
           <h3>Verify once with KYC</h3>
-          <p>A fast, document-based KYC flow confirms it's really you. You only do it once.</p>
+          <p>A quick check with your Aadhaar or Passport confirms it's really you. You only do it once, and your earnings keep adding up until you do.</p>
           <div class="foot"><span class="go"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span class="n">03</span></div>
         </div>
         <div class="step">
           <h3>Get payouts to your bank</h3>
-          <p>Add your bank details once. We send your earnings straight to your bank account as payouts, and your full earnings history stays visible in the app.</p>
+          <p>Once your balance reaches ₹300, it's sent to your verified bank account on the 5th of each month. Your full earnings history stays in the app.</p>
           <div class="foot"><span class="go"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span class="n">04</span></div>
         </div>
       </div>
@@ -521,19 +511,97 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
       <h2 class="h2">Everything in one<br>login</h2>
     </div>
     <div class="shots">
-      <a class="shot" href="#how">
-        <div class="frame f1"><div class="mini"><div class="row"><i></i><div class="bar w6"></div></div><div class="tile"></div><div class="bar w8"></div><div class="bar w4"></div></div></div>
+      <a class="shot" href="#earnings">
+        <div class="frame photo"><img src="images/site/reels-festival-market.webp" width="760" height="1140" alt="A creator filming a reel at a festive Indian market, holding up his ThanQYou profile" loading="lazy"></div>
         <div class="cap"><div><small>Social · Reels</small><h3>Post reels, get paid for views</h3></div><svg viewBox="0 0 24 24"><path d="M7 17L17 7M8 7h9v9"/></svg></div>
+        <span class="shot-note">Share reels, photos and stories. Creators earn from the ads shown after their reels and ₹2 for every 1,000 views.</span>
       </a>
-      <a class="shot" href="#about">
-        <div class="frame f2"><div class="mini"><div class="row"><i></i><div class="bar w6"></div></div><div class="b-in"></div><div class="b-out"></div><div class="b-in"></div><div class="b-out" style="width:45%"></div><div style="flex:1"></div><div class="bar"></div></div></div>
+      <a class="shot" href="#features">
+        <div class="frame f2"><div class="device"><img src="images/site/app-social-feed.webp" width="540" height="1138" alt="The ThanQYou app's social home screen" loading="lazy"></div></div>
         <div class="cap"><div><small>Messenger · Calls</small><h3>Chats that stay private</h3></div><svg viewBox="0 0 24 24"><path d="M7 17L17 7M8 7h9v9"/></svg></div>
+        <span class="shot-note">Chats, groups and calls are end-to-end encrypted. Only the people in the conversation can read or hear them.</span>
       </a>
-      <a class="shot" href="#how">
-        <div class="frame f3"><div class="mini"><div class="lbl">Wallet balance</div><div class="bal">₹ ••••</div><div class="chart"><i style="height:30%"></i><i style="height:45%"></i><i style="height:38%"></i><i style="height:62%"></i><i style="height:55%"></i><i style="height:80%"></i><i style="height:92%"></i></div><div class="btn"></div></div></div>
+      <a class="shot" href="#earnings">
+        <div class="frame f3"><div class="device"><img src="images/site/app-welcome.webp" width="540" height="1203" alt="The ThanQYou app's welcome screen with sign-up options" loading="lazy"></div></div>
         <div class="cap"><div><small>Wallet · KYC</small><h3>Real bank payouts</h3></div><svg viewBox="0 0 24 24"><path d="M7 17L17 7M8 7h9v9"/></svg></div>
+        <span class="shot-note">Verify once with KYC and your earnings go straight to your bank account every month.</span>
       </a>
     </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="sec" id="features" style="padding-top:40px">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Features <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 8v9H8"/></svg></div>
+      <h2 class="h2">Everything you use daily,<br><b>in one app</b></h2>
+    </div>
+    <div class="feat-grid">
+      <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M10 8.5v7l6-3.5z"/></svg></span><h3>Reels &amp; posts</h3><p>Post reels, photos and stories, and discover new creators on the Reels feed.</p></div>
+      <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><h3>Private chats</h3><p>One-to-one and group chats, end-to-end encrypted, with disappearing messages and chat lock.</p></div>
+      <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span><h3>Free voice &amp; video calls</h3><p>Call friends and family over the internet, add more people to a call, and keep chatting while you talk.</p></div>
+      <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><h3>Updates</h3><p>Share status updates with your contacts and choose exactly who can see them.</p></div>
+      <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2.5"/><path d="M2 10h20M16 15h2"/></svg></span><h3>Wallet</h3><p>See what you've earned each day, from watch time, reels and bonuses, with your full history.</p></div>
+      <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><h3>KYC &amp; bank payouts</h3><p>Verify once with Aadhaar or Passport. Payouts go straight to your own bank account.</p></div>
+      <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg></span><h3>Business profiles</h3><p>A verified profile for shops and brands, with promoted posts and reach insights.</p></div>
+      <div class="feat"><span class="bi"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><h3>Use it on your computer</h3><p>Link your phone at <a href="https://app.thanqyou.com/#/link-device">app.thanqyou.com</a> and use ThanQYou in your browser.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- EARNINGS -->
+<section class="sec" id="earnings" style="padding-top:40px">
+  <div class="glow" style="width:640px;height:640px;left:-240px;top:10%"></div>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">How you earn <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 8v9H8"/></svg></div>
+      <h2 class="h2">Clear rates, <b>no guesswork</b></h2>
+      <p class="muted" style="max-width:620px;margin:16px auto 0">Every rupee is worked out by a fixed formula. No lucky draws, and you are never paid for viewing or clicking ads.</p>
+    </div>
+    <div class="earn-grid">
+      <div class="earn">
+        <small>Watch reels</small>
+        <h3>Paid for your time</h3>
+        <div class="big">₹0.25<span>per full hour</span></div>
+        <ul>
+          <li>Counts up to <b>5 hours a day</b>; minutes carry over to the next hour</li>
+          <li><b>₹200 bonus</b> at 100 hours in a month, or <b>₹350</b> at 150 hours</li>
+          <li>Added to your wallet every night</li>
+        </ul>
+      </div>
+      <div class="earn">
+        <small>Create reels</small>
+        <h3>Earn from ads &amp; views</h3>
+        <div class="big">40%<span>of ad revenue</span></div>
+        <ul>
+          <li>The two reels before each ad share it: <b>25%</b> and <b>15%</b></li>
+          <li><b>₹2 for every 1,000 views</b>, for the reel's lifetime</li>
+          <li>Only post reels you made or have the right to post</li>
+        </ul>
+      </div>
+      <div class="earn hl">
+        <small>Early user offer</small>
+        <h3>For the first 25,000 users</h3>
+        <div class="big">₹5<span>on signing up</span></div>
+        <ul>
+          <li><b>₹3</b> for each friend who joins with your code</li>
+          <li><b>₹2</b> each for your first 3 reels a day (15 seconds or longer)</li>
+          <li><b>₹0.03</b> for every 5 likes on your posts</li>
+        </ul>
+      </div>
+      <div class="earn">
+        <small>Payouts</small>
+        <h3>Straight to your bank</h3>
+        <div class="big">5th<span>of every month</span></div>
+        <ul>
+          <li>Sent automatically once your balance reaches <b>₹300</b></li>
+          <li>One-time KYC needed before your first payout</li>
+          <li>Below ₹300, your balance stays in your wallet</li>
+        </ul>
+      </div>
+    </div>
+    <div class="earn-note"><span>Rates as of November 2026 and may change.</span><span>Full rules in our <a href="/terms-of-service.html">Terms of Service</a>.</span></div>
   </div>
 </section>
 
@@ -544,7 +612,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
     <div>
       <div class="eyebrow">For Business <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 8v9H8"/></svg></div>
       <h2 class="h2" style="margin-top:14px">Grow Your Brand<br><b>On ThanQYou</b></h2>
-      <p class="muted" style="margin-top:18px;max-width:480px">Pick Business when you sign up and get a profile built for brands, shops and creators who sell. Verify your business, promote your posts and see how far they travel.</p>
+      <p class="muted" style="margin-top:18px;max-width:480px">From a saree boutique to a local café — pick Business when you sign up and put your shop in front of thousands of people. Verify your business, promote your posts and see how far they travel.</p>
       <div class="biz-feats">
         <div class="bf"><span class="bi"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg></span><h4>Business profile</h4><p>A dedicated profile for your brand, separate from personal accounts.</p></div>
         <div class="bf"><span class="bi"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></span><h4>KYB verification</h4><p>Verify your business with its documents so people know it's real.</p></div>
@@ -552,17 +620,9 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
         <div class="bf"><span class="bi"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-6"/></svg></span><h4>Reach &amp; insights</h4><p>Track reach, impressions and clicks, and pick a subscription plan that fits.</p></div>
       </div>
     </div>
-    <div class="biz-card" aria-hidden="true">
-      <div class="bc-top"><img src="images/icon-192.png" alt=""><div><strong>Your Business</strong><small><span class="vdot"></span>KYB verified</small></div><span class="bc-tag">Business</span></div>
-      <div class="bc-label">Promoted post · this week</div>
-      <div class="bc-bars">
-        <div><span>Reach</span><i style="--w:88%"></i></div>
-        <div><span>Impressions</span><i style="--w:72%"></i></div>
-        <div><span>Clicks</span><i style="--w:41%"></i></div>
-      </div>
-      <div class="bc-chart"><i style="height:28%"></i><i style="height:40%"></i><i style="height:35%"></i><i style="height:58%"></i><i style="height:52%"></i><i style="height:76%"></i><i style="height:90%"></i></div>
-      <div class="bc-note">Illustration</div>
-    </div>
+    <figure class="biz-photo">
+      <div class="photo"><img src="images/site/business-saree-boutique.webp" width="860" height="1075" alt="A saree boutique owner holding up her shop's ThanQYou business profile" loading="lazy"></div>
+    </figure>
   </div>
 </section>
 
@@ -571,17 +631,37 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
   <div class="glow" style="width:640px;height:640px;left:-240px;top:10%"></div>
   <div class="wrap why-grid">
     <div class="why-art">
-      <div class="ph"><img src="images/icon-192.png" alt="ThanQYou app icon"></div>
-      <div class="gcard"><span class="c"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><p><b>Social, Chat</b> and Wallet <b>in one</b> app</p></div>
+      <div class="ph photo"><img src="images/site/calls-dorm.webp" width="760" height="1140" alt="A student smiling during a free ThanQYou video call home from her room" loading="lazy"></div>
     </div>
     <div>
       <div class="eyebrow">Why ThanQYou <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 8v9H8"/></svg></div>
       <h2 class="h2" style="margin-top:14px">An App That Gives<br>Something Back</h2>
       <div class="why-list">
-        <div class="why-item"><h4>Get paid for your time</h4><p>Earn for the time you spend on ThanQYou, and as a creator from views and likes on your reels. No hidden thresholds, no gimmicks.</p></div>
+        <div class="why-item"><h4>Get paid for your time</h4><p>Earn for every full hour of reels you watch, and as a creator from ads and views on your reels. Clear rates, paid to your bank.</p></div>
         <div class="why-item"><h4>Private by default</h4><p>Messages, voice notes and calls are end-to-end encrypted — only the people in the conversation can read or hear them, not even ThanQYou.</p></div>
-        <div class="why-item"><h4>Your controls</h4><p>1:1 and group chats, voice and video calls, disappearing messages and chat lock when you want them.</p></div>
+        <div class="why-item"><h4>Free calls, anytime</h4><p>Voice and video calls to family and friends over the internet, one-to-one or with more people added in.</p></div>
+        <div class="why-item"><h4>Your controls</h4><p>Disappearing messages, chat lock, choosing who sees your updates, and deleting your account whenever you want.</p></div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="sec" id="faq" style="padding-top:40px">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">FAQ <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 8v9H8"/></svg></div>
+      <h2 class="h2">Questions, <b>answered</b></h2>
+    </div>
+    <div class="faq">
+      <details><summary>Is ThanQYou free to use?<i aria-hidden="true"></i></summary><p>Yes. The app is free to download and use, and following anyone is always free.</p></details>
+      <details><summary>Do I get paid for watching ads?<i aria-hidden="true"></i></summary><p>No. Viewers are paid a fixed rate for the time they spend watching reels. Ads pay for the creators' share and for running ThanQYou; nobody is paid for viewing or clicking an ad.</p></details>
+      <details><summary>When and how do I get paid?<i aria-hidden="true"></i></summary><p>Your earnings are added to your wallet daily. Once your balance reaches ₹300, it is sent to your verified bank account on the 5th of each month. Below ₹300, it stays in your wallet until it gets there.</p></details>
+      <details><summary>Why do I need KYC?<i aria-hidden="true"></i></summary><p>KYC confirms that payouts go to the right person, so your name must match your Aadhaar or Passport. You can keep earning before you verify and nothing is lost, but KYC is needed before your first payout. If you earn over ₹50,000 in a year, Indian tax law also requires your PAN.</p></details>
+      <details><summary>Who can join?<i aria-hidden="true"></i></summary><p>Anyone aged 15 or over. Shops and brands can choose a Business profile when they sign up.</p></details>
+      <details><summary>Are my chats really private?<i aria-hidden="true"></i></summary><p>Yes. Messages, voice notes and calls are end-to-end encrypted, so ThanQYou cannot read or hear them. If someone reports a message to us, we can act on what they report.</p></details>
+      <details><summary>Can I use ThanQYou on my computer?<i aria-hidden="true"></i></summary><p>Yes. Open <a href="https://app.thanqyou.com/#/link-device">app.thanqyou.com</a> and link it to the app on your phone.</p></details>
+      <details><summary>How do I delete my account?<i aria-hidden="true"></i></summary><p>From the app's settings, or see our <a href="/delete-account.html">Delete Account</a> page. Your data is removed 30 days after you delete; signing back in within those 30 days restores your account.</p></details>
     </div>
   </div>
 </section>
@@ -611,7 +691,7 @@ nav.open .menu-btn span:nth-child(3){transform:translateY(-6.8px) rotate(-45deg)
         <div class="foot-email-item"><span class="foot-email-label">Business</span><a href="mailto:contact@thanqyou.com">contact@thanqyou.com</a></div>
       </div>
     </div>
-    <p class="foot-legal">ThanQYou is owned and operated by <strong>MAANYA IT &amp; HR SERVICES</strong><br>Ground Floor, Plot No 235, Road No 93, Near Yaari House, Kapra, Hyderabad, Medchal Malkajgiri District, Telangana 500083, India<br>GSTIN: 36ACFFM5558A1ZB</p>
+    <p class="foot-legal">ThanQYou is owned and operated by <strong>MAANYA IT &amp; HR SERVICES</strong>.</p>
     <div class="foot-bottom">
       <p class="fcopy">© 2026 MAANYA IT &amp; HR SERVICES. All rights reserved.</p>
       <div class="foot-links">
