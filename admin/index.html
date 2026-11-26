@@ -1425,17 +1425,23 @@
         <div class="mini-stat"><div class="ms-val" id="rp-pending-users">—</div><div class="ms-label">Pending User Reports</div></div>
       </div>
       <div class="table-card">
-        <div class="table-header"><h3>Reported Posts</h3></div>
+        <div class="table-header"><h3>Reported public content (reels &amp; posts)</h3></div>
         <table>
           <thead><tr><th>Post</th><th>Post Author</th><th>Reported By</th><th>Reason</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody id="reports-post-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
         </table>
       </div>
       <div class="table-card" style="margin-top:20px">
-        <div class="table-header"><h3>Reported Users</h3></div>
+        <div class="table-header"><h3>Private reports (chats, DMs &amp; calls)</h3></div>
+        <div style="padding:8px 14px;font-size:12px;color:#888;line-height:1.5">
+          Private chats and calls stay end-to-end encrypted. What you see here was submitted
+          by the person who tapped <b>Report</b> — the reported message as shown on their phone,
+          or, for a call, the call details and their own note. The app does not read anyone's
+          messages or calls.
+        </div>
         <table>
-          <thead><tr><th>Reported Account</th><th>Reported By</th><th>Reason</th><th>Date</th><th>Actions</th></tr></thead>
-          <tbody id="reports-user-body"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+          <thead><tr><th>Type</th><th>Reported</th><th>Reported By</th><th>What was reported</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="reports-user-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -5826,31 +5832,66 @@ function readReelLength(url){
 }
 async function loadReports(){
   document.getElementById('reports-post-body').innerHTML='<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
-  document.getElementById('reports-user-body').innerHTML='<tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('reports-user-body').innerHTML='<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
   var res=await Promise.all([
     query('post_reports','select=*&status=eq.pending&order=created_at.desc'),
     query('user_reports','select=*&status=eq.pending&order=created_at.desc'),
-    query('social_accounts','select=id,social_uid,username_handle,username,social_avatar_url')
+    query('social_accounts','select=id,social_uid,firebase_uid,username_handle,username,social_avatar_url')
   ]);
   var postReports=res[0]||[],userReports=res[1]||[];
-  var accts={};(res[2]||[]).forEach(function(a){accts[a.social_uid]=a;});
-  window._accts=accts;
+  var accts={},acctsByFb={};
+  (res[2]||[]).forEach(function(a){accts[a.social_uid]=a;if(a.firebase_uid)acctsByFb[a.firebase_uid]=a;});
+  window._accts=accts;window._acctsByFb=acctsByFb;
   document.getElementById('rp-pending-posts').textContent=postReports.length;
   document.getElementById('rp-pending-users').textContent=userReports.length;
 
+  // Reel/post details (caption + thumbnail) so the reviewer sees what they act on.
   var postIds=Array.from(new Set(postReports.map(function(r){return r.post_id;}).filter(Boolean)));
   var posts={};
   if(postIds.length){
-    var fetched=await query('posts','select=id,caption,social_uid&id=in.('+postIds.join(',')+')');
+    var fetched=await query('posts','select=id,caption,social_uid,thumbnail_url,media_urls,media_types&id=in.('+postIds.join(',')+')');
     (fetched||[]).forEach(function(p){posts[p.id]=p;});
   }
 
+  // Call reports carry a call_log_id - pull the call details (who/when/how long).
+  var callIds=Array.from(new Set(userReports.map(function(r){return r.call_log_id;}).filter(Boolean)));
+  var calls={};
+  if(callIds.length){
+    var cl=await query('call_logs','select=id,call_type,status,duration_seconds,started_at,is_group&id=in.('+callIds.join(',')+')');
+    (cl||[]).forEach(function(c){calls[c.id]=c;});
+  }
+
+  // Resolve the phone-side (firebase) accounts named in chat/call reports.
+  var fbUids=new Set();
+  userReports.forEach(function(r){
+    if(r.reported_firebase_uid)fbUids.add(r.reported_firebase_uid);
+    if(r.reporter_firebase_uid)fbUids.add(r.reporter_firebase_uid);
+  });
+  var usersByFb={};
+  if(fbUids.size){
+    var us=await query('users','select=firebase_uid,display_name,phone&firebase_uid=in.('+Array.from(fbUids).join(',')+')');
+    (us||[]).forEach(function(u){usersByFb[u.firebase_uid]=u;});
+  }
+  window._usersByFb=usersByFb;
+
   renderPostReports(postReports,posts);
-  renderUserReports(userReports);
+  renderUserReports(userReports,calls);
 }
 function nameFor(uid){
   var a=window._accts&&window._accts[uid];
   return escHtml(a?('@'+(a.username_handle||a.username||uid.substring(0,8))):(uid?uid.substring(0,8):'—'));
+}
+// Best name for either a social uid or a firebase uid used in a private report.
+function nameForReport(socialUid,fbUid){
+  if(socialUid){var a=window._accts&&window._accts[socialUid];if(a)return escHtml('@'+(a.username_handle||a.username||socialUid.substring(0,8)));}
+  if(fbUid){
+    var byFb=window._acctsByFb&&window._acctsByFb[fbUid];
+    if(byFb)return escHtml('@'+(byFb.username_handle||byFb.username||fbUid.substring(0,8)));
+    var u=window._usersByFb&&window._usersByFb[fbUid];
+    if(u)return escHtml((u.display_name||'')+(u.phone?' ('+u.phone+')':'')||fbUid.substring(0,10));
+    return escHtml(fbUid.substring(0,10)+'…');
+  }
+  return socialUid?escHtml(socialUid.substring(0,8)):'—';
 }
 function renderPostReports(reports,posts){
   var body=document.getElementById('reports-post-body');
@@ -5858,8 +5899,14 @@ function renderPostReports(reports,posts){
   body.innerHTML=reports.map(function(r){
     var p=posts[r.post_id];
     var caption=p?(p.caption||'(no caption)'):'(post already removed)';
+    var thumb=p&&(p.thumbnail_url||((p.media_urls||[])[0]));
+    var isVideo=p&&((p.media_types||[])[0]==='video');
+    var preview=thumb
+      ?'<a href="'+escHtml(thumb)+'" target="_blank" rel="noopener" style="flex:none"><img src="'+escHtml(thumb)+'" style="width:44px;height:58px;object-fit:cover;border-radius:6px;background:#eee" loading="lazy"></a>'
+      :'<div style="width:44px;height:58px;border-radius:6px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:18px">'+(p?'🖼️':'🗑️')+'</div>';
     return '<tr>'
-      +'<td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(caption)+'</td>'
+      +'<td><div style="display:flex;gap:8px;align-items:center">'+preview
+        +'<span style="font-size:12px;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(caption)+(isVideo?' <span class="badge" style="background:#eee">reel</span>':'')+'</span></div></td>'
       +'<td>'+(p?nameFor(p.social_uid):'—')+'</td>'
       +'<td>'+nameFor(r.social_uid)+'</td>'
       +'<td><span class="badge badge-red">'+escHtml(r.reason)+'</span></td>'
@@ -5870,31 +5917,62 @@ function renderPostReports(reports,posts){
       +'</td></tr>';
   }).join('');
 }
-function renderUserReports(reports){
+function reportTypeBadge(source){
+  var map={chat:['Chat','#5B8DEF'],social_dm:['Social DM','#C13584'],call:['Call','#E67E22']};
+  var m=map[source]||['Profile','#777'];
+  return '<span class="badge" style="background:'+m[1]+';color:#fff">'+m[0]+'</span>';
+}
+function renderUserReports(reports,calls){
+  calls=calls||{};
   var body=document.getElementById('reports-user-body');
-  if(!reports.length){body.innerHTML='<tr><td colspan="5"><div class="empty-state"><p>No pending user reports</p></div></td></tr>';return;}
+  if(!reports.length){body.innerHTML='<tr><td colspan="6"><div class="empty-state"><p>No pending private reports</p></div></td></tr>';return;}
   body.innerHTML=reports.map(function(r){
+    // "What was reported" column.
+    var content='';
+    if(r.source==='call'){
+      var c=calls[r.call_log_id];
+      content=c
+        ?'<div style="font-size:12px;color:#555">'+escHtml(c.is_group?'Group ':'')+escHtml(c.call_type||'voice')+' call · '+escHtml(c.status||'')+' · '+fmtDuration(c.duration_seconds)+'<br>'+formatDate(c.started_at)+'</div>'
+        :'<div style="font-size:12px;color:#999">(call details unavailable)</div>';
+    } else if(r.message_content){
+      content='<div style="font-size:12.5px;background:#f7f7f9;border-left:3px solid #C13584;padding:6px 9px;border-radius:4px;max-width:360px;white-space:pre-wrap;word-break:break-word">'+escHtml(r.message_content)+'</div>';
+    } else {
+      content='<span style="font-size:12px;color:#999">Account reported — no message attached</span>';
+    }
+    var note=r.description?'<div style="font-size:12px;color:#333;margin-top:5px"><b>Note:</b> '+escHtml(r.description)+'</div>':'';
+    var reasonTag='<div style="margin-bottom:5px"><span class="badge badge-red">'+escHtml(r.reason||'reported')+'</span></div>';
+    // Actions depend on which side we can act against.
+    var acts='<button class="action-btn" onclick="resolveReport(\'user_reports\',\''+r.id+'\')">Approve (clean)</button> ';
+    if(r.reported_social_uid){
+      acts+='<button class="action-btn danger" onclick="blockReportedUser(\''+r.id+'\',\''+r.reported_social_uid+'\')">Block (Social)</button> ';
+    }
+    if(r.reported_firebase_uid){
+      acts+='<button class="action-btn danger" onclick="suspendReportedUser(\''+r.id+'\',\''+r.reported_firebase_uid+'\')">Suspend account</button>';
+    }
     return '<tr>'
-      +'<td>'+nameFor(r.reported_social_uid)+'</td>'
-      +'<td>'+nameFor(r.reporter_social_uid)+'</td>'
-      +'<td><span class="badge badge-red">'+escHtml(r.reason)+'</span></td>'
+      +'<td>'+reportTypeBadge(r.source)+'</td>'
+      +'<td>'+nameForReport(r.reported_social_uid,r.reported_firebase_uid)+'</td>'
+      +'<td>'+nameForReport(r.reporter_social_uid,r.reporter_firebase_uid)+'</td>'
+      +'<td>'+reasonTag+content+note+'</td>'
       +'<td style="font-size:12px">'+formatDate(r.created_at)+'</td>'
-      +'<td>'
-        +'<button class="action-btn" onclick="resolveReport(\'user_reports\',\''+r.id+'\')">Approve (clean)</button> '
-        +'<button class="action-btn danger" onclick="blockReportedUser(\''+r.id+'\',\''+r.reported_social_uid+'\')">Block user</button>'
-      +'</td></tr>';
+      +'<td style="white-space:nowrap">'+acts+'</td></tr>';
   }).join('');
 }
+// Every review writes an audit trail (who/when/what) - the record that we
+// acted is itself the legal defence as an intermediary.
+function reviewStamp(action){
+  return {status:'resolved',reviewed_at:new Date().toISOString(),reviewed_by:'admin',admin_action:action};
+}
 async function resolveReport(table,id){
-  var ok=await update(table,id,{status:'resolved'});
+  var ok=await update(table,id,reviewStamp('dismissed_clean'));
   if(ok){showToast('Marked as reviewed - clean');loadReports();}
   else showToast('Failed to update report','error');
 }
 async function removeReportedPost(reportId,postId){
-  if(!confirm('Remove this post? It will be hidden from everyone in the app.'))return;
+  if(!confirm('Remove this post? It will be hidden from everyone in the app. The record is kept for moderation history.'))return;
   var ok=await update('posts',postId,{is_deleted:true});
   if(ok){
-    await update('post_reports',reportId,{status:'resolved'});
+    await update('post_reports',reportId,reviewStamp('post_removed'));
     showToast('Post removed');
     loadReports();
   } else showToast('Failed to remove post','error');
@@ -5905,10 +5983,30 @@ async function blockReportedUser(reportId,socialUid){
   if(!acct||!acct.id){showToast('Account not found','error');return;}
   var ok=await update('social_accounts',acct.id,{is_blocked:true,social_blocked:true,block_reason:'Reported and reviewed by admin'});
   if(ok){
-    await update('user_reports',reportId,{status:'resolved'});
+    await update('user_reports',reportId,reviewStamp('social_blocked'));
     showToast('User blocked');
     loadReports();
   } else showToast('Failed to block user','error');
+}
+// Full account suspension (signs the person out of the whole app and blocks
+// re-signin) via the admin-ban-user function - for serious private reports.
+async function suspendReportedUser(reportId,fbUid){
+  var reason=prompt('Suspend this account across the whole app? They will be signed out and cannot sign back in.\n\nReason (the user will see this):','Reported for serious misuse');
+  if(reason===null)return;
+  reason=reason.trim();
+  if(!reason){showToast('A reason is required','error');return;}
+  try{
+    var r=await fetch(`${SUPABASE_URL}/functions/v1/admin-proxy/edge/admin-ban-user`,{
+      method:'POST',
+      headers:{'x-admin-session':sessionToken,'Content-Type':'application/json'},
+      body:JSON.stringify({firebase_uid:fbUid,ban:true,reason:reason})
+    });
+    var d=await r.json().catch(function(){return {};});
+    if(!r.ok||!d.success)throw new Error(d.error||('HTTP '+r.status));
+    await update('user_reports',reportId,reviewStamp('account_suspended'));
+    showToast('Account suspended');
+    loadReports();
+  }catch(e){showToast("Couldn't suspend: "+e.message,'error');}
 }
 function reportBadge(id){
   var r=(window._postReports||{})[id];
