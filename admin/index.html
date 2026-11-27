@@ -10,21 +10,21 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ThanqYou Admin">
 <title>ThanqYou Admin</title>
-<link rel="icon" type="image/png" href="/images/icon-192.png?v=2">
-<link rel="apple-touch-icon" href="/images/icon-192.png?v=2">
+<link rel="icon" type="image/png" href="/images/icon-192.png?v=3">
+<link rel="apple-touch-icon" href="/images/icon-192.png?v=3">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap');
   :root {
     /* Deep wine brand accent, matching the main ThanqYou app */
-    --red: #722F37; --red-light: #8C3F49; --red-dim: rgba(114,47,55,0.07); --red-soft: #F6ECEE;
+    --red: #9D1A66; --red-light: #B82A7C; --red-dim: rgba(157,26,102,0.08); --red-soft: #FBEAF3;
     /* Light theme surfaces. Names are historical: --dark* are surfaces, --white is ink */
     --dark: #F5F4F2; --dark2: #FFFFFF; --dark3: #F1EEEC; --dark4: #E4DFDC;
     --white: #1F1A19; --grey: #7A726D; --grey2: #5E5752; --grey3: #EEEAE7;
     --line: #ECE8E5;
-    --green: #1E8E4E; --orange: #C77712; --blue: #2468B0; --purple: #6E3FA3;
+    --green: #1E8E4E; --orange: #C77712; --blue: #3E6FD6; --purple: #7A4BC7;
     --sidebar-w: 240px;
-    --sb-bg: #140D10; --sb-bg2: #26161B; --sb-ink: #F7EFF1; --sb-muted: #BCA9AE; --sb-accent: #E8A0AA;
+    --sb-bg: #0C0A16; --sb-bg2: #191333; --sb-ink: #F2EEFB; --sb-muted: #A99FC4; --sb-accent: #E5B560;
     /* One colour per sidebar section (rainbow, softened for the dark sidebar) */
     --sec-1: #F26D6D; --sec-2: #F59A45; --sec-3: #F2C14E; --sec-4: #3FCB87; --sec-5: #55A4F6; --sec-6: #A88BFA; --sec-biz: #EC6BB7;
     --shadow-lg: 0 18px 44px rgba(31,26,25,0.10), 0 4px 12px rgba(31,26,25,0.05);
@@ -39,7 +39,7 @@
 
   /* LOGIN */
   #login-page { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:16px;
-    background: radial-gradient(1200px 600px at 10% -10%, rgba(114,47,55,0.18), transparent 60%), radial-gradient(900px 500px at 110% 110%, rgba(114,47,55,0.12), transparent 60%), var(--dark); }
+    background: radial-gradient(1200px 600px at 10% -10%, rgba(157,26,102,0.16), transparent 60%), radial-gradient(900px 500px at 110% 110%, rgba(70,124,220,0.12), transparent 60%), var(--dark); }
   .login-box { background:var(--dark2); border:1px solid var(--line); border-radius:20px; padding:44px 40px; width:420px; max-width:100%; box-shadow:var(--shadow-md); }
   .login-logo { text-align:center; margin-bottom:32px; }
   .login-logo h1 { font-size:30px; font-weight:800; color:var(--red); letter-spacing:-0.8px; }
@@ -53,7 +53,7 @@
 
   /* MAIN LAYOUT */
   #app { display:none; }
-  .sidebar { position:fixed; left:0; top:0; width:var(--sidebar-w); height:100vh; background:radial-gradient(120% 45% at 0% 0%, rgba(140,63,73,0.45), transparent 62%), radial-gradient(90% 40% at 100% 100%, rgba(168,139,250,0.10), transparent 70%), linear-gradient(180deg, var(--sb-bg2), var(--sb-bg)); border-right:1px solid rgba(255,255,255,0.05); padding:20px 12px; z-index:100; display:flex; flex-direction:column; overflow-y:auto; }
+  .sidebar { position:fixed; left:0; top:0; width:var(--sidebar-w); height:100vh; background:radial-gradient(120% 45% at 0% 0%, rgba(157,26,102,0.42), transparent 60%), radial-gradient(95% 45% at 100% 100%, rgba(70,124,220,0.22), transparent 70%), linear-gradient(180deg, var(--sb-bg2), var(--sb-bg)); border-right:1px solid rgba(255,255,255,0.05); padding:20px 12px; z-index:100; display:flex; flex-direction:column; overflow-y:auto; }
   .sidebar-logo { padding:4px 10px 18px; margin-bottom:4px; display:flex; align-items:center; gap:12px; border-bottom:1px solid rgba(255,255,255,0.06); }
   .sidebar-logo .logo-mark { width:38px; height:38px; border-radius:11px; object-fit:cover; display:block; box-shadow:0 6px 16px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.08); flex-shrink:0; }
   .sidebar-logo h2 { font-size:18px; font-weight:800; color:#fff; letter-spacing:-0.3px; line-height:1.1; }
@@ -757,7 +757,7 @@
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-logo">
-      <img class="logo-mark" src="/images/icon-192.png?v=2" alt="ThanqYou">
+      <img class="logo-mark" src="/images/icon-192.png?v=3" alt="ThanqYou">
       <div>
         <h2>ThanqYou</h2>
         <span>Admin Panel</span>
@@ -5681,7 +5681,7 @@ function setupRealtime() {
 // and a red dot for a post/reel, and the title counts them. Checked when the
 // database signals new activity (see LIVE SIGNAL); dots clear when you come
 // back to the tab. Quiet on errors - no toasts from a tab nobody is looking at.
-const TAB_ICON = '/images/icon-192.png?v=2', TAB_TITLE = 'ThanqYou Admin';
+const TAB_ICON = '/images/icon-192.png?v=3', TAB_TITLE = 'ThanqYou Admin';
 let _alertSeen = null, _alertNew = { signups: 0, posts: 0 }, _alertIcon = null, _alertCheckedAt = 0;
 
 async function latestRows(table, columns, filter) {
