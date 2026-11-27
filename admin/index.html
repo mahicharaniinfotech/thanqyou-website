@@ -101,6 +101,16 @@
   @media (max-width:1400px) { #notif-btn .btn-text { display:none; } }
   .goal-strip { display:inline-flex; align-items:stretch; gap:14px; flex:0 1 auto; min-width:0; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; color:inherit; font-family:inherit; text-align:left; cursor:pointer; }
   .goal-strip[hidden], #user-state[hidden] { display:none; }
+  .csv-btn { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; margin-left:auto; }
+  .csv-presets { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 14px; }
+  .csv-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 14px; margin-bottom:16px; }
+  @media (max-width:700px) { .csv-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .csv-fields label, .csv-opts label { display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
+  .csv-fields input, .csv-opts input { accent-color:var(--orange, #f59e0b); width:15px; height:15px; }
+  .csv-opts { display:flex; flex-direction:column; gap:8px; padding:12px 0; border-top:1px solid var(--dark4); border-bottom:1px solid var(--dark4); margin-bottom:14px; }
+  .csv-opts select { background:var(--dark3); border:1px solid var(--dark4); border-radius:8px; padding:5px 8px; color:var(--white); font-size:13px; }
+  .csv-sum { font-size:13px; margin-bottom:14px; }
+  .csv-sum b { font-size:15px; }
   .au-type { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:12.5px; font-weight:600; color:var(--grey); }
   .au-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:18px; }
   .au-box { background:var(--dark2); border:1px solid var(--line); border-radius:14px; padding:16px 18px; min-width:0; }
@@ -1321,6 +1331,8 @@
             </select>
             <select id="user-country" onchange="onUserCountry()" aria-label="Country" style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"><option value="">All countries</option></select>
             <select id="user-state" onchange="filterUsers()" aria-label="State" hidden style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></select>
+            <button class="action-btn csv-btn" onclick="openUsersCsv()" title="Download the users in this list as a CSV file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Download CSV</button>
           </div>
           <table><thead><tr><th>User</th><th>Email</th><th>State / City</th><th>Device</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
           <tbody id="users-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
@@ -1844,6 +1856,35 @@
       <button onclick="closeModal('watch-modal')" aria-label="Close" style="background:none;border:none;color:var(--grey);cursor:pointer;font-size:20px">×</button>
     </div>
     <div style="overflow-x:auto;max-height:60vh"><table><thead><tr><th>User</th><th>Watch time</th><th>Reels</th><th title="Ads shown during reels">Ads in reels</th><th title="Every ad shown to this person in these dates">All ads</th><th>Last watched</th></tr></thead><tbody id="wl-body"></tbody></table></div>
+  </div>
+</div>
+<div class="modal-overlay" id="csv-modal" onclick="if(event.target===this)closeModal('csv-modal')">
+  <div class="modal" style="width:720px;max-width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <h2>Download users as CSV</h2>
+      <button onclick="closeModal('csv-modal')" aria-label="Close" style="background:none;border:none;color:var(--grey);cursor:pointer;font-size:20px">×</button>
+    </div>
+    <p class="cell-sub" style="margin-bottom:12px">Exports the people in the Users list as it's filtered now: dates, search, gender/KYC, country and state. Deleted accounts are never included.</p>
+    <div class="csv-presets">
+      <button class="action-btn" onclick="csvPreset('whatsapp')">WhatsApp list (name + phone)</button>
+      <button class="action-btn" onclick="csvPreset('email')">Email list (name + email)</button>
+      <button class="action-btn" onclick="csvPreset('all')">All fields</button>
+      <button class="action-btn" onclick="csvPreset('none')">Clear</button>
+    </div>
+    <div class="csv-fields" id="csv-fields"></div>
+    <div class="csv-opts">
+      <label><span style="min-width:110px">Phone format</span><select id="csv-phone-fmt" onchange="csvSummary()"><option value="wa">WhatsApp: 919876543210</option><option value="plus">International: +919876543210</option><option value="local">10 digits: 9876543210</option></select></label>
+      <label><input type="checkbox" id="csv-need-phone" onchange="csvSummary()">Only people with a phone number</label>
+      <label><input type="checkbox" id="csv-need-email" onchange="csvSummary()">Only people with an email</label>
+      <label><input type="checkbox" id="csv-skip-banned" checked onchange="csvSummary()">Leave out banned accounts</label>
+      <label><input type="checkbox" id="csv-dedupe" checked onchange="csvSummary()">One row per phone number (drop repeats)</label>
+    </div>
+    <div class="csv-sum" id="csv-sum"></div>
+    <p class="cell-sub" style="margin-bottom:14px">Only message people who signed up to ThanQYou, and give them a way to opt out. WhatsApp blocks numbers that get reported as spam.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="action-btn" onclick="closeModal('csv-modal')">Cancel</button>
+      <button class="action-btn success" id="csv-go" onclick="downloadUsersCsv()">Download CSV</button>
+    </div>
   </div>
 </div>
 <div class="modal-overlay" id="deleted-modal" onclick="if(event.target===this)closeModal('deleted-modal')">
@@ -4410,6 +4451,122 @@ function renderUsers() {
       </td>
     </tr>`;
   }).join('');
+}
+
+// ── USERS CSV ─────────────────────────────────────────
+// Downloads the filtered Users list with the fields picked here, for uploading
+// to WhatsApp / email tools. Built in the browser from data already loaded.
+const CSV_FIELDS = [
+  ['name', 'Name', u => u.display_name || ''],
+  ['first_name', 'First name', u => String(u.display_name || '').trim().split(/\s+/)[0] || ''],
+  ['phone', 'Phone', u => csvPhone(u.phone)],
+  ['email', 'Email', u => u.email || ''],
+  ['gender', 'Gender', u => GENDER_META[genderOf(u)][0]],
+  ['dob', 'Date of birth', u => u.dob || ''],
+  ['state', 'State', u => u.state || ''],
+  ['city', 'City', u => u.city || ''],
+  ['country', 'Country', u => COUNTRY_NAMES[countryOf(u)] || countryOf(u)],
+  ['username', 'Username', u => socialHandles[u.firebase_uid] ? '@' + socialHandles[u.firebase_uid] : ''],
+  ['ty_id', 'ThanqYou ID', u => u.ty_id || ''],
+  ['account_type', 'Account type', u => u.account_type === 'business' ? 'Business' : 'Personal'],
+  ['kyc', 'KYC status', u => u._kyc ? prettyType(u._kyc.status) : 'No KYC'],
+  ['balance', 'Wallet balance (₹)', u => u._wallet ? (u._wallet.balance / 100).toFixed(2) : '0.00'],
+  ['joined', 'Joined', u => csvDate(u.created_at)],
+  ['last_active', 'Last active', u => csvDate(u.last_active_at || u.last_seen_at)],
+  ['device', 'Phone model', u => u.device_model || PLATFORM_NAMES[u.platform] || ''],
+  ['app_version', 'App version', u => u.app_version || ''],
+  ['referral_code', 'Referral code', u => u.referral_code || ''],
+  ['signup_method', 'Signed up with', u => u.signup_method ? prettyType(u.signup_method) : ''],
+];
+const CSV_PRESETS = { whatsapp: ['name', 'phone'], email: ['name', 'email'] };
+const CSV_KEY = 'tq_admin_csv_fields';
+
+function csvDate(iso) {
+  if (!iso) return '';
+  const d = new Date(new Date(iso).getTime() + 330 * 60000);
+  return d.toISOString().slice(0, 16).replace('T', ' ');
+}
+function csvPhone(phone) {
+  const d = waDigits(phone);
+  if (!d) return '';
+  const fmt = document.getElementById('csv-phone-fmt').value;
+  if (fmt === 'plus') return '+' + d;
+  if (fmt === 'local') return d.startsWith('91') && d.length === 12 ? d.slice(2) : '+' + d;
+  return d;
+}
+function csvChosen() { return [...document.querySelectorAll('#csv-fields input:checked')].map(i => i.value); }
+
+function openUsersCsv() {
+  if (document.getElementById('user-filter').value === 'deleted') {
+    showToast("Deleted accounts can't be downloaded: they mustn't be contacted", 'error');
+    return;
+  }
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(CSV_KEY) || 'null'); } catch (e) {}
+  const on = new Set(Array.isArray(saved) && saved.length ? saved : CSV_PRESETS.whatsapp);
+  document.getElementById('csv-fields').innerHTML = CSV_FIELDS.map(([k, label]) =>
+    `<label><input type="checkbox" value="${k}" ${on.has(k) ? 'checked' : ''} onchange="csvSummary()">${escHtml(label)}</label>`).join('');
+  csvSummary();
+  openModal('csv-modal');
+}
+
+function csvPreset(name) {
+  const on = new Set(name === 'all' ? CSV_FIELDS.map(f => f[0]) : CSV_PRESETS[name] || []);
+  document.querySelectorAll('#csv-fields input').forEach(i => { i.checked = on.has(i.value); });
+  if (name === 'whatsapp') { document.getElementById('csv-need-phone').checked = true; document.getElementById('csv-need-email').checked = false; }
+  if (name === 'email') { document.getElementById('csv-need-email').checked = true; document.getElementById('csv-need-phone').checked = false; }
+  csvSummary();
+}
+
+function csvRows() {
+  const needPhone = document.getElementById('csv-need-phone').checked;
+  const needEmail = document.getElementById('csv-need-email').checked;
+  const skipBanned = document.getElementById('csv-skip-banned').checked;
+  const dedupe = document.getElementById('csv-dedupe').checked;
+  const seen = new Set();
+  return getFilteredUsers().filter(u => {
+    if (u.is_deleted) return false;
+    if (skipBanned && u.banned_at) return false;
+    const ph = waDigits(u.phone);
+    if (needPhone && !ph) return false;
+    if (needEmail && !u.email) return false;
+    if (dedupe && ph) { if (seen.has(ph)) return false; seen.add(ph); }
+    return true;
+  });
+}
+
+function csvSummary() {
+  const fields = csvChosen(), n = csvRows().length;
+  document.getElementById('csv-sum').innerHTML = fields.length
+    ? `<b>${n.toLocaleString('en-IN')}</b> people · ${fields.length} column${fields.length === 1 ? '' : 's'}: ${escHtml(CSV_FIELDS.filter(f => fields.includes(f[0])).map(f => f[1]).join(', '))}`
+    : 'Pick at least one field.';
+  document.getElementById('csv-go').disabled = !fields.length || !n;
+}
+
+function downloadUsersCsv() {
+  const keys = csvChosen();
+  const cols = CSV_FIELDS.filter(f => keys.includes(f[0]));
+  const rows = csvRows();
+  if (!cols.length || !rows.length) return;
+  try { localStorage.setItem(CSV_KEY, JSON.stringify(keys)); } catch (e) {}
+  // Quote every cell; text starting with = + - @ is prefixed so Excel can't run
+  // it as a formula (phone numbers are digits only, or start with + by choice)
+  const cell = (v, key) => {
+    let t = String(v ?? '');
+    if (key !== 'phone' && /^[=+\-@\t\r]/.test(t)) t = "'" + t;
+    return '"' + t.replace(/"/g, '""') + '"';
+  };
+  const lines = [cols.map(c => cell(c[1], '')).join(',')]
+    .concat(rows.map(u => cols.map(c => cell(c[2](u), c[0])).join(',')));
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  const { from, to } = getRange('users');
+  a.href = URL.createObjectURL(blob);
+  a.download = `thanqyou-users-${new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10)}${from || to ? '-filtered' : ''}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  closeModal('csv-modal');
+  showToast(`Downloaded ${rows.length.toLocaleString('en-IN')} people`, 'success');
 }
 
 function usersPage(dir) {
