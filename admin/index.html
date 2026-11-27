@@ -101,6 +101,11 @@
   @media (max-width:1400px) { #notif-btn .btn-text { display:none; } }
   .goal-strip { display:inline-flex; align-items:stretch; gap:14px; flex:0 1 auto; min-width:0; padding:5px 12px; border:1px solid var(--line); border-radius:12px; background:#FBFAF9; color:inherit; font-family:inherit; text-align:left; cursor:pointer; }
   .goal-strip[hidden], #user-state[hidden] { display:none; }
+  .user-filters { display:grid; grid-template-columns:1.2fr 1fr 1.2fr .9fr .9fr 1fr auto; gap:8px; padding:0 20px 14px; }
+  @media (max-width:1100px) { .user-filters { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (max-width:600px) { .user-filters { grid-template-columns:1fr 1fr; } }
+  .user-filters input, .user-filters select { background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none; min-width:0; width:100%; }
+  .user-filters input:focus { border-color:var(--orange, #f59e0b); }
   .csv-btn { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; margin-left:auto; }
   .csv-presets { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 14px; }
   .csv-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 14px; margin-bottom:16px; }
@@ -1322,19 +1327,25 @@
             </div>
             <select id="user-filter" onchange="filterUsers()" style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
               <option value="">Everyone</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other / not specified</option>
               <option value="kyc_pending">KYC pending</option>
               <option value="kyc_verified">KYC verified</option>
               <option value="deleted" id="user-filter-deleted">Deleted accounts</option>
             </select>
             <select id="user-country" onchange="onUserCountry()" aria-label="Country" style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"><option value="">All countries</option></select>
-            <select id="user-state" onchange="filterUsers()" aria-label="State" hidden style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></select>
+            <select id="user-state" onchange="onUserState()" aria-label="State" style="background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none"></select>
             <button class="action-btn csv-btn" onclick="openUsersCsv()" title="Download the users in this list as a CSV file">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Download CSV</button>
           </div>
-          <table><thead><tr><th>User</th><th>Email</th><th>State / City</th><th>Device</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
+          <div class="user-filters">
+            <input id="uf-name" placeholder="Name" oninput="filterUsers()" aria-label="Filter by name">
+            <input id="uf-phone" placeholder="Mobile number" inputmode="numeric" oninput="filterUsers()" aria-label="Filter by mobile number">
+            <input id="uf-email" placeholder="Email" oninput="filterUsers()" aria-label="Filter by email">
+            <select id="uf-gender" onchange="filterUsers()" aria-label="Gender"><option value="">All genders</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other / not specified</option></select>
+            <select id="uf-city" onchange="filterUsers()" aria-label="City"><option value="">All cities</option></select>
+            <select id="uf-has" onchange="filterUsers()" aria-label="Contact details"><option value="">Any contact details</option><option value="phone">Has mobile number</option><option value="email">Has email</option><option value="both">Has mobile and email</option></select>
+            <button class="action-btn" onclick="clearUserFilters()">Clear filters</button>
+          </div>
+          <table><thead><tr><th>User</th><th>Email / Mobile</th><th>State / City</th><th>Device</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
           <tbody id="users-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
           <div class="pagination"><span id="users-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="usersPage(-1)">← Prev</button><button class="pag-btn active" id="users-page-num">1</button><button class="pag-btn" onclick="usersPage(1)">Next →</button></div></div>
         </div>
@@ -4353,6 +4364,18 @@ const stateOf = u => String(u.state || '').trim();
 
 function onUserCountry() {
   document.getElementById('user-state').value = '';
+  document.getElementById('uf-city').value = '';
+  filterUsers();
+}
+function onUserState() {
+  document.getElementById('uf-city').value = '';
+  filterUsers();
+}
+const cityKey = u => String(u.city || '').trim().toLowerCase();
+
+function clearUserFilters() {
+  ['user-search', 'uf-name', 'uf-phone', 'uf-email'].forEach(id => { document.getElementById(id).value = ''; });
+  ['user-filter', 'uf-gender', 'uf-has', 'user-country', 'user-state', 'uf-city'].forEach(id => { document.getElementById(id).value = ''; });
   filterUsers();
 }
 
@@ -4367,40 +4390,58 @@ function buildRegionFilters(base) {
     .sort((a, b) => byC[b] - byC[a]).map(c => opt(c, COUNTRY_NAMES[c] || c, byC[c])).join('')
     + (byC[''] ? opt(STATE_NOT_SET, 'Country not set', byC['']) : '');
   cSel.value = keepC in byC || keepC === '' || (keepC === STATE_NOT_SET && byC['']) ? keepC : '';
-  const india = cSel.value === 'IN';
-  sSel.hidden = !india;
-  if (!india) { sSel.value = ''; return; }
-  const inIndia = base.filter(u => countryOf(u) === 'IN');
-  const byS = tally(inIndia, stateOf);
-  sSel.innerHTML = opt('', 'All states', inIndia.length) + Object.keys(byS).filter(Boolean)
+  const c = cSel.value;
+  const inCountry = !c ? base : base.filter(u => c === STATE_NOT_SET ? countryOf(u) === '' : countryOf(u) === c);
+  const byS = tally(inCountry, stateOf);
+  sSel.innerHTML = opt('', 'All states', inCountry.length) + Object.keys(byS).filter(Boolean)
     .sort((a, b) => byS[b] - byS[a] || a.localeCompare(b)).map(st => opt(st, st, byS[st])).join('')
     + (byS[''] ? opt(STATE_NOT_SET, 'State not set', byS['']) : '');
   sSel.value = keepS === '' || keepS in byS || (keepS === STATE_NOT_SET && byS['']) ? keepS : '';
+  // Cities for the chosen state (all states if none); same city typed in
+  // different cases counts once, shown as first written
+  const st = sSel.value, ctSel = document.getElementById('uf-city'), keepCt = ctSel.value;
+  const inState = !st ? inCountry : inCountry.filter(u => st === STATE_NOT_SET ? !stateOf(u) : stateOf(u) === st);
+  const byCt = {}, label = {};
+  inState.forEach(u => { const k = cityKey(u); byCt[k] = (byCt[k] || 0) + 1; if (k && !label[k]) label[k] = String(u.city).trim(); });
+  ctSel.innerHTML = opt('', 'All cities', inState.length) + Object.keys(byCt).filter(Boolean)
+    .sort((a, b) => byCt[b] - byCt[a] || a.localeCompare(b)).map(k => opt(k, label[k], byCt[k])).join('')
+    + (byCt[''] ? opt(STATE_NOT_SET, 'City not set', byCt['']) : '');
+  ctSel.value = keepCt === '' || keepCt in byCt || (keepCt === STATE_NOT_SET && byCt['']) ? keepCt : '';
 }
 
 function matchRegion(u) {
   const c = document.getElementById('user-country').value, st = document.getElementById('user-state').value;
   if (c === STATE_NOT_SET ? countryOf(u) !== '' : c && countryOf(u) !== c) return false;
-  if (c !== 'IN' || !st) return true;
-  return st === STATE_NOT_SET ? !stateOf(u) : stateOf(u) === st;
+  if (st && (st === STATE_NOT_SET ? stateOf(u) : stateOf(u) !== st)) return false;
+  const ct = document.getElementById('uf-city').value;
+  if (ct && (ct === STATE_NOT_SET ? cityKey(u) : cityKey(u) !== ct)) return false;
+  return true;
 }
 
 // Range + search + dropdown (drives the table)
 function getFilteredUsers() {
   const search = plainLower(document.getElementById('user-search').value);
   const filter = document.getElementById('user-filter').value;
+  const fName = plainLower(document.getElementById('uf-name').value).trim();
+  const fPhone = document.getElementById('uf-phone').value.replace(/\D/g, '');
+  const fEmail = plainLower(document.getElementById('uf-email').value).trim();
+  const fGender = document.getElementById('uf-gender').value;
+  const fHas = document.getElementById('uf-has').value;
   // Deleted accounts: never in the counts, listed here whatever the dates
   const base = filter === 'deleted' ? usersData.filter(u => u.is_deleted && !u.purged_at) : usersInRange();
   return base.filter(u => {
     const matchSearch = !search || plainLower(u.display_name).includes(search) || (u.phone||'').includes(search) || plainLower(u.email).includes(search) || plainLower(socialHandles[u.firebase_uid]).includes(search.replace(/^@/, '')) || plainLower(u.ty_id).includes(search.replace(/\s/g, '')) || plainLower(u.state).includes(search) || plainLower(u.city).includes(search);
     const g = genderOf(u);
     const matchFilter = !filter || filter === 'deleted'
-      || (filter === 'male' && g === 'male')
-      || (filter === 'female' && g === 'female')
-      || (filter === 'other' && (g === 'other' || g === 'unspecified'))
       || (filter === 'kyc_pending' && u._kyc && isPendingKYC(u._kyc))
       || (filter === 'kyc_verified' && u._kyc?.status === 'verified');
-    return matchSearch && matchFilter && matchRegion(u);
+    const digits = String(u.phone || '').replace(/\D/g, '');
+    const matchFields = (!fName || plainLower(u.display_name).includes(fName))
+      && (!fPhone || digits.includes(fPhone))
+      && (!fEmail || plainLower(u.email).includes(fEmail))
+      && (!fGender || (fGender === 'other' ? (g === 'other' || g === 'unspecified') : g === fGender))
+      && (fHas !== 'phone' || digits) && (fHas !== 'email' || u.email) && (fHas !== 'both' || (digits && u.email));
+    return matchSearch && matchFilter && matchFields && matchRegion(u);
   });
 }
 
@@ -4433,7 +4474,7 @@ function renderUsers() {
     return `
     <tr>
       <td><div class="avatar-cell">${avatarHtml(u.firebase_uid, u.display_name)}<div><div style="font-weight:600">${escHtml(u.display_name||'—')}${suspendedBadge(u)}</div>${socialHandleLine(u.firebase_uid)}${u.ty_id ? `<div class="cell-sub" style="font-family:'DM Mono',monospace;letter-spacing:.5px">${escHtml(u.ty_id)}</div>` : ''}</div></div></td>
-      <td style="font-size:12px">${escHtml(u.email||'—')}${u.is_deleted ? `<div class="cell-sub">${escHtml(u.phone||'No phone')}</div><div class="cell-sub">Deleted ${formatDateTime(u.deleted_at)}</div><div class="cell-sub" style="color:var(--red)" title="Promised on the Delete Account page. Do not contact deleted accounts">Data removed ${formatDate(new Date(new Date(u.deleted_at).getTime() + 30 * 864e5).toISOString())}</div>` : ''}</td>
+      <td style="font-size:12px">${escHtml(u.email||'—')}${!u.is_deleted ? `<div class="cell-sub" style="white-space:nowrap">${escHtml(u.phone||'No mobile')}</div>` : ''}${u.is_deleted ? `<div class="cell-sub">${escHtml(u.phone||'No phone')}</div><div class="cell-sub">Deleted ${formatDateTime(u.deleted_at)}</div><div class="cell-sub" style="color:var(--red)" title="Promised on the Delete Account page. Do not contact deleted accounts">Data removed ${formatDate(new Date(new Date(u.deleted_at).getTime() + 30 * 864e5).toISOString())}</div>` : ''}</td>
       <td style="font-size:12px">${regionCell(u)}</td>
       <td style="font-size:12px">${deviceCell(u)}</td>
       <td style="font-size:12px;color:${g==='unspecified'?'var(--grey)':'inherit'}">${GENDER_META[g][0]}</td>
