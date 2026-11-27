@@ -107,6 +107,8 @@
   @media (max-width:600px) { .user-filters { grid-template-columns:1fr 1fr; } }
   .user-filters input, .user-filters select { background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none; min-width:0; width:100%; }
   .user-filters input:focus { border-color:var(--orange, #f59e0b); }
+  .per-page { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--grey); margin-right:10px; }
+  .per-page select { background:var(--dark3); border:1px solid var(--dark4); border-radius:8px; padding:5px 8px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:12px; outline:none; cursor:pointer; }
   .user-actions { display:grid; grid-template-columns:repeat(2,max-content); gap:6px; }
   .user-actions .action-btn { text-align:center; }
   .csv-btn { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; margin-left:auto; }
@@ -1348,7 +1350,7 @@
           </div>
           <table><thead><tr><th>User</th><th>Email / Mobile</th><th>State / City</th><th>Device</th><th>Gender</th><th>Balance</th><th>KYC</th><th>Joined</th><th>Actions</th></tr></thead>
           <tbody id="users-body"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table>
-          <div class="pagination"><span id="users-count">Loading...</span><div class="pag-btns"><button class="pag-btn" onclick="usersPage(-1)">← Prev</button><button class="pag-btn active" id="users-page-num">1</button><button class="pag-btn" onclick="usersPage(1)">Next →</button></div></div>
+          <div class="pagination"><span id="users-count">Loading...</span><div class="pag-btns"><label class="per-page">Show <select id="users-per-page" onchange="setUsersPerPage(this.value)"><option value="20">20</option><option value="40">40</option><option value="60">60</option><option value="80">80</option><option value="100">100</option><option value="all">All</option></select> per page</label><button class="pag-btn" onclick="usersPage(-1)">← Prev</button><button class="pag-btn active" id="users-page-num">1</button><button class="pag-btn" onclick="usersPage(1)">Next →</button></div></div>
         </div>
       </div>
 
@@ -4283,6 +4285,14 @@ async function renderDashUsers() {
 // ── USERS ─────────────────────────────────────────────
 let usersData = [];
 let usersCurrentPage = 0;
+// Rows per page on Users: 20/40/60/80/100 or all (0); remembered in this browser
+let usersPerPage = (() => { try { const v = localStorage.getItem('tq_admin_users_per_page'); return v === 'all' ? 0 : (+v || PAGE_SIZE); } catch (e) { return PAGE_SIZE; } })();
+function setUsersPerPage(v) {
+  usersPerPage = v === 'all' ? 0 : +v;
+  try { localStorage.setItem('tq_admin_users_per_page', v); } catch (e) {}
+  usersCurrentPage = 0;
+  renderUsers();
+}
 
 // Phone shown in Users: model reported by the app (from the build that
 // adds it), else just Android / iOS. Android reports model codes, e.g.
@@ -4490,9 +4500,11 @@ function renderUsers() {
 
   const filtered = getFilteredUsers();
   const total = filtered.length;
-  const start = usersCurrentPage * PAGE_SIZE;
-  const page = filtered.slice(start, start + PAGE_SIZE);
-  document.getElementById('users-count').textContent = total ? `${start+1}–${Math.min(start+PAGE_SIZE,total)} of ${total}` : '0 users';
+  const size = usersPerPage || total || 1;
+  const start = usersCurrentPage * size;
+  const page = filtered.slice(start, start + size);
+  document.getElementById('users-per-page').value = usersPerPage ? String(usersPerPage) : 'all';
+  document.getElementById('users-count').textContent = total ? `${start+1}–${Math.min(start+size,total)} of ${total}` : '0 users';
   document.getElementById('users-page-num').textContent = usersCurrentPage + 1;
   if (!page.length) {
     document.getElementById('users-body').innerHTML = `<tr><td colspan="9"><div class="empty-state"><p>No users signed up ${from || to ? 'in this period' : 'yet'}</p></div></td></tr>`;
@@ -4642,7 +4654,7 @@ function downloadUsersCsv() {
 }
 
 function usersPage(dir) {
-  const maxPage = Math.max(0, Math.ceil(getFilteredUsers().length / PAGE_SIZE) - 1);
+  const maxPage = usersPerPage ? Math.max(0, Math.ceil(getFilteredUsers().length / usersPerPage) - 1) : 0;
   usersCurrentPage = Math.max(0, Math.min(maxPage, usersCurrentPage + dir));
   renderUsers();
 }
