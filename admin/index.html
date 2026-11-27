@@ -178,9 +178,7 @@
   .stat-card::before { content:''; position:absolute; left:0; right:0; top:0; height:3px; background:linear-gradient(90deg, var(--acc), color-mix(in srgb, var(--acc) 25%, transparent)); }
   .stat-card::after { content:''; position:absolute; right:-40px; top:-40px; width:130px; height:130px; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb, var(--acc) 9%, transparent), transparent 70%); pointer-events:none; }
   .stat-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg); }
-  .stat-card:has(.kpi-icon.wine) { --acc:#B8475A; } .stat-card:has(.kpi-icon.blue) { --acc:#2A78D6; }
-  .stat-card:has(.kpi-icon.green) { --acc:#1E8E4E; } .stat-card:has(.kpi-icon.amber) { --acc:#D08A16; }
-  .stat-card:has(.kpi-icon.violet) { --acc:#6E3FA3; } .stat-card:has(.kpi-icon.teal) { --acc:#0F8A8A; }
+  /* All stat cards share the single brand accent - no per-card colour */
   .stat-card .stat-label { font-size:13px; font-weight:600; color:var(--grey2); margin-bottom:10px; }
   .stat-card .stat-value { font-size:32px; font-weight:800; letter-spacing:-1px; margin-bottom:8px; line-height:1.1; }
   .stat-card .stat-change { font-size:12px; color:var(--grey); }
@@ -228,12 +226,8 @@
   .kpi-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
   .kpi-icon { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative; z-index:1; box-shadow:inset 0 0 0 1px color-mix(in srgb, currentColor 14%, transparent), 0 4px 10px color-mix(in srgb, currentColor 12%, transparent); }
   .kpi-icon svg { width:20px; height:20px; }
-  .kpi-icon.wine { background:var(--red-soft); color:var(--red); }
-  .kpi-icon.blue { background:#EAF2FB; color:#2468B0; }
-  .kpi-icon.green { background:#E8F5EE; color:#1E8E4E; }
-  .kpi-icon.amber { background:#FDF3E3; color:#B26A0C; }
-  .kpi-icon.violet { background:#F1EAF9; color:#6E3FA3; }
-  .kpi-icon.teal { background:#E3F4F4; color:#0F7A7A; }
+  /* Every KPI icon uses the one brand colour, whatever class the JS assigns */
+  .kpi-icon.wine, .kpi-icon.blue, .kpi-icon.green, .kpi-icon.amber, .kpi-icon.violet, .kpi-icon.teal { background:var(--red-soft); color:var(--red); }
   /* Dashboard: 3 + 3 cards (people row, money row) */
   #dash-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
   @media (min-width:1281px) { #dash-stats { grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,2fr); } }
@@ -1039,7 +1033,7 @@
           <div class="chart-card">
             <div class="chart-head">
               <div><h3>Signups &amp; posts</h3><p id="trend-sub">Daily</p></div>
-              <div class="chart-legend"><span><i style="background:#b8475a"></i>Signups</span><span><i style="background:#2a78d6"></i>Posts</span></div>
+              <div class="chart-legend"><span><i style="background:#9D1A66"></i>Signups</span><span><i style="background:#8A8591"></i>Posts</span></div>
             </div>
             <div class="dash-filter chart-range" data-range="trend" data-default="14d" data-presets="trend"></div>
             <div class="chart-box"><canvas id="signupChart" role="img" aria-label="Daily signups and posts"></canvas></div>
@@ -3598,7 +3592,9 @@ function refreshSignupTime() {
   if (el && _lastSignupAt) el.textContent = `Signed up ${signupWhen(_lastSignupAt)} · ${timeAgo(_lastSignupAt)}`;
 }
 // Categorical order validated for colour-blind separation; slot 1 is the brand-adjacent rose
-const DASH_SERIES = ['#b8475a','#2a78d6','#eda100','#1baf7a','#4a3aa7','#e87ba4'];
+// Brand magenta first, then a neutral slate, then magenta tints - keeps every
+// multi-series chart on one hue instead of a rainbow.
+const DASH_SERIES = ['#9D1A66','#8A8591','#C53C86','#6E1147','#D98FBE','#B06A92'];
 const DASH_OTHER = '#b9b2ad';
 const DASH_STATUS = { verified:'#0ca30c', pending:'#fab219', rejected:'#d03b3b', notStarted:'#d8d2cf' };
 
@@ -3846,7 +3842,7 @@ function genderOf(u) {
   if (!g || g === 'prefer not to say') return 'unspecified';
   return 'other';
 }
-const GENDER_META = { male:['Male','#2a78d6'], female:['Female','#b8475a'], other:['Other','#eda100'], unspecified:['Not specified','#b9b2ad'] };
+const GENDER_META = { male:['Male','#6E1147'], female:['Female','#C53C86'], other:['Other','#E0A3C8'], unspecified:['Not specified','#b9b2ad'] };
 function genderCounts(users) {
   const c = { male:0, female:0, other:0, unspecified:0 };
   users.forEach(u => c[genderOf(u)]++);
