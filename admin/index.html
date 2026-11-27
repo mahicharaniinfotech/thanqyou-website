@@ -107,6 +107,8 @@
   @media (max-width:600px) { .user-filters { grid-template-columns:1fr 1fr; } }
   .user-filters input, .user-filters select { background:var(--dark3);border:1px solid var(--dark4);border-radius:8px;padding:7px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:13px;outline:none; min-width:0; width:100%; }
   .user-filters input:focus { border-color:var(--orange, #f59e0b); }
+  .user-actions { display:grid; grid-template-columns:repeat(2,max-content); gap:6px; }
+  .user-actions .action-btn { text-align:center; }
   .csv-btn { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; margin-left:auto; }
   .csv-presets { display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 14px; }
   .csv-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px 14px; margin-bottom:16px; }
@@ -4511,7 +4513,7 @@ function renderUsers() {
       <td>${kycBadge}</td>
       <td style="font-size:12px;white-space:nowrap">${formatDateTime(u.created_at)}</td>
       <td>
-        <div style="display:flex;gap:6px">
+        <div class="user-actions">
           <button class="action-btn" onclick="viewUser('${u.firebase_uid}')">View</button>
           ${u.is_deleted ? '' : waButton(u.phone, u.display_name) + tqButton(u.firebase_uid, u.display_name)}
           ${u.is_deleted ? '' : u.banned_at
