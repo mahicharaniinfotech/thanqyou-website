@@ -822,6 +822,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
       Analytics
     </div>
+    <div class="nav-item" onclick="showPage('subscriptions',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+      Subscriptions
+    </div>
     </div>
     <div class="nav-group" data-mode="business" style="display:none">
     <div class="nav-section">Business</div>
@@ -1465,6 +1469,34 @@
         <table>
           <thead><tr><th>Type</th><th>Reported</th><th>Reported By</th><th>What was reported</th><th>Date</th><th>Actions</th></tr></thead>
           <tbody id="reports-user-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SUBSCRIPTIONS -->
+    <div class="page" id="page-subscriptions">
+      <div class="stats-row">
+        <div class="mini-stat"><div class="ms-val" id="sub-active">—</div><div class="ms-label">Active now</div></div>
+        <div class="mini-stat"><div class="ms-val" id="sub-total">—</div><div class="ms-label">Total subscribers</div></div>
+        <div class="mini-stat"><div class="ms-val" id="sub-attention">—</div><div class="ms-label">Needs attention</div></div>
+        <div class="mini-stat"><div class="ms-val" id="sub-revenue">—</div><div class="ms-label">Subscription revenue (net)</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><h3>Subscribers (Prime)</h3></div>
+        <table>
+          <thead><tr><th>User</th><th>Plan</th><th>Started</th><th>Expires</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody id="sub-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="table-card" style="margin-top:20px">
+        <div class="table-header"><h3>Purchases needing attention</h3></div>
+        <div style="padding:8px 14px;font-size:12px;color:#888;line-height:1.5">
+          Payments the app recorded where our server couldn't confirm the subscription with Google
+          (so Prime may not have switched on). Check these and activate manually if the payment is real.
+        </div>
+        <table>
+          <thead><tr><th>User</th><th>Plan</th><th>Bought</th><th>Amount</th><th>Status</th><th>Reason</th></tr></thead>
+          <tbody id="sub-pending-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2266,7 +2298,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 
 // ── NAVIGATION ────────────────────────────────────────
 const pageTitles = {
-  dashboard:'Dashboard', metrics:'Metrics', chats:'Chats', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', activity:'Watch hours', content:'Content', reports:'Reports', kyc:'KYC Verification',
+  dashboard:'Dashboard', metrics:'Metrics', chats:'Chats', biz:'Business Overview', businesses:'Businesses', kyb:'KYB Verification', bsubs:'Business Subscriptions', promos:'Promoted Posts', installs:'App Installs', users:'Users', activity:'Watch hours', content:'Content', reports:'Reports', subscriptions:'Subscriptions', kyc:'KYC Verification',
   devreset:'Device resets', wallet:'Wallet & Finance', referrals:'Referrals', payouts:'Creator Payouts', bank:'Bank', analytics:'Analytics', notifications:'Notifications', settings:'Settings'
 };
 
@@ -2285,7 +2317,7 @@ function showPage(name, el) {
   closeDrawer();
   window.scrollTo(0, 0);
   const loaders = {
-    dashboard: loadDashboard, metrics: loadMetrics, chats: loadChats, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, installs: loadInstalls, users: loadUsers, activity: loadActivity, content: loadContent, reports: loadReports,
+    dashboard: loadDashboard, metrics: loadMetrics, chats: loadChats, biz: loadBizOverview, businesses: loadBusinessList, kyb: loadKyb, bsubs: loadBizSubs, promos: loadPromos, installs: loadInstalls, users: loadUsers, activity: loadActivity, content: loadContent, reports: loadReports, subscriptions: loadSubscriptions,
     kyc: loadKYC, devreset: loadDeviceResets, wallet: loadWallet, referrals: loadReferrals, payouts: loadPayouts, bank: loadBank,
     analytics: loadAnalytics, notifications: loadNotifications, settings: loadSettings
   };
@@ -2349,7 +2381,7 @@ function refreshCurrentPage() {
   const active = document.querySelector('.nav-item.active');
   const page = active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
   if (page) {
-    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,installs:loadInstalls,users:loadUsers,activity:loadActivity,content:loadContent,reports:loadReports,kyc:loadKYC,devreset:loadDeviceResets,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
+    const loaders = {dashboard:loadDashboard,metrics:loadMetrics,biz:loadBizOverview,businesses:loadBusinessList,kyb:loadKyb,bsubs:loadBizSubs,promos:loadPromos,installs:loadInstalls,users:loadUsers,activity:loadActivity,content:loadContent,reports:loadReports,subscriptions:loadSubscriptions,kyc:loadKYC,devreset:loadDeviceResets,wallet:loadWallet,referrals:loadReferrals,payouts:loadPayouts,analytics:loadAnalytics,notifications:loadNotifications,settings:loadSettings};
     if (loaders[page]) loaders[page]();
   }
 }
@@ -6028,6 +6060,55 @@ function readReelLength(url){
   v.onerror=function(){ finish(NaN); };
   v.src=url;
 }
+async function loadSubscriptions(){
+  document.getElementById('sub-body').innerHTML='<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  document.getElementById('sub-pending-body').innerHTML='<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  var res=await Promise.all([
+    query('subscriptions','select=*&order=created_at.desc').catch(function(){return [];}),
+    query('subscription_purchases','select=*&order=created_at.desc').catch(function(){return [];}),
+    query('users','select=firebase_uid,display_name,phone').catch(function(){return [];})
+  ]);
+  var subs=res[0]||[], purchases=res[1]||[], users=res[2]||[];
+  var uMap={}; users.forEach(function(u){uMap[u.firebase_uid]=u;});
+  function who(uid){var u=uMap[uid];return u?escHtml((u.display_name||'-')+(u.phone?' ('+u.phone+')':'')):(uid?escHtml(uid.substring(0,10)+'…'):'-');}
+  var now=Date.now();
+  function isActive(r){return r.expires_at && new Date(r.expires_at).getTime()>now && (r.status||'active')!=='cancelled';}
+  var activeCount=subs.filter(isActive).length;
+  var gross=subs.reduce(function(a,r){return a+(Number(r.amount_paid)||0);},0);
+  var net=Math.round(gross*0.85); // after Google's 15% fee (TDS is recoverable)
+  var activeUids={}; subs.forEach(function(r){if(isActive(r))activeUids[r.firebase_uid]=true;});
+  var attention=purchases.filter(function(p){return p.verify_status!=='verified' && !activeUids[p.firebase_uid];});
+  document.getElementById('sub-active').textContent=activeCount;
+  document.getElementById('sub-total').textContent=subs.length;
+  document.getElementById('sub-attention').textContent=attention.length;
+  document.getElementById('sub-revenue').textContent=fmtINR(net);
+  var body=document.getElementById('sub-body');
+  if(!subs.length){body.innerHTML='<tr><td colspan="6"><div class="empty-state"><p>No subscribers yet</p></div></td></tr>';}
+  else body.innerHTML=subs.map(function(r){
+    var act=isActive(r);
+    return '<tr>'
+      +'<td>'+who(r.firebase_uid)+'</td>'
+      +'<td>'+escHtml(r.plan||'-')+'</td>'
+      +'<td style="font-size:12px">'+formatDate(r.started_at)+'</td>'
+      +'<td style="font-size:12px">'+formatDate(r.expires_at)+'</td>'
+      +'<td>'+fmtINR(Number(r.amount_paid)||0)+'</td>'
+      +'<td><span class="badge '+(act?'badge-green':'badge-grey')+'">'+(act?'Active':'Expired')+'</span></td>'
+      +'</tr>';
+  }).join('');
+  var pb=document.getElementById('sub-pending-body');
+  if(!attention.length){pb.innerHTML='<tr><td colspan="6"><div class="empty-state"><p>Nothing needs attention</p></div></td></tr>';}
+  else pb.innerHTML=attention.map(function(p){
+    return '<tr>'
+      +'<td>'+who(p.firebase_uid)+'</td>'
+      +'<td>'+escHtml(p.plan||p.product_id||'-')+'</td>'
+      +'<td style="font-size:12px">'+formatDate(p.purchased_at||p.created_at)+'</td>'
+      +'<td>'+fmtINR(Number(p.amount_paid)||0)+'</td>'
+      +'<td><span class="badge badge-orange">'+escHtml(p.verify_status||'pending')+'</span></td>'
+      +'<td style="font-size:12px;max-width:260px">'+escHtml(p.verify_error||'')+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
 async function loadReports(){
   document.getElementById('reports-post-body').innerHTML='<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
   document.getElementById('reports-user-body').innerHTML='<tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>';
