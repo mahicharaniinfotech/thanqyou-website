@@ -1086,6 +1086,18 @@
           <div class="mini-stat"><div class="ms-val" id="mt-likes">—</div><div class="ms-label">Likes</div></div>
           <div class="mini-stat"><div class="ms-val" id="mt-shares">—</div><div class="ms-label">Shares</div></div>
         </div>
+        <div class="settings-card" id="feed-coverage-card" style="margin-bottom:16px">
+          <div class="table-header" style="padding-bottom:12px">
+            <h3>Feed coverage</h3>
+            <span class="kpi-sub" id="fc-sub" style="font-size:12px;color:var(--grey)">How much of the reel library viewers have been shown</span>
+          </div>
+          <div class="mini-stats">
+            <div class="mini-stat"><div class="ms-val" id="fc-avg">—</div><div class="ms-label">Avg library seen per viewer</div></div>
+            <div class="mini-stat"><div class="ms-val" id="fc-median">—</div><div class="ms-label">Median viewer</div></div>
+            <div class="mini-stat"><div class="ms-val" id="fc-reached">—</div><div class="ms-label">Reels shown to someone</div></div>
+            <div class="mini-stat"><div class="ms-val" id="fc-unreached">—</div><div class="ms-label">Reels not yet shown</div></div>
+          </div>
+        </div>
         <div class="table-card" id="metrics-posts-card">
           <div class="table-header">
             <h3>Post performance</h3>
@@ -3132,8 +3144,28 @@ function loadActiveUsers() {
   loadAuMonth();
 }
 
+// Feed coverage: how much of the reel library viewers have actually been
+// shown (reads reel_impressions server-side). Not range-scoped - it's a
+// running library-wide figure, so it loads independently of the table.
+async function loadFeedCoverage() {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  try {
+    const c = await rpc('admin_feed_coverage', {});
+    const d = Array.isArray(c) ? c[0] : c;
+    if (!d) return;
+    set('fc-avg', `${(+d.avg_coverage_pct || 0).toFixed(1)}%`);
+    set('fc-median', `${(+d.median_coverage_pct || 0).toFixed(1)}%`);
+    set('fc-reached', `${fmtNum(d.reels_reached)} / ${fmtNum(d.total_reels)}`);
+    set('fc-unreached', fmtNum(d.reels_unreached));
+    set('fc-sub', `${fmtNum(d.active_viewers)} viewers · each has been shown ${(+d.avg_reels_seen || 0).toFixed(0)} of ${fmtNum(d.total_reels)} reels on average`);
+  } catch (e) {
+    set('fc-sub', `Couldn't load coverage: ${e.message}`);
+  }
+}
+
 async function loadMetrics() {
   await ensureAvatars();
+  loadFeedCoverage();
   const { from, to } = getRange('metrics');
   document.getElementById('metrics-range-label').textContent = `${accountMode === 'business' ? 'Business accounts' : 'Individual accounts'} · ${rangeLabel(from, to)}`;
   document.querySelector('#page-metrics .dash-head h2').textContent = accountMode === 'business' ? 'Business reels & reach' : 'Reach metrics';
