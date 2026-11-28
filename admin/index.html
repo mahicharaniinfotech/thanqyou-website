@@ -1706,6 +1706,8 @@
               <div><div class="stat-label">Break-even</div><div class="stat-value" id="s-be">—</div><div class="be-pct" id="s-be-pct"></div></div>
               <div class="kpi-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0z"/><path d="M8 21h8"/></svg></div>
             </div>
+            <div class="kpi-foot"><span id="s-be-d"></span><span class="stat-change" id="s-be-c"></span></div>
+            <svg class="spark" id="spark-be" preserveAspectRatio="none"></svg>
           </div>
         </div>
         <div class="charts-grid single">
@@ -4126,6 +4128,29 @@ function renderMoneyCards(d, from, to, days) {
   const byDay = {};
   ad.forEach(r => { byDay[r.day] = (byDay[r.day] || 0) + r.inr; });
   drawSpark('spark-admob', days.map(k => byDay[k] || 0), '#6E3FA3');
+
+  // Break-even footer + trend: make the absolute gap legible (the % is
+  // misleading once AdMob is a tiny share of payouts - it just sits near 100%).
+  const beToday = localDay(new Date());
+  const coverage = payouts > 0 ? admob / payouts * 100 : 0;
+  $('s-be-c').textContent = payouts > 0
+    ? `AdMob covers ${coverage < 1 ? coverage.toFixed(2) : coverage.toFixed(1)}% of payouts`
+    : '';
+  const paidByDay = {};
+  d.allTxns.forEach(t => { const k = localDay(t.created_at); paidByDay[k] = (paidByDay[k] || 0) + parseFloat(t.rupees || 0); });
+  if (from || to) {
+    $('s-be-d').innerHTML = '';
+  } else {
+    const gapToday = (paidByDay[beToday] || 0) - (byDay[beToday] || 0);
+    $('s-be-d').innerHTML = gapToday > 0.005
+      ? `<span class="chip down" title="How much the gap widened today">−${fmtINR(gapToday)} today</span>`
+      : '<span class="chip flat">no change today</span>';
+  }
+  // Cumulative gap (payouts minus AdMob) across the window. It only ever
+  // climbs, so a big one-day step like a rate change stands out at a glance.
+  let cumGap = 0;
+  const gapSeries = days.map(k => { cumGap += (paidByDay[k] || 0) - (byDay[k] || 0); return cumGap; });
+  drawSpark('spark-be', gapSeries, '#C0392B');
 }
 
 function drawSpark(id, values, color) {
